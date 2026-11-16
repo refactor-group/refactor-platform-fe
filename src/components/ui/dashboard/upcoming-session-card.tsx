@@ -66,7 +66,7 @@ export function UpcomingSessionCard({
   onReschedule,
   onRefreshNeeded,
 }: UpcomingSessionCardProps) {
-  const { userSession, isACoach } = useAuthStore((state) => state);
+  const { userSession, canScheduleSessions } = useAuthStore((state) => state);
   const { sessions, isLoading, error, refresh } = useTodaysSessions();
 
   // Surface refresh to the parent so it can re-fetch after a series changes.
@@ -91,7 +91,7 @@ export function UpcomingSessionCard({
       <CardContainer>
         <UpcomingSessionCardEmpty
           onCreateSession={onCreateSession}
-          canCreateSession={isACoach}
+          canCreateSession={canScheduleSessions}
         />
       </CardContainer>
     );
@@ -233,7 +233,7 @@ function PopulatedBody({
       <FooterRow
         urgencyMessage={urgencyMessage}
         showPulsingDot={showPulsingDot}
-        showReschedule={participant.isCoach && participant.counterpartIsMember}
+        showReschedule={participant.canSchedule && participant.schedulingOpen}
         onReschedule={onReschedule ? () => onReschedule(session) : undefined}
         sessionId={session.id}
       />

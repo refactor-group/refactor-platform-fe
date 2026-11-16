@@ -54,14 +54,14 @@ vi.mock("@/lib/hooks/use-week-sessions", () => ({
 let isACoach = true;
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (select: (s: unknown) => unknown) =>
-    select({ userId: "coach-1", isACoach, userSession: { id: "coach-1", timezone: TZ } }),
+    select({ userId: "coach-1", isACoach, canScheduleSessions: isACoach, userSession: { id: "coach-1", timezone: TZ } }),
 }));
 
 let edges: WeekEdges = { hasEarlier: true };
 vi.mock("@/lib/hooks/use-week-edges", () => ({ useWeekEdges: () => edges }));
 
-const ALEX: FilterPerson = { userId: "u-alex", fullName: "Alex Chen", relationshipIds: ["rel-1"], group: PersonGroup.Coachees };
-const SAM: FilterPerson = { userId: "u-sam", fullName: "Sam Ruiz", relationshipIds: ["rel-sam"], group: PersonGroup.Coachees };
+const ALEX: FilterPerson = { userId: "u-alex", fullName: "Alex Chen", relationshipIds: ["rel-1"], group: PersonGroup.Active };
+const SAM: FilterPerson = { userId: "u-sam", fullName: "Sam Ruiz", relationshipIds: ["rel-sam"], group: PersonGroup.Active };
 let selectedPerson: Option<FilterPerson> = None;
 const selectPerson = vi.fn();
 const clearPerson = vi.fn();

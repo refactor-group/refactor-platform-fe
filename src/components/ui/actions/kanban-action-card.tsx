@@ -7,11 +7,9 @@ import { cn } from "@/components/lib/utils";
 import { NonMemberIdsProvider } from "@/components/ui/coaching-sessions/non-member-ids-context";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import {
-  isUserCoachInRelationship,
-  isUserCoacheeInRelationship,
   nonMemberIdsOf,
 } from "@/types/coaching-relationship";
-import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
+import { getCoachName, getCoacheeName, relationshipPairLabel } from "@/lib/utils/relationship";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import type { Id, ItemStatus } from "@/types/general";
@@ -51,19 +49,17 @@ const KanbanActionCardContent = memo(function KanbanActionCardContent({
   onBodyChange,
   onGoalChange,
   onDelete,
-  coachLabel,
-  coacheeLabel,
+  pairLabel,
 }: KanbanCardCallbacks & {
   ctx: AssignedActionWithContext;
-  coachLabel: string;
-  coacheeLabel: string;
+  pairLabel: string;
 }) {
   return (
     <>
       {/* Relationship header */}
       <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground border border-b-0 border-border rounded-t-lg bg-muted/40">
         <span className="truncate">
-          {coachLabel} → {coacheeLabel}
+          {pairLabel}
         </span>
       </div>
 
@@ -126,12 +122,7 @@ export function KanbanActionCard({
     ...(transform ? { transform: CSS.Translate.toString(transform) } : undefined),
   };
 
-  const coachLabel = userId && isUserCoachInRelationship(userId, ctx.relationship)
-    ? "You"
-    : getCoachName(ctx.relationship);
-  const coacheeLabel = userId && isUserCoacheeInRelationship(userId, ctx.relationship)
-    ? "You"
-    : getCoacheeName(ctx.relationship);
+  const pairLabel = relationshipPairLabel(ctx.relationship, userId);
 
   return (
     <div
@@ -155,8 +146,7 @@ export function KanbanActionCard({
         onBodyChange={onBodyChange}
         onGoalChange={onGoalChange}
         onDelete={onDelete}
-        coachLabel={coachLabel}
-        coacheeLabel={coacheeLabel}
+        pairLabel={pairLabel}
       />
     </div>
   );

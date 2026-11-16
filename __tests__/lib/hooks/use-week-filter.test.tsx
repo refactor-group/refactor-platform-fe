@@ -7,7 +7,7 @@ import type { NearestQuery } from "@/lib/api/coaching-sessions";
 import { PersonGroup } from "@/lib/week-grid/filter";
 import { useWeekFilter } from "@/lib/hooks/use-week-filter";
 import { WeekGridStoreProvider } from "@/lib/providers/week-grid-store-provider";
-import { createMockEnrichedSession, createMockRelationship } from "../../test-utils";
+import { COACHEE_VIEWER, createMockEnrichedSession, createMockRelationship } from "../../test-utils";
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (select: (s: unknown) => unknown) =>
@@ -21,7 +21,7 @@ vi.mock("@/lib/hooks/use-schedule-data", () => ({ useScheduleTimezone: () => "Am
 const relationships = [
   createMockRelationship({ id: "rel-alex", coach_id: "coach-1", coachee_id: "u-alex", coachee_first_name: "Alex", coachee_last_name: "Chen" }),
   createMockRelationship({ id: "rel-erin", coach_id: "coach-1", coachee_id: "u-erin", coachee_first_name: "Erin", coachee_last_name: "Park" }),
-  createMockRelationship({ id: "rel-mine", coach_id: "u-boss", coachee_id: "coach-1", coach_first_name: "Bo", coach_last_name: "Ss" }),
+  createMockRelationship({ id: "rel-mine", coach_id: "u-boss", coachee_id: "coach-1", coach_first_name: "Bo", coach_last_name: "Ss", viewer: COACHEE_VIEWER }),
 ];
 let relationshipsLoading = false;
 vi.mock("@/lib/api/coaching-relationships", () => ({
@@ -80,7 +80,7 @@ describe("useWeekFilter", () => {
     act(() => result.current.load());
     expect(result.current.grouped).toBe(true);
     expect(result.current.people.map((p) => [p.fullName, p.group])).toEqual([
-      ["Alex Chen", PersonGroup.Coachees],
+      ["Alex Chen", PersonGroup.Active],
       ["Erin Park", PersonGroup.Inactive],
     ]);
   });
@@ -97,7 +97,7 @@ describe("useWeekFilter", () => {
     const { result } = setup();
     act(() => result.current.load());
     expect(result.current.grouped).toBe(true);
-    expect(result.current.people.every((p) => p.group === PersonGroup.Coachees)).toBe(true);
+    expect(result.current.people.every((p) => p.group === PersonGroup.Active)).toBe(true);
   });
 
   it("selects and clears a person", () => {

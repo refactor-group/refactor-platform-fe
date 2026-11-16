@@ -137,7 +137,7 @@ const ClockSelect: FC<ClockSelectProps> = ({ id, label, value, disabled, onChang
 );
 
 export const CoachingPreferencesSection: FC = () => {
-  const { isACoach, userId } = useAuthStore((state) => state);
+  const { canScheduleSessions, userId } = useAuthStore((state) => state);
   const { user, isLoading, refresh } = useUser(userId);
   const { update, isLoading: isSaving } = useUserPreferencesMutation();
 
@@ -180,7 +180,7 @@ export const CoachingPreferencesSection: FC = () => {
     return () => clearTimeout(timer);
   }, [changes, shown, isDirty, isValid, isSaving, user, userId, update, refresh]);
 
-  if (!isACoach) {
+  if (!canScheduleSessions) {
     return null;
   }
 

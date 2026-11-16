@@ -24,13 +24,14 @@ export enum SessionRemoval {
 }
 
 export interface SessionActionContext {
-  isCoach: boolean;
+  /** May schedule and cancel in this relationship, from the backend. */
+  canSchedule: boolean;
   /** Locked (see `sessionLocked`): only Open session and the delete item remain. */
   isLocked: boolean;
   /** Its start has passed: a one-off's invite can't be resent, though the session may still be edited today. */
   hasStarted: boolean;
-  /** The other participant is still in the organization; if not, nothing can be rescheduled or resent. */
-  counterpartIsMember: boolean;
+  /** Nobody's leaving blocks scheduling; if it does, nothing can be rescheduled or resent. */
+  schedulingOpen: boolean;
 }
 
 export interface SessionActionItem {
@@ -49,49 +50,49 @@ interface SessionActionRule {
 
 const inSeries = (session: EnrichedCoachingSession) => session.coaching_session_series_id.some;
 
-const coachUpcoming = (c: SessionActionContext) => c.isCoach && !c.isLocked;
+const schedulerUpcoming = (c: SessionActionContext) => c.canSchedule && !c.isLocked;
 
-const coachCanSchedule = (c: SessionActionContext) => coachUpcoming(c) && c.counterpartIsMember;
+const canScheduleNow = (c: SessionActionContext) => schedulerUpcoming(c) && c.schedulingOpen;
 
 const RULES: SessionActionRule[] = [
   { action: SessionAction.OpenSession, group: SessionActionGroup.Navigate, shown: () => true },
   {
     action: SessionAction.Reschedule,
     group: SessionActionGroup.Schedule,
-    shown: (_s, c) => coachCanSchedule(c),
+    shown: (_s, c) => canScheduleNow(c),
   },
   {
     action: SessionAction.ViewSeries,
     group: SessionActionGroup.Schedule,
-    shown: (s, c) => inSeries(s) && coachUpcoming(c),
+    shown: (s, c) => inSeries(s) && schedulerUpcoming(c),
   },
   {
     action: SessionAction.EditSeries,
     group: SessionActionGroup.Schedule,
-    shown: (s, c) => inSeries(s) && coachCanSchedule(c),
+    shown: (s, c) => inSeries(s) && canScheduleNow(c),
   },
   {
     action: SessionAction.ShareLink,
     group: SessionActionGroup.Share,
-    shown: (_s, c) => coachUpcoming(c),
+    shown: (_s, c) => schedulerUpcoming(c),
   },
   {
     action: SessionAction.ResendInvite,
     group: SessionActionGroup.Share,
     // The series resend covers its later sessions; a one-off has none once it starts.
-    shown: (s, c) => coachUpcoming(c) && (inSeries(s) || !c.hasStarted),
+    shown: (s, c) => schedulerUpcoming(c) && (inSeries(s) || !c.hasStarted),
     // Kept in place, disabled, so the note beside it explains why.
-    enabled: (c) => c.counterpartIsMember,
+    enabled: (c) => c.schedulingOpen,
   },
   {
     action: SessionAction.DeleteSession,
     group: SessionActionGroup.Destructive,
-    shown: (_s, c) => c.isCoach,
+    shown: (_s, c) => c.canSchedule,
   },
   {
     action: SessionAction.DeleteSeries,
     group: SessionActionGroup.Destructive,
-    shown: (s, c) => inSeries(s) && coachUpcoming(c),
+    shown: (s, c) => inSeries(s) && schedulerUpcoming(c),
   },
 ];
 

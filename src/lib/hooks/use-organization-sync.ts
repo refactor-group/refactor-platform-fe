@@ -10,7 +10,7 @@ import {
   type OrganizationMembership,
 } from "@/lib/hooks/use-reconcile-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { isUserCoach } from "@/types/coaching-relationship";
+import { canScheduleInAny, coachesAnyone } from "@/types/coaching-relationship";
 
 /**
  * Keeps the coach flag and the current organization in step with the user's
@@ -21,6 +21,7 @@ export function useOrganizationSync() {
   const userId = useAuthStore((state) => state.userId);
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
   const setIsACoach = useAuthStore((state) => state.setIsACoach);
+  const setCanScheduleSessions = useAuthStore((state) => state.setCanScheduleSessions);
 
   const { organizations, isLoading, isError } = useOrganizationList(userId);
 
@@ -41,11 +42,13 @@ export function useOrganizationSync() {
   useEffect(() => {
     if (!userId) {
       setIsACoach(false);
+      setCanScheduleSessions(false);
       return;
     }
     if (relationshipsLoading || relationshipsError) return;
-    setIsACoach(isUserCoach(userId, relationships));
-  }, [userId, relationships, relationshipsLoading, relationshipsError, setIsACoach]);
+    setIsACoach(coachesAnyone(relationships));
+    setCanScheduleSessions(canScheduleInAny(relationships));
+  }, [userId, relationships, relationshipsLoading, relationshipsError, setIsACoach, setCanScheduleSessions]);
 
   // Note: the default-selection fallback can go away once a user has the notion
   //       of a default Organization and currentOrganizationId can start out

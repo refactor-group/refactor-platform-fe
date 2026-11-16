@@ -13,7 +13,7 @@ import {
   CoachViewMode,
   UserActionsAssigneeFilter,
 } from "@/types/assigned-actions";
-import { isUserCoach } from "@/types/coaching-relationship";
+import { coachesAnyone, RelationshipKind } from "@/types/coaching-relationship";
 import type { Id } from "@/types/general";
 import { type Option, Some, None, unwrapOr } from "@/types/option";
 
@@ -48,11 +48,16 @@ export function assignmentFilterToRelationshipActionsParams(
   }
 }
 
-/** None = coachee broad view; lets the backend's visibility predicate narrow. */
+/**
+ * None = the broad view; lets the backend's visibility predicate narrow. A colleague
+ * relationship has no coach or coachee side, so filtering to one never sends a scope.
+ */
 function selectAssigneeScope(
   isACoach: boolean,
-  isCoacheeMode: boolean
+  isCoacheeMode: boolean,
+  filteredToColleagues: boolean
 ): Option<AssigneeScope> {
+  if (filteredToColleagues) return None;
   if (isCoacheeMode) return Some(AssigneeScope.Coachee);
   if (isACoach) return Some(AssigneeScope.Coach);
   return None;
@@ -93,7 +98,10 @@ export function useActionsFetch(
   const roleKnown = !!userId && !relationshipsLoading && !relationshipsError;
 
   const isCoacheeMode = viewMode === CoachViewMode.CoacheeActions;
-  const assigneeScope = selectAssigneeScope(isUserCoach(userId, relationships), isCoacheeMode);
+  const filteredToColleagues = relationships.some(
+    (r) => r.id === relationshipId && r.kind === RelationshipKind.Colleague
+  );
+  const assigneeScope = selectAssigneeScope(coachesAnyone(relationships), isCoacheeMode, filteredToColleagues);
 
   const params = assignmentFilterToRelationshipActionsParams(assignmentFilter, assigneeScope);
 

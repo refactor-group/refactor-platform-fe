@@ -5,8 +5,8 @@ import { PersonGroup, type FilterPerson } from "@/lib/week-grid/filter";
 import { WeekFilter } from "@/components/ui/dashboard/week-grid/week-filter";
 
 const people: FilterPerson[] = [
-  { userId: "u-alex", fullName: "Alex Chen", relationshipIds: ["rel-alex"], group: PersonGroup.Coachees },
-  { userId: "u-sam", fullName: "Sam Ruiz", relationshipIds: ["rel-sam"], group: PersonGroup.Coachees },
+  { userId: "u-alex", fullName: "Alex Chen", relationshipIds: ["rel-alex"], group: PersonGroup.Active },
+  { userId: "u-sam", fullName: "Sam Ruiz", relationshipIds: ["rel-sam"], group: PersonGroup.Active },
   { userId: "u-erin", fullName: "Erin Park", relationshipIds: ["rel-erin"], group: PersonGroup.Inactive },
 ];
 
@@ -48,8 +48,8 @@ describe("WeekFilter", () => {
     open("All sessions");
     const panel = popover();
     expect(within(panel).getByRole("searchbox", { name: "Find a person" })).toBeInTheDocument();
-    expect(within(panel).getByRole("group", { name: "Coachees" })).toHaveTextContent("Alex Chen");
-    expect(within(panel).getByRole("group", { name: "Coachees" })).toHaveTextContent("Sam Ruiz");
+    expect(within(panel).getByRole("group", { name: "Active" })).toHaveTextContent("Alex Chen");
+    expect(within(panel).getByRole("group", { name: "Active" })).toHaveTextContent("Sam Ruiz");
     expect(within(panel).getByRole("group", { name: "Inactive" })).toHaveTextContent("Erin Park");
     expect(choice("All sessions")).toHaveAttribute("aria-pressed", "true");
     expect(within(panel).queryByRole("listbox")).not.toBeInTheDocument();
@@ -69,7 +69,7 @@ describe("WeekFilter", () => {
     expect(choice("All sessions")).toBeInTheDocument();
     expect(within(popover()).getByRole("status", { name: "Loading people" })).toBeInTheDocument();
     expect(within(popover()).queryByText("Alex Chen")).not.toBeInTheDocument();
-    expect(within(popover()).queryByRole("group", { name: "Coachees" })).not.toBeInTheDocument();
+    expect(within(popover()).queryByRole("group", { name: "Active" })).not.toBeInTheDocument();
   });
 
   it("narrows by search and says when no one matches", () => {

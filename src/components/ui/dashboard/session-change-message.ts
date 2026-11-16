@@ -3,16 +3,16 @@ import type { RepeatChoice } from "@/lib/scheduling";
 import { durationText, firstNameOf, repeatLabel, shortDay } from "@/lib/scheduling-copy";
 import { sessionStartIn, shortDate, timeOfDay } from "@/lib/session-window";
 import { formatWeekdayDate } from "@/lib/utils/date";
-import { getCoacheeName } from "@/lib/utils/relationship";
+import { otherParticipant } from "@/lib/people";
 import { SessionRemoval } from "@/lib/session-actions";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { Id } from "@/types/general";
 import type { Option } from "@/types/option";
 
-/** " with James Hodapp", or nothing if the relationship isn't loaded. */
-function withCoachee(relationships: CoachingRelationshipWithUserNames[], relationshipId: Id): string {
+/** " with James Hodapp", the other participant, or nothing if the relationship isn't loaded. */
+function withOther(relationships: CoachingRelationshipWithUserNames[], relationshipId: Id, viewerId: Id): string {
   const relationship = relationships.find((r) => r.id === relationshipId);
-  return relationship ? ` with ${getCoacheeName(relationship)}` : "";
+  return relationship ? ` with ${otherParticipant(relationship, viewerId).fullName}` : "";
 }
 
 type SessionRef = { date: string; coaching_relationship_id: Id };
@@ -32,9 +32,10 @@ function startsAt(session: SessionRef, timezone: string): string {
 function theSession(
   session: SessionRef,
   relationships: CoachingRelationshipWithUserNames[],
+  viewerId: Id,
   timezone: string
 ): string {
-  return `the ${startsAt(session, timezone)} session${withCoachee(relationships, session.coaching_relationship_id)}`;
+  return `the ${startsAt(session, timezone)} session${withOther(relationships, session.coaching_relationship_id, viewerId)}`;
 }
 
 function removedVerb(removal: SessionRemoval): string {
@@ -54,10 +55,11 @@ function removedVerb(removal: SessionRemoval): string {
 export function sessionRemovedMessage(
   session: SessionRef,
   relationships: CoachingRelationshipWithUserNames[],
+  viewerId: Id,
   timezone: string,
   removal: SessionRemoval
 ): string {
-  return `${removedVerb(removal)} ${theSession(session, relationships, timezone)}`;
+  return `${removedVerb(removal)} ${theSession(session, relationships, viewerId, timezone)}`;
 }
 
 export interface OtherMove {

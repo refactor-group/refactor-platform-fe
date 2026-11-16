@@ -11,7 +11,7 @@ import {
   UserActionsAssigneeFilter,
 } from "@/types/assigned-actions";
 import { Some, None } from "@/types/option";
-import { createMockRelationship } from "../../test-utils";
+import { COACHEE_VIEWER, createMockRelationship } from "../../test-utils";
 
 const h = vi.hoisted(() => ({
   relationships: {
@@ -147,7 +147,7 @@ describe("assignmentFilterToRelationshipActionsParams", () => {
 
 describe("useActionsFetch", () => {
   const coaching = createMockRelationship({ coach_id: "user-1", coachee_id: "user-2" });
-  const coached = createMockRelationship({ coach_id: "user-3", coachee_id: "user-1" });
+  const coached = createMockRelationship({ coach_id: "user-3", coachee_id: "user-1", viewer: COACHEE_VIEWER });
   const myActions = () =>
     renderHook(() => useActionsFetch(CoachViewMode.MyActions, undefined, AssignmentFilter.Assigned));
 

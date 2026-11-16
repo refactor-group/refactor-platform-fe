@@ -30,8 +30,8 @@ const inactive: PersonActivity = { kind: "inactive", last: None };
 describe("filterPeople", () => {
   it("puts everyone under Coachees until activity is known", () => {
     expect(filterPeople([ALEX, ERIN], None).map((p) => p.group)).toEqual([
-      PersonGroup.Coachees,
-      PersonGroup.Coachees,
+      PersonGroup.Active,
+      PersonGroup.Active,
     ]);
   });
 
@@ -42,23 +42,23 @@ describe("filterPeople", () => {
       ["u-sam", upcoming],
     ]);
     expect(filterPeople([ALEX, ERIN, SAM], Some(activity))).toEqual([
-      { userId: "u-alex", fullName: "Alex Chen", relationshipIds: ["rel-alex"], group: PersonGroup.Coachees },
+      { userId: "u-alex", fullName: "Alex Chen", relationshipIds: ["rel-alex"], group: PersonGroup.Active },
       { userId: "u-erin", fullName: "Erin Park", relationshipIds: ["rel-erin"], group: PersonGroup.Inactive },
-      { userId: "u-sam", fullName: "Sam Ruiz", relationshipIds: ["rel-sam-1", "rel-sam-2"], group: PersonGroup.Coachees },
+      { userId: "u-sam", fullName: "Sam Ruiz", relationshipIds: ["rel-sam-1", "rel-sam-2"], group: PersonGroup.Active },
     ]);
   });
 });
 
 const people: FilterPerson[] = [
-  { userId: "u-alex", fullName: "Alex Chen", relationshipIds: ["rel-alex"], group: PersonGroup.Coachees },
+  { userId: "u-alex", fullName: "Alex Chen", relationshipIds: ["rel-alex"], group: PersonGroup.Active },
   { userId: "u-erin", fullName: "Erin Park", relationshipIds: ["rel-erin"], group: PersonGroup.Inactive },
-  { userId: "u-sam", fullName: "Sam Ruiz", relationshipIds: ["rel-sam-1", "rel-sam-2"], group: PersonGroup.Coachees },
+  { userId: "u-sam", fullName: "Sam Ruiz", relationshipIds: ["rel-sam-1", "rel-sam-2"], group: PersonGroup.Active },
 ];
 
 describe("filterSections", () => {
   it("lists Coachees then Inactive, each labelled", () => {
     expect(filterSections(people, "").map((s) => [s.label, s.people.map((p) => p.userId)])).toEqual([
-      ["Coachees", ["u-alex", "u-sam"]],
+      ["Active", ["u-alex", "u-sam"]],
       ["Inactive", ["u-erin"]],
     ]);
   });

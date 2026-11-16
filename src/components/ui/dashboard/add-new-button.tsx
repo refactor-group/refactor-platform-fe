@@ -23,11 +23,11 @@ interface AddNewButtonProps {
 export function AddNewButton({ onCreateSession, className }: AddNewButtonProps) {
   const router = useRouter();
   const currentUserRoleState = useCurrentUserRole();
-  const { isACoach } = useAuthStore((state) => state);
+  const { canScheduleSessions } = useAuthStore((state) => state);
   const { currentOrganizationId } = useCurrentOrganization();
 
   // Determine potential actions based on user role (regardless of org selection)
-  const couldAddSession = isACoach;
+  const couldAddSession = canScheduleSessions;
   const couldAddMember = isAdminOrSuperAdmin(currentUserRoleState);
   const hasPotentialActions = couldAddSession || couldAddMember;
 

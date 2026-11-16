@@ -13,7 +13,9 @@ const h = vi.hoisted(() => ({
     userId: 'user-1',
     isLoggedIn: true,
     isACoach: false,
+    canScheduleSessions: false,
     setIsACoach: () => {},
+    setCanScheduleSessions: () => {},
     userSession: {
       id: 'user-1',
       first_name: 'Test',

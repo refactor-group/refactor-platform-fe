@@ -2,7 +2,8 @@ import { DateTime } from "ts-luxon";
 import { Action } from "@/types/action";
 import { Agreement } from "@/types/agreement";
 import { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
-import { CoachingRelationshipWithUserNames, RelationshipKind } from "@/types/coaching-relationship";
+import { CoachingRelationshipWithUserNames, RelationshipKind, type RelationshipViewer } from "@/types/coaching-relationship";
+import { RelationshipRole } from "@/types/relationship-role";
 import { Goal } from "@/types/goal";
 import { ItemStatus } from "@/types/general";
 import { Some, None } from "@/types/option";
@@ -80,8 +81,41 @@ export function createMockRelationship(
     kind: RelationshipKind.Coaching,
     coach_is_member: true,
     coachee_is_member: true,
+    // Seen by its coach, user-1, the viewer most tests sign in as.
+    viewer: COACH_VIEWER,
+    suggests_actions: true,
+    scheduling_blocked_by: null,
     ...overrides,
   };
+}
+
+export const COACH_VIEWER: RelationshipViewer = {
+  role: RelationshipRole.Coach,
+  can_schedule_sessions: true,
+  sees_all_actions: true,
+};
+
+export const COACHEE_VIEWER: RelationshipViewer = {
+  role: RelationshipRole.Coachee,
+  can_schedule_sessions: false,
+  sees_all_actions: false,
+};
+
+export const COLLEAGUE_VIEWER: RelationshipViewer = {
+  role: RelationshipRole.Colleague,
+  can_schedule_sessions: true,
+  sees_all_actions: true,
+};
+
+export function viewerFor(role: RelationshipRole): RelationshipViewer {
+  switch (role) {
+    case RelationshipRole.Coach:
+      return COACH_VIEWER;
+    case RelationshipRole.Coachee:
+      return COACHEE_VIEWER;
+    case RelationshipRole.Colleague:
+      return COLLEAGUE_VIEWER;
+  }
 }
 
 export function createMockSession(
@@ -143,6 +177,9 @@ export function createMockEnrichedSession(
       kind: RelationshipKind.Coaching,
       coach_is_member: true,
       coachee_is_member: true,
+      viewer: COACH_VIEWER,
+      suggests_actions: true,
+      scheduling_blocked_by: null,
     },
     coach: {
       id: "coach-1",
