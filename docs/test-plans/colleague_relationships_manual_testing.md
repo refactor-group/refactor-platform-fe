@@ -168,7 +168,7 @@ KID is coached by COACH and a colleague of OTHER_COACH in RC2.
 
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
-| COL-60 | RC session with a completed transcript: suggestions area | COACH, MEMBER | RC's `suggests_actions` is false. No suggestions; the scan control reports it isn't available (no spinner, no error toast) | TRN-30, TRN-31 |
+| COL-60 | RC session with a completed transcript: suggestions area | COACH, MEMBER | RC's `suggests_actions` is false. No suggestions and no scan control (no spinner, no error toast) | TRN-30, TRN-31 |
 | COL-61 | R1 session with a completed transcript | COACH | Scan and suggestions work as before | TRN-09 |
 
 ### 3.8 Meeting link, time and zone (`COL-7x`)
