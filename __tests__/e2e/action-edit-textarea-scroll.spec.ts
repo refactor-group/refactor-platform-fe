@@ -4,6 +4,7 @@ import {
   mockCommonApiRoutes,
   MOCK_USER_ID,
   SINGLE_RELATIONSHIP,
+  COACHEE_VIEWER,
 } from './helpers'
 
 // ---------------------------------------------------------------------------
@@ -89,6 +90,9 @@ const ENRICHED_SESSION = {
     kind: 'coaching',
     coach_is_member: true,
     coachee_is_member: true,
+    viewer: COACHEE_VIEWER,
+    suggests_actions: true,
+    scheduling_blocked_by: null,
   },
   coach: {
     id: COACH_ID,

@@ -11,7 +11,7 @@ import { SuggestedActionCard } from "@/components/ui/coaching-sessions/suggested
 import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionEdits, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { Some, None } from "@/types/option";
-import { createMockAction, createMockGoal } from "../../../test-utils";
+import { createMockAction, createMockGoal, COACH_VIEWER } from "../../../test-utils";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 const COACH_ID = "coach-1";
@@ -50,7 +50,7 @@ describe("the edit form while the duplicate confirm row is open", () => {
       <Wrapper>
         <SuggestedActionCard
           suggestion={suggestion}
-          viewerRole={RelationshipRole.Coach}
+          viewer={COACH_VIEWER}
           locale="en-US"
           coachId={COACH_ID}
           coachName="Jim Hodapp"

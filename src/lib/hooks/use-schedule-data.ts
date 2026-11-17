@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { DateTime } from "ts-luxon";
-import type { PickerPerson } from "@/components/ui/new-session/person-picker";
+import type { PickerPerson } from "@/components/ui/person-picker";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import {
   CoachingSessionInclude,
@@ -19,7 +19,6 @@ import { type Availability, busySessions, busyWindow, knownSessions, pickerPeopl
 import type { BusySession } from "@/lib/scheduling";
 import { sessionEndIn, sessionStartIn, utcInstant } from "@/lib/session-window";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
-import { isMember } from "@/types/coaching-relationship";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { CoachingSessionSeriesWithSessions } from "@/types/coaching-session-series";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
@@ -87,9 +86,8 @@ export function useScheduleData(range: BusyRange): ScheduleData {
   const { currentOrganizationId } = useCurrentOrganization();
   const relationships = useCoachingRelationshipList(currentOrganizationId);
   const relationshipList = relationships.relationships;
-  // Coachees no longer in the organization can't be scheduled with.
   const entries = useMemo(
-    () => schedulablePeople(userId, relationshipList.filter((r) => isMember(r, r.coachee_id))),
+    () => schedulablePeople(userId, relationshipList),
     [userId, relationshipList]
   );
 

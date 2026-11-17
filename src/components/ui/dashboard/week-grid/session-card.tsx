@@ -91,7 +91,7 @@ export function SessionCard({
 }: SessionCardProps) {
   const isPast = view.tense === CardTense.Past;
   const isAgenda = layout === SessionCardLayout.Agenda;
-  const canMove = view.editable && view.canManage && view.counterpartIsMember;
+  const canMove = view.editable && view.canManage && view.schedulingOpen;
   const draggable = canMove && justDragged.some;
   const sharedHint = useContext(CardHintContext);
   const ownHintIds = useCardHintIds();

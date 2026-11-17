@@ -13,7 +13,7 @@ import {
   CoachViewMode,
   UserActionsAssigneeFilter,
 } from "@/types/assigned-actions";
-import { isUserCoach } from "@/types/coaching-relationship";
+import { coachesAnyone, RelationshipKind } from "@/types/coaching-relationship";
 import type { Id } from "@/types/general";
 import { type Option, Some, None, unwrapOr } from "@/types/option";
 
@@ -23,9 +23,9 @@ import { type Option, Some, None, unwrapOr } from "@/types/option";
  */
 export function assignmentFilterToRelationshipActionsParams(
   filter: AssignmentFilter,
-  assigneeScope: Option<AssigneeScope>
+  assigneeScope: Option<AssigneeScope | Id>
 ): {
-  assignee?: AssigneeScope;
+  assignee?: AssigneeScope | Id;
   assigneeFilter?: UserActionsAssigneeFilter;
 } {
   const scope = unwrapOr(assigneeScope, undefined);
@@ -48,13 +48,20 @@ export function assignmentFilterToRelationshipActionsParams(
   }
 }
 
-/** None = coachee broad view; lets the backend's visibility predicate narrow. */
+/**
+ * None = the broad view; lets the backend's visibility predicate narrow.
+ * My Actions is the coach's own id: everything assigned to them in every relationship,
+ * coaching or colleague. A colleague relationship has no coachee side, so Coachee
+ * Actions filtered to one sends no scope.
+ */
 function selectAssigneeScope(
+  userId: Id,
   isACoach: boolean,
-  isCoacheeMode: boolean
-): Option<AssigneeScope> {
-  if (isCoacheeMode) return Some(AssigneeScope.Coachee);
-  if (isACoach) return Some(AssigneeScope.Coach);
+  isCoacheeMode: boolean,
+  filteredToColleagues: boolean
+): Option<AssigneeScope | Id> {
+  if (isCoacheeMode) return filteredToColleagues ? None : Some(AssigneeScope.Coachee);
+  if (isACoach) return Some(userId);
   return None;
 }
 
@@ -62,7 +69,7 @@ function selectAssigneeScope(
  * Fetches actions via the batch relationship-actions endpoint.
  *
  * All views hit the same endpoint, differentiated by `assignee`:
- * - Coach "My Actions" toggle: assignee=coach (strict-contains)
+ * - Coach "My Actions" toggle: assignee=<own user id>, across coaching and colleague relationships
  * - Coach "Coachee Actions" toggle: assignee=coachee (strict-contains)
  * - Coachee broad view: assignee omitted (backend visibility predicate returns
  *   self-assigned ∪ unassigned)
@@ -93,7 +100,10 @@ export function useActionsFetch(
   const roleKnown = !!userId && !relationshipsLoading && !relationshipsError;
 
   const isCoacheeMode = viewMode === CoachViewMode.CoacheeActions;
-  const assigneeScope = selectAssigneeScope(isUserCoach(userId, relationships), isCoacheeMode);
+  const filteredToColleagues = relationships.some(
+    (r) => r.id === relationshipId && r.kind === RelationshipKind.Colleague
+  );
+  const assigneeScope = selectAssigneeScope(userId, coachesAnyone(relationships), isCoacheeMode, filteredToColleagues);
 
   const params = assignmentFilterToRelationshipActionsParams(assignmentFilter, assigneeScope);
 

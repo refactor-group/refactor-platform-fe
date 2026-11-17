@@ -97,13 +97,13 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const weekOffset = useWeekGridStore((s) => s.weekOffset);
   const week = useWeekAt(weekOffset, now, timezone);
   const isCurrentWeek = weekOffset === CURRENT_WEEK;
-  const isCoach = useAuthStore((s) => s.isACoach);
+  const isScheduler = useAuthStore((s) => s.canScheduleSessions);
   const navigation = useWeekNavigation(isCurrentWeek, week);
   const { sessions, isLoading, isError, refresh } = useWeekSessions(week);
   const adjacent = useAdjacentWeekSessions(week);
   // SWR keeps the last sessions when a read fails, so they stay visible but can't be changed.
   const readOnly = isError;
-  const canSchedule = isCoach && !readOnly;
+  const canSchedule = isScheduler && !readOnly;
   const viewerId = useAuthStore((s) => s.userId);
   const filter = useWeekFilter();
   const { selected } = filter;
@@ -187,7 +187,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
     title: weekTitle(weekOffset, week),
     range: weekRange(week),
     navigation,
-    filter: isCoach
+    filter: isScheduler
       ? Some({
           people: filter.people,
           grouped: filter.grouped,
@@ -197,7 +197,7 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
           onOpen: filter.load,
         })
       : None,
-    onSchedule: isCoach ? Some(() => onSchedule(None)) : None,
+    onSchedule: isScheduler ? Some(() => onSchedule(None)) : None,
     readOnly,
   };
   const scheduleDay = canSchedule ? Some((day: DateTime) => onSchedule(Some(day))) : None;

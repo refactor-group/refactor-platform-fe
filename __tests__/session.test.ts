@@ -20,6 +20,8 @@ import {
   createMockRelationship,
   createMockSession,
   createSessionAt,
+  COACHEE_VIEWER,
+  COLLEAGUE_VIEWER,
   createMockEnrichedSession,
   createEnrichedSessionAt,
 } from "./test-utils";
@@ -291,7 +293,7 @@ describe("getSessionParticipantInfo", () => {
     const session = createMockEnrichedSession();
     const info = getSessionParticipantInfo(session, "coach-1");
     expect(info).not.toBeNull();
-    expect(info?.isCoach).toBe(true);
+    expect(info?.canSchedule).toBe(true);
     expect(info?.userRole).toBe(RelationshipRole.Coach);
     expect(info?.participantName).toBe("Alex Chen");
     expect(info?.firstName).toBe("Alex");
@@ -299,14 +301,30 @@ describe("getSessionParticipantInfo", () => {
   });
 
   it("returns coachee-role info when the viewer is the coachee", () => {
-    const session = createMockEnrichedSession();
+    const base = createMockEnrichedSession();
+    const session = createMockEnrichedSession({ relationship: { ...base.relationship!, viewer: COACHEE_VIEWER } });
     const info = getSessionParticipantInfo(session, "coachee-1");
     expect(info).not.toBeNull();
-    expect(info?.isCoach).toBe(false);
+    expect(info?.canSchedule).toBe(false);
     expect(info?.userRole).toBe(RelationshipRole.Coachee);
     expect(info?.participantName).toBe("Jim Hodapp");
     expect(info?.firstName).toBe("Jim");
     expect(info?.lastName).toBe("Hodapp");
+  });
+
+  it("lets either colleague schedule, as the backend says", () => {
+    const base = createMockEnrichedSession();
+    const session = createMockEnrichedSession({ relationship: { ...base.relationship!, viewer: COLLEAGUE_VIEWER } });
+    const info = getSessionParticipantInfo(session, "coachee-1");
+    expect(info?.canSchedule).toBe(true);
+    expect(info?.userRole).toBe(RelationshipRole.Colleague);
+    expect(info?.participantName).toBe("Jim Hodapp");
+  });
+
+  it("returns null for a viewer who isn't in the relationship", () => {
+    const base = createMockEnrichedSession();
+    const session = createMockEnrichedSession({ relationship: { ...base.relationship!, viewer: null } });
+    expect(getSessionParticipantInfo(session, "admin-1")).toBeNull();
   });
 
   it("returns null when the session has no relationship", () => {
@@ -318,8 +336,8 @@ describe("getSessionParticipantInfo", () => {
     const session = createMockEnrichedSession({ coachee: undefined });
     const info = getSessionParticipantInfo(session, "coach-1");
     expect(info).not.toBeNull();
-    expect(info?.isCoach).toBe(true);
-    expect(info?.participantName).toBe("Coachee (data not loaded)");
+    expect(info?.canSchedule).toBe(true);
+    expect(info?.participantName).toBe("(data not loaded)");
     expect(info?.firstName).toBe("");
     expect(info?.lastName).toBe("");
     expect(info?.isMissing).toBe(true);

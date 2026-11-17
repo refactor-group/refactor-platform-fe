@@ -13,7 +13,7 @@ import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { Some, None } from "@/types/option";
 import type { Id } from "@/types/general";
-import { createMockAction } from "../../../test-utils";
+import { createMockAction, viewerFor } from "../../../test-utils";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -73,7 +73,7 @@ const ACTION_BUTTONS = ["Accept", "Dismiss", "Edit"];
 function renderCard(suggestion: ActionSuggestion, viewerRole: RelationshipRole) {
   return render(
     <Wrapper>
-      <SuggestedActionCard suggestion={suggestion} viewerRole={viewerRole} {...people} />
+      <SuggestedActionCard suggestion={suggestion} viewer={viewerFor(viewerRole)} {...people} />
     </Wrapper>
   );
 }
@@ -168,7 +168,7 @@ function sectionProps(suggestions: ActionSuggestion[], viewerRole = Relationship
     reviewActions: [],
     sessionActions: [createMockAction({ id: "session-action-1", body: "Existing session action" })],
     actionSuggestions: suggestions,
-    viewerRole,
+    viewer: viewerFor(viewerRole),
     locale: "en-US",
     coachId: COACH_ID,
     coachName: "Jim Hodapp",

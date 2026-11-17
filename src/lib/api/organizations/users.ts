@@ -3,14 +3,15 @@
 import { useSWRConfig } from "swr";
 import { Id } from "@/types/general";
 import { EntityApi } from "../entity-api";
-import { User, NewUser, Role } from "@/types/user";
+import { type InviteRelationship, User, NewUser, Role } from "@/types/user";
+import type { Option } from "@/types/option";
 import { ORGANIZATIONS_BASEURL } from "../organizations";
 
 const ORGANIZATIONS_USERS_BASEURL = (organizationId: Id) =>
   `${ORGANIZATIONS_BASEURL}/${organizationId}/users`;
 
-/// `coach_id` is omitted rather than null when no coach is chosen.
-type AttachRoleBody = { role: Role; coach_id?: Id };
+/// `relationship` is omitted rather than null when none is chosen.
+type AttachRoleBody = { role: Role; relationship?: InviteRelationship };
 
 /**
  * API client for user-related operations in the scope of organizations.
@@ -91,11 +92,11 @@ export const UserApi = {
     organizationId: Id,
     userId: Id,
     role: Role,
-    coachId?: Id
+    relationship: Option<InviteRelationship>
   ): Promise<void> =>
     EntityApi.createFn<AttachRoleBody, void>(
       `${ORGANIZATIONS_USERS_BASEURL(organizationId)}/${userId}/role`,
-      { role, ...(coachId ? { coach_id: coachId } : {}) }
+      { role, ...(relationship.some ? { relationship: relationship.val } : {}) }
     ),
 
   /**
@@ -181,9 +182,9 @@ export const useUserMutation = (organizationId: Id) => {
       orgId: Id,
       userId: Id,
       role: Role,
-      coachId?: Id
+      relationship: Option<InviteRelationship>
     ) => {
-      await UserApi.attachExisting(orgId, userId, role, coachId);
+      await UserApi.attachExisting(orgId, userId, role, relationship);
       invalidate(orgId);
     },
     // Returns void deliberately: the response's org-filtered `roles` must not

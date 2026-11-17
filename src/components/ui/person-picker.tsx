@@ -15,6 +15,8 @@ export interface PickerPerson {
   initials: string;
   subline: string;
   inactive: boolean;
+  /** False shows the person, with their subline saying why, but they can't be picked. */
+  selectable: boolean;
 }
 
 interface PersonPickerProps {
@@ -63,9 +65,10 @@ function PersonCard({ person, selected, onSelect }: PersonCardProps) {
     <button
       type="button"
       aria-pressed={selected}
+      disabled={!person.selectable}
       onClick={() => onSelect(person.userId)}
       className={cn(
-        "flex min-h-14 items-center gap-3 rounded-[12px] px-3 py-2.5 text-left transition-colors duration-150 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
+        "flex min-h-14 items-center gap-3 rounded-[12px] px-3 py-2.5 text-left transition-colors duration-150 hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-55 motion-reduce:transition-none",
         selected && "bg-card",
         person.inactive && !selected && "opacity-55"
       )}

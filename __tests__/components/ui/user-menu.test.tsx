@@ -7,6 +7,7 @@ import { Role, type UserRoleState } from '@/types/user';
 
 const h = vi.hoisted(() => ({
   isACoach: false,
+  canScheduleSessions: false,
   isSuperAdmin: false,
   currentOrganizationId: 'org-1' as string | null,
   roleState: {} as UserRoleState,
@@ -21,7 +22,7 @@ vi.mock('@/lib/providers/auth-store-provider', () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
     selector({
       userId: 'user-1',
-      isACoach: h.isACoach,
+      isACoach: h.isACoach, canScheduleSessions: h.isACoach,
       userSession: {
         id: 'user-1',
         first_name: 'Test',

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { type PickerPerson, PersonPicker } from "@/components/ui/new-session/person-picker";
+import { type PickerPerson, PersonPicker } from "@/components/ui/person-picker";
 import { None, Some } from "@/types/option";
 
 const person = (userId: string, fullName: string, inactive = false): PickerPerson => ({
@@ -9,6 +9,7 @@ const person = (userId: string, fullName: string, inactive = false): PickerPerso
   initials: fullName.split(" ").map((p) => p[0]).join(""),
   subline: inactive ? "Last session Jun 12" : "Usually Tuesdays, 2:30 PM",
   inactive,
+  selectable: true,
 });
 
 const PEOPLE = [
@@ -70,6 +71,17 @@ describe("PersonPicker", () => {
     expect(card("Dana Ortiz")).toBeInTheDocument();
     expect(card("Omar Haddad")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Show everyone (+2 inactive)" })).toBeInTheDocument();
+  });
+
+  it("shows an unselectable person without letting them be picked", () => {
+    const onSelect = vi.fn();
+    const taken = { ...person("u-ehab", "Ehab Badawi"), subline: "Already Cara's coach", selectable: false };
+    render(<PersonPicker people={[taken]} selectedId={None} onSelect={onSelect} />);
+    const button = card("Ehab Badawi");
+    expect(button).toBeDisabled();
+    expect(button).toHaveTextContent("Already Cara's coach");
+    fireEvent.click(button!);
+    expect(onSelect).not.toHaveBeenCalled();
   });
 
   it("has no link when everyone is active", () => {
