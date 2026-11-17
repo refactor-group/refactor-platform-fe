@@ -126,7 +126,7 @@ for (const viewport of VIEWPORTS) {
       relationships.mode = { kind: 'serve', relationships: [] }
       await openSchedule(page)
       await inState(page, viewport, 'Who › empty', async () => {
-        await expect(dialog(page).getByText("You don't coach anyone in this organization yet.")).toBeVisible()
+        await expect(dialog(page).getByText("You have nobody to schedule with in this organization yet.")).toBeVisible()
       })
     })
 
@@ -134,7 +134,7 @@ for (const viewport of VIEWPORTS) {
       await start(page, context, viewport, { mode: { kind: 'fail' } })
       await openSchedule(page)
       await inState(page, viewport, 'Who › error', async () => {
-        await expect(dialog(page).getByText("Couldn't load the people you coach. Close and try again.")).toBeVisible()
+        await expect(dialog(page).getByText("Couldn't load who you can schedule with. Close and try again.")).toBeVisible()
       })
     })
 

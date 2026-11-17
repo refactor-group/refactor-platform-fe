@@ -12,7 +12,7 @@ import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-s
 import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionEdits, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { Some, None } from "@/types/option";
-import { createMockAction } from "../../../test-utils";
+import { createMockAction, COACH_VIEWER } from "../../../test-utils";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 const PICKED = DateTime.fromISO("2026-11-02T12:00:00Z");
@@ -81,7 +81,7 @@ function renderCard(suggestion: ActionSuggestion) {
     <Wrapper>
       <SuggestedActionCard
         suggestion={suggestion}
-        viewerRole={RelationshipRole.Coach}
+        viewer={COACH_VIEWER}
         {...people}
         {...handlers}
       />
@@ -182,7 +182,7 @@ describe("ActionSectionContent accept with edits", () => {
           reviewActions={[]}
           sessionActions={[]}
           actionSuggestions={[suggestion]}
-          viewerRole={RelationshipRole.Coach}
+          viewer={COACH_VIEWER}
           {...people}
           isAddingAction={false}
           onAddingActionChange={vi.fn()}

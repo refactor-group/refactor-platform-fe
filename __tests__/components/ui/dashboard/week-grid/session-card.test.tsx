@@ -6,7 +6,7 @@ import { defaultCoachingSessionTopic } from "@/types/coaching-session-topic";
 import { cardView, CardTense, type CardContext } from "@/lib/week-grid/card";
 import { SessionAction } from "@/lib/session-actions";
 import { SessionCard } from "@/components/ui/dashboard/week-grid/session-card";
-import { createMockEnrichedSession } from "../../../../test-utils";
+import { createMockEnrichedSession, COACH_VIEWER, COACHEE_VIEWER } from "../../../../test-utils";
 
 const TZ = "America/Chicago";
 // 1:45 PM in Chicago.
@@ -16,9 +16,12 @@ const COACHEE: CardContext = { viewerId: "coachee-1", now: NOW, timezone: TZ };
 
 const topics = (n: number) => Array.from({ length: n }, () => defaultCoachingSessionTopic());
 
+const BASE = createMockEnrichedSession();
+
 function view(utc: string, topicCount: number, context = COACH, series = false) {
   return cardView(
     createMockEnrichedSession({
+      relationship: { ...BASE.relationship!, viewer: context === COACHEE ? COACHEE_VIEWER : COACH_VIEWER },
       id: "s-1",
       date: utc,
       duration_minutes: 50,

@@ -13,7 +13,7 @@ import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { type TranscriptSegment } from "@/types/transcription";
 import { Some, None } from "@/types/option";
-import { createMockAction } from "../../../test-utils";
+import { createMockAction, COACH_VIEWER } from "../../../test-utils";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 vi.mock("@/lib/toast", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
@@ -191,7 +191,7 @@ describe("SuggestedActionCard quote link", () => {
       <Wrapper>
         <SuggestedActionCard
           suggestion={suggestion}
-          viewerRole={RelationshipRole.Coach}
+          viewer={COACH_VIEWER}
           locale="en-US"
           coachId="coach-1"
           coachName="Jim Hodapp"

@@ -67,7 +67,7 @@ describe("CoachingPreferencesSection", () => {
 
   describe("auth gating", () => {
     it("does not render the section for non-coaches", () => {
-      mockAuthStore.mockReturnValue({ isACoach: false, userId: "user-1" });
+      mockAuthStore.mockReturnValue({ isACoach: false, canScheduleSessions: false, userId: "user-1" });
       const { container } = render(<CoachingPreferencesSection />);
       expect(container.innerHTML).toBe("");
     });
@@ -75,7 +75,7 @@ describe("CoachingPreferencesSection", () => {
 
   describe("auto-save behavior", () => {
     beforeEach(() => {
-      mockAuthStore.mockReturnValue({ isACoach: true, userId: "user-1" });
+      mockAuthStore.mockReturnValue({ isACoach: true, canScheduleSessions: true, userId: "user-1" });
     });
 
     it("calls useUserMutation().update with the new value after the debounce window", async () => {
@@ -202,7 +202,7 @@ describe("CoachingPreferencesSection", () => {
   describe("working hours", () => {
     beforeEach(() => {
       mockUpdate.mockResolvedValue(undefined);
-      mockAuthStore.mockReturnValue({ isACoach: true, userId: "user-1" });
+      mockAuthStore.mockReturnValue({ isACoach: true, canScheduleSessions: true, userId: "user-1" });
       mockUserState = {
         ...mockUserState,
         user: createMockUser({ id: "user-1", working_hours_start: "08:00", working_hours_end: "17:30" }),

@@ -103,13 +103,13 @@ export function useSessionActions({
       // The mutation's own invalidation misses the user-scoped session caches.
       onSessionsChanged();
       setDeleteState({ kind: "closed" });
-      sonnerToast.success(sessionRemovedMessage(session, relationships, userTimezone, removal));
+      sonnerToast.success(sessionRemovedMessage(session, relationships, userSession.id, userTimezone, removal));
     } catch (err) {
       console.error("Failed to delete coaching session:", err);
       sonnerToast.error(removalFailedMessage(removal, err));
       setDeleteState({ kind: "closed" });
     }
-  }, [deleteState, deleteSession, onSessionsChanged, relationships, userTimezone]);
+  }, [deleteState, deleteSession, onSessionsChanged, relationships, userSession.id, userTimezone]);
 
   const { requestResend } = resend;
   const run = useCallback(

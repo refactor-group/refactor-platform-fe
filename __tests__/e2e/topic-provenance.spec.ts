@@ -3,6 +3,7 @@ import {
   setupAuthentication,
   mockCommonApiRoutes,
   MOCK_USER_ID,
+  COACHEE_VIEWER,
 } from './helpers'
 
 // The carried-over provenance line only renders inside the Radix HoverCard on
@@ -33,6 +34,9 @@ const COACHEE_RELATIONSHIP = {
   kind: 'coaching',
   coach_is_member: true,
   coachee_is_member: true,
+  viewer: COACHEE_VIEWER,
+  suggests_actions: true,
+  scheduling_blocked_by: null,
 }
 
 const makeTopic = (over: Record<string, unknown> = {}) => ({

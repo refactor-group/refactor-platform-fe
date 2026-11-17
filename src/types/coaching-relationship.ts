@@ -1,6 +1,8 @@
 import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
 import { User } from "@/types/user";
+import { type Option, None, Some } from "@/types/option";
+import { RelationshipRole } from "@/types/relationship-role";
 
 export enum RelationshipKind {
   Coaching = "coaching",
@@ -19,6 +21,67 @@ export interface CoachingRelationship {
   /** False once they leave the organization: nothing new can be scheduled with or assigned to them. */
   coach_is_member: boolean;
   coachee_is_member: boolean;
+  /** What the signed-in user may do here, computed by the backend. Null for a non-participant. */
+  viewer: RelationshipViewer | null;
+  /** Its sessions get suggested actions. */
+  suggests_actions: boolean;
+  /** The participant whose leaving the organization blocks scheduling, or null. */
+  scheduling_blocked_by: Id | null;
+}
+
+/**
+ * The caller's role and permissions in one relationship, from the same backend checks that
+ * enforce them. Display only: never derive these from coach_id or coachee_id.
+ */
+export interface RelationshipViewer {
+  role: RelationshipRole;
+  /** Schedule, reschedule, cancel, run series, resend invites, delete anyone's topic. */
+  can_schedule_sessions: boolean;
+  /** Every action in the relationship, and full suggestion review. */
+  sees_all_actions: boolean;
+}
+
+/** Until the backend's viewer loads: the most restricted participant. */
+export const RESTRICTED_VIEWER: RelationshipViewer = {
+  role: RelationshipRole.Coachee,
+  can_schedule_sessions: false,
+  sees_all_actions: false,
+};
+
+export function viewerOf(relationship: CoachingRelationship): Option<RelationshipViewer> {
+  return relationship.viewer ? Some(relationship.viewer) : None;
+}
+
+export function canScheduleSessionsIn(relationship: CoachingRelationship): boolean {
+  const viewer = viewerOf(relationship);
+  return viewer.some && viewer.val.can_schedule_sessions;
+}
+
+export function schedulingBlockedBy(relationship: CoachingRelationship): Option<Id> {
+  return relationship.scheduling_blocked_by ? Some(relationship.scheduling_blocked_by) : None;
+}
+
+/** Offer schedule, reschedule and resend. Cancel and delete only need canScheduleSessionsIn. */
+export function canScheduleNowIn(relationship: CoachingRelationship): boolean {
+  return canScheduleSessionsIn(relationship) && schedulingBlockedBy(relationship).none;
+}
+
+/** Coaches someone in at least one of the relationships. Colleagues don't count. */
+export function coachesAnyone(relationships: readonly CoachingRelationship[]): boolean {
+  return relationships.some((r) => {
+    const viewer = viewerOf(r);
+    return viewer.some && viewer.val.role === RelationshipRole.Coach;
+  });
+}
+
+/** May schedule in at least one of the relationships: shows the scheduling entry points. */
+export function canScheduleInAny(relationships: readonly CoachingRelationship[]): boolean {
+  return relationships.some(canScheduleSessionsIn);
+}
+
+export function seesAllActionsIn(relationship: CoachingRelationship): boolean {
+  const viewer = viewerOf(relationship);
+  return viewer.some && viewer.val.sees_all_actions;
 }
 
 // This must always reflect the Rust struct on the backend
@@ -117,6 +180,9 @@ export function defaultCoachingRelationshipWithUserNames(): CoachingRelationship
     updated_at: now,
     coach_is_member: true,
     coachee_is_member: true,
+    viewer: null,
+    suggests_actions: true,
+    scheduling_blocked_by: null,
   };
 }
 
@@ -136,24 +202,35 @@ export function coachingRelationshipsWithUserNamesToString(
   return JSON.stringify(relationships);
 }
 
+const isCoaching = (r: CoachingRelationship): boolean => r.kind !== RelationshipKind.Colleague;
+
 /**
- * Checks if a user is a coach in any of the provided relationships
+ * Checks if a user coaches anyone in the provided relationships. Describes the
+ * relationships; for what the signed-in user may do, read `viewer`.
  */
 export function isUserCoach(
   userId: Id,
   relationships: CoachingRelationshipWithUserNames[]
 ): boolean {
-  return relationships.some(r => r.coach_id === userId);
+  return relationships.some(r => isCoaching(r) && r.coach_id === userId);
 }
 
 /**
- * Checks if a user is a coachee in any of the provided relationships
+ * Checks if anyone coaches the user in the provided relationships
  */
 export function isUserCoachee(
   userId: Id,
   relationships: CoachingRelationshipWithUserNames[]
 ): boolean {
-  return relationships.some(r => r.coachee_id === userId);
+  return relationships.some(r => isCoaching(r) && r.coachee_id === userId);
+}
+
+/** The user's colleague relationships. */
+export function getColleagueRelationships(
+  userId: Id,
+  relationships: CoachingRelationshipWithUserNames[]
+): CoachingRelationshipWithUserNames[] {
+  return relationships.filter(r => !isCoaching(r) && (r.coach_id === userId || r.coachee_id === userId));
 }
 
 /**
@@ -183,7 +260,7 @@ export function getRelationshipsAsCoach(
   userId: Id,
   relationships: CoachingRelationshipWithUserNames[]
 ): CoachingRelationshipWithUserNames[] {
-  return relationships.filter(r => r.coach_id === userId);
+  return relationships.filter(r => isCoaching(r) && r.coach_id === userId);
 }
 
 /**
@@ -193,22 +270,17 @@ export function getRelationshipsAsCoachee(
   userId: Id,
   relationships: CoachingRelationshipWithUserNames[]
 ): CoachingRelationshipWithUserNames[] {
-  return relationships.filter(r => r.coachee_id === userId);
+  return relationships.filter(r => isCoaching(r) && r.coachee_id === userId);
 }
 
 /**
- * Returns every relationship the user participates in, in either role.
- * Deduplicated by id: a user can hold both roles in the same relationship.
+ * Returns every relationship the user participates in, coaching or colleague.
  */
 export function getRelationshipsForUser(
   userId: Id,
   relationships: CoachingRelationshipWithUserNames[]
 ): CoachingRelationshipWithUserNames[] {
-  const participants = [
-    ...getRelationshipsAsCoach(userId, relationships),
-    ...getRelationshipsAsCoachee(userId, relationships),
-  ];
-  return Array.from(new Map(participants.map((r) => [r.id, r])).values());
+  return relationships.filter((r) => r.coach_id === userId || r.coachee_id === userId);
 }
 
 /**

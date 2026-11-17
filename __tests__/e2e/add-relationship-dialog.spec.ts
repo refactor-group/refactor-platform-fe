@@ -62,6 +62,7 @@ const ADMIN_AUTH_STORE_STATE = {
     isLoggedIn: true,
     isCurrentCoach: false,
     isACoach: true,
+    canScheduleSessions: true,
   },
   version: 2,
 }

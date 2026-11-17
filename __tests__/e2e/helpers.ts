@@ -22,6 +22,28 @@ interface MockCoachingRelationship {
   kind: string
   coach_is_member: boolean
   coachee_is_member: boolean
+  viewer: MockRelationshipViewer | null
+  suggests_actions: boolean
+  scheduling_blocked_by: string | null
+}
+
+/** Mirrors RelationshipViewer: what the backend says the signed-in user may do. */
+interface MockRelationshipViewer {
+  role: 'coach' | 'coachee' | 'colleague'
+  can_schedule_sessions: boolean
+  sees_all_actions: boolean
+}
+
+export const COACH_VIEWER: MockRelationshipViewer = {
+  role: 'coach',
+  can_schedule_sessions: true,
+  sees_all_actions: true,
+}
+
+export const COACHEE_VIEWER: MockRelationshipViewer = {
+  role: 'coachee',
+  can_schedule_sessions: false,
+  sees_all_actions: false,
 }
 
 /** Mirrors CoachingSession (src/types/coaching-session.ts) */
@@ -81,6 +103,7 @@ export const AUTH_STORE_STATE = {
     isLoggedIn: true,
     isCurrentCoach: false,
     isACoach: true,
+    canScheduleSessions: true,
   },
   version: 2,
 }
@@ -122,6 +145,9 @@ export function mockRelationship(
     kind: 'coaching',
     coach_is_member: true,
     coachee_is_member: true,
+    viewer: COACH_VIEWER,
+    suggests_actions: true,
+    scheduling_blocked_by: null,
     ...overrides,
   }
 }

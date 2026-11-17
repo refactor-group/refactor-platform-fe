@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "ts-luxon";
 import { Some } from "@/types/option";
-import { createMockEnrichedSession } from "../../test-utils";
+import { COACHEE_VIEWER, COLLEAGUE_VIEWER, createMockEnrichedSession } from "../../test-utils";
+import type { RelationshipViewer } from "@/types/coaching-relationship";
 import { defaultCoachingSessionTopic } from "@/types/coaching-session-topic";
 import { CardFooter, CardTense, cardNoteText, cardView, type CardContext } from "@/lib/week-grid/card";
 
@@ -25,12 +26,14 @@ describe("cardView", () => {
     expect(view.start.toFormat("HH:mm")).toBe("16:30");
   });
 
-  it("names the other person and grants management only to the coach", () => {
+  it("names the other person and grants management as the backend says", () => {
     const s = session("2026-08-18T21:30:00", 0);
+    const seenBy = (viewer: RelationshipViewer) => ({ ...s, relationship: { ...s.relationship!, viewer } });
     expect(cardView(s, COACH).name).toBe("Alex Chen");
     expect(cardView(s, COACH).canManage).toBe(true);
-    expect(cardView(s, COACHEE).name).toBe("Jim Hodapp");
-    expect(cardView(s, COACHEE).canManage).toBe(false);
+    expect(cardView(seenBy(COACHEE_VIEWER), COACHEE).name).toBe("Jim Hodapp");
+    expect(cardView(seenBy(COACHEE_VIEWER), COACHEE).canManage).toBe(false);
+    expect(cardView(seenBy(COLLEAGUE_VIEWER), COACHEE).canManage).toBe(true);
   });
 
   it("is Live with a pulsing relative note when the session starts soon", () => {
@@ -114,16 +117,14 @@ describe("cardNoteText", () => {
   });
 });
 
-describe("cardView counterpartIsMember", () => {
-  const withMembership = (coachIsMember: boolean, coacheeIsMember: boolean) => {
+describe("cardView schedulingOpen", () => {
+  const blockedBy = (userId: string | null) => {
     const s = session("2026-08-18T21:30:00", 0);
-    return { ...s, relationship: { ...s.relationship!, coach_is_member: coachIsMember, coachee_is_member: coacheeIsMember } };
+    return { ...s, relationship: { ...s.relationship!, scheduling_blocked_by: userId } };
   };
 
-  it("reads the coachee's membership for the coach, and the coach's for the coachee", () => {
-    expect(cardView(withMembership(true, false), COACH).counterpartIsMember).toBe(false);
-    expect(cardView(withMembership(true, false), COACHEE).counterpartIsMember).toBe(true);
-    expect(cardView(withMembership(false, true), COACHEE).counterpartIsMember).toBe(false);
-    expect(cardView(withMembership(true, true), COACH).counterpartIsMember).toBe(true);
+  it("closes scheduling when the backend names someone who left", () => {
+    expect(cardView(blockedBy("coachee-1"), COACH).schedulingOpen).toBe(false);
+    expect(cardView(blockedBy(null), COACH).schedulingOpen).toBe(true);
   });
 });

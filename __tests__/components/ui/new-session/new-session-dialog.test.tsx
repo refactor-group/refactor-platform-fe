@@ -20,12 +20,12 @@ import { toast } from "@/lib/toast";
 import { EntityApiError } from "@/types/entity-api-error";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { None, Some } from "@/types/option";
-import { createMockSession } from "../../../test-utils";
+import { COACHEE_VIEWER, createMockSession } from "../../../test-utils";
 import { ALL, NEAREST, NOW, RELATIONSHIPS, ZONE, at } from "../../../lib/scheduling/roster";
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
-    selector({ userId: "me", isACoach: true, userSession: { id: "me", timezone: "America/Chicago" } }),
+    selector({ userId: "me", isACoach: true, canScheduleSessions: true, userSession: { id: "me", timezone: "America/Chicago" } }),
 }));
 vi.mock("@/lib/hooks/use-current-organization", () => ({
   useCurrentOrganization: () => ({ currentOrganizationId: "org-1" }),
@@ -187,7 +187,7 @@ describe("NewSessionDialog: Who", () => {
   it("says so when there's no one to schedule with", () => {
     serveRelationships(RELATIONSHIPS.filter((r) => r.coach_id !== "me"));
     renderDialog();
-    expect(screen.getByText("You don't coach anyone in this organization yet.")).toBeInTheDocument();
+    expect(screen.getByText("You have nobody to schedule with in this organization yet.")).toBeInTheDocument();
   });
 });
 
@@ -373,7 +373,7 @@ describe("NewSessionDialog: Resolve overlap", () => {
   it("only keeps both when the other session isn't mine to move", () => {
     vi.mocked(useEnrichedCoachingSessionsForUser).mockReturnValue({
       enrichedSessions: ALL.map((s) =>
-        s.id === "e-18" ? { ...s, relationship: { ...s.relationship!, coach_id: "someone-else" } } : s
+        s.id === "e-18" ? { ...s, relationship: { ...s.relationship!, coach_id: "someone-else", viewer: COACHEE_VIEWER } } : s
       ),
       isLoading: false,
       isError: undefined,

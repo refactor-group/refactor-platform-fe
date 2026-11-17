@@ -6,14 +6,14 @@ import { useReplaceSearchParams } from "@/lib/hooks/use-replace-search-params";
 import { DateTime } from "ts-luxon";
 import { toast } from "@/lib/toast";
 import { actionErrorMessage } from "@/lib/utils/action-error-message";
-import { participantNameOf } from "@/lib/utils/relationship";
+import { participantNameOf, relationshipPairLabel } from "@/lib/utils/relationship";
 import { AddBackPurpose } from "@/lib/api/membership-errors";
 import { useNotAMemberToast } from "@/lib/hooks/use-not-a-member-toast";
 import { notAMemberRefusalOf } from "@/types/membership";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
-import { isUserCoachInRelationship, isUserCoacheeInRelationship, sortRelationshipsByParticipantName } from "@/types/coaching-relationship";
+import { sortRelationshipsByParticipantName } from "@/types/coaching-relationship";
 import { useActionMutation } from "@/lib/api/actions";
 import { Some, None } from "@/types/option";
 import { DEFAULT_ACTIONS_VIEW, useActionsView } from "@/lib/hooks/use-actions-view";
@@ -171,18 +171,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
       (r) => r.coach_id === userId || r.coachee_id === userId
     );
     return sortRelationshipsByParticipantName(userRelationships, userId).map(
-      (r) => {
-        const coachLabel = isUserCoachInRelationship(userId, r)
-          ? "You"
-          : `${r.coach_first_name} ${r.coach_last_name}`;
-        const coacheeLabel = isUserCoacheeInRelationship(userId, r)
-          ? "You"
-          : `${r.coachee_first_name} ${r.coachee_last_name}`;
-        return {
-          id: r.id,
-          label: `${coachLabel} \u2192 ${coacheeLabel}`,
-        };
-      }
+      (r) => ({ id: r.id, label: relationshipPairLabel(r, userId) })
     );
   }, [relationships, userId]);
 

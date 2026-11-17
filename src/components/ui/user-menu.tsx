@@ -52,9 +52,9 @@ const THEMES = [
 ] as const;
 
 export function UserMenu() {
-  const { userSession, isACoach } = useAuthStore((state) => ({
+  const { userSession, canScheduleSessions } = useAuthStore((state) => ({
     userSession: state.userSession,
-    isACoach: state.isACoach,
+    canScheduleSessions: state.canScheduleSessions,
   }));
   const logoutUser = useLogoutUser();
   const { currentOrganizationId } = useCurrentOrganization();
@@ -105,7 +105,7 @@ export function UserMenu() {
         )}
         <MenuSeparator />
         <LinkRow href={`/members/${userSession.id}/profile`} icon={User} label="Profile" />
-        {isACoach && <LinkRow href="/settings" icon={Settings} label="Settings" />}
+        {canScheduleSessions && <LinkRow href="/settings" icon={Settings} label="Settings" />}
         <AppearanceRow />
         <MenuSeparator />
         <DropdownMenuItem className={ROW} onSelect={logoutUser}>

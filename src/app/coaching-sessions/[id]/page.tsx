@@ -158,7 +158,7 @@ export default function CoachingSessionsPage() {
     useCurrentCoachingRelationship();
 
   // Coaches can still add/remove goals on past sessions; coachees cannot
-  const { isCoachInCurrentRelationship } = useCurrentRelationshipRole();
+  const { controlsRecording } = useCurrentRelationshipRole();
 
   // Three-pane layout state (focus mode + transcript visibility). URL-backed.
   const layout = useCoachingSessionLayout();
@@ -284,7 +284,7 @@ export default function CoachingSessionsPage() {
     return (
       <ForbiddenError
         title="Coaching Session Access Denied"
-        message="You don't have permission to access this coaching session. Only the coach and coachee can view this session."
+        message="You don't have permission to access this coaching session. Only the people meeting in it can view this session."
       />
     );
   }
@@ -326,7 +326,7 @@ export default function CoachingSessionsPage() {
               <JoinMeetingButton
                 sessionId={currentCoachingSessionId ?? null}
                 meetingUrl={currentCoachingSession?.meeting_url}
-                isCoach={isCoachInCurrentRelationship}
+                controlsRecording={controlsRecording}
               />
               <TranscriptToggleButton
                 isOpen={layout.isTranscriptOpen}
