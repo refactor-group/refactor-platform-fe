@@ -166,7 +166,7 @@ KID is coached by COACH and a colleague of OTHER_COACH in RC2.
 |---|---|---|---|---|
 | COL-50 | New session and new series with MEMBER (stale dialog opened before the removal) | COACH | Refusal toast naming MEMBER: "{Name} is no longer in this organization". Nothing saved, no mail captured | SES-46, SER-24 |
 | COL-51 | Same, COACH also an org admin | COACH as admin | The toast offers **Add back**, which opens Add existing member | SES-46 |
-| COL-52 | RC card menu and upcoming card after a refresh | COACH | `scheduling_blocked_by` names MEMBER. No Reschedule or drag; Resend shown disabled with a note naming MEMBER; Cancel still works | SES-21 |
+| COL-52 | RC card menu and upcoming card after a refresh | COACH | `scheduling_blocked_by` names MEMBER. No Reschedule, Resend invite or drag; the menu's note names MEMBER; Cancel still works | SES-21 |
 | COL-53 | New session **Who** list | COACH | MEMBER isn't offered | SES-46 |
 
 ### 3.7 Suggested actions (`COL-6x`)

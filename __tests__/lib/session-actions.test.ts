@@ -119,24 +119,17 @@ describe("sessionRemovalFor", () => {
 describe("sessionActionsFor when the coachee is no longer a member", () => {
   const items = (session = oneOff) => sessionActionsFor(session, COACH_COACHEE_NOT_MEMBER);
 
-  it("drops Reschedule and Edit series, keeping open, share and cancel", () => {
+  it("drops Reschedule, Edit series and Resend invite, keeping open, share and cancel", () => {
     expect(items(inSeries).map((i) => i.action)).toEqual([
       SessionAction.OpenSession,
       SessionAction.ViewSeries,
       SessionAction.ShareLink,
-      SessionAction.ResendInvite,
       SessionAction.DeleteSession,
       SessionAction.DeleteSeries,
     ]);
   });
 
-  it("keeps Resend invite in place but disabled", () => {
-    const resend = items().find((i) => i.action === SessionAction.ResendInvite);
-    expect(resend?.enabled).toBe(false);
-    expect(items().filter((i) => !i.enabled).map((i) => i.action)).toEqual([SessionAction.ResendInvite]);
-  });
-
-  it("enables every item while both are members", () => {
-    expect(sessionActionsFor(inSeries, COACH_UPCOMING).every((i) => i.enabled)).toBe(true);
+  it("offers Resend invite again while both are members", () => {
+    expect(sessionActionsFor(inSeries, COACH_UPCOMING).map((i) => i.action)).toContain(SessionAction.ResendInvite);
   });
 });

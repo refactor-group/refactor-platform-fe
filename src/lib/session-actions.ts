@@ -37,15 +37,12 @@ export interface SessionActionContext {
 export interface SessionActionItem {
   action: SessionAction;
   group: SessionActionGroup;
-  enabled: boolean;
 }
 
 interface SessionActionRule {
   action: SessionAction;
   group: SessionActionGroup;
   shown: (session: EnrichedCoachingSession, context: SessionActionContext) => boolean;
-  /** Shown but unavailable. Defaults to always enabled. */
-  enabled?: (context: SessionActionContext) => boolean;
 }
 
 const inSeries = (session: EnrichedCoachingSession) => session.coaching_session_series_id.some;
@@ -80,9 +77,7 @@ const RULES: SessionActionRule[] = [
     action: SessionAction.ResendInvite,
     group: SessionActionGroup.Share,
     // The series resend covers its later sessions; a one-off has none once it starts.
-    shown: (s, c) => schedulerUpcoming(c) && (inSeries(s) || !c.hasStarted),
-    // Kept in place, disabled, so the note beside it explains why.
-    enabled: (c) => c.schedulingOpen,
+    shown: (s, c) => canScheduleNow(c) && (inSeries(s) || !c.hasStarted),
   },
   {
     action: SessionAction.DeleteSession,
@@ -100,11 +95,7 @@ export function sessionActionsFor(
   session: EnrichedCoachingSession,
   context: SessionActionContext
 ): SessionActionItem[] {
-  return RULES.filter((rule) => rule.shown(session, context)).map(({ action, group, enabled }) => ({
-    action,
-    group,
-    enabled: enabled ? enabled(context) : true,
-  }));
+  return RULES.filter((rule) => rule.shown(session, context)).map(({ action, group }) => ({ action, group }));
 }
 
 export function sessionRemovalFor(isLocked: boolean): SessionRemoval {

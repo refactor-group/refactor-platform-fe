@@ -98,7 +98,6 @@ function SessionCardMenuItem({
   return (
     <ContextMenuItem
       onSelect={onSelect}
-      disabled={!item.enabled}
       data-testid={sessionActionTestId(item.action)}
       className={cn(isDestructive(item.group) && DESTRUCTIVE_ITEM_CLASS)}
     >
