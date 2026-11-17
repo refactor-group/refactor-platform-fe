@@ -94,6 +94,16 @@ export function nowLineIndex<T>(items: T[], startOf: (item: T) => DateTime, now:
   return next === -1 ? items.length : next;
 }
 
+const NOW_LINE_STEP_MINUTES = 5;
+
+/** How far through a session now is, in 5-minute steps, or None outside it. */
+export function nowLineProgress(start: DateTime, durationMinutes: number, now: DateTime): Option<number> {
+  const elapsed = now.diff(start, "minutes").minutes;
+  if (elapsed < 0 || elapsed >= durationMinutes) return None;
+  const stepped = Math.floor(elapsed / NOW_LINE_STEP_MINUTES) * NOW_LINE_STEP_MINUTES;
+  return Some(stepped / durationMinutes);
+}
+
 /** The now line's time for a day, shown only on today. */
 export function nowLineOn<T>(group: DayGroup<T>, now: DateTime): Option<DateTime> {
   return group.isToday ? Some(now.setZone(group.day.zone)) : None;

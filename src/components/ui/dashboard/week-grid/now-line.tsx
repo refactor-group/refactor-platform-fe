@@ -20,6 +20,24 @@ function NowLine({ now }: { now: DateTime }) {
 /** Slots the now line among a day's rendered cards, or above its empty state. */
 export function withNowLine(nodes: ReactNode[], cards: GridCard[], now: Option<DateTime>): ReactNode[] {
   if (now.none) return nodes;
+  for (const [live, { elapsed }] of cards.entries()) {
+    if (elapsed.some) return nodes.map((node, i) => (i === live ? withNowDot(node, elapsed.val, now.val) : node));
+  }
   const at = nowLineIndex(cards, (c) => c.start, now.val);
   return [...nodes.slice(0, at), <NowLine key="now-line" now={now.val} />, ...nodes.slice(at)];
+}
+
+// A session under way shows only the line's dot, on its left edge where the card's fill ends.
+function withNowDot(node: ReactNode, elapsed: number, now: DateTime): ReactNode {
+  return (
+    <div key="now-line" className="relative">
+      {node}
+      <span
+        role="separator"
+        aria-label={`Now, ${timeOfDay(now)}`}
+        className="pointer-events-none absolute left-0 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand"
+        style={{ top: `${elapsed * 100}%` }}
+      />
+    </div>
+  );
 }

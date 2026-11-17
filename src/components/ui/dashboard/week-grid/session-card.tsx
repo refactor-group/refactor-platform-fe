@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useId, useMemo } from "react";
-import type { KeyboardEvent, ReactNode, RefObject, SyntheticEvent } from "react";
+import type { CSSProperties, KeyboardEvent, ReactNode, RefObject, SyntheticEvent } from "react";
 import Link from "next/link";
 import { useDraggable } from "@dnd-kit/core";
 import { ArrowRight, Check } from "lucide-react";
@@ -128,6 +128,7 @@ export function SessionCard({
           {...listeners}
           onClick={onClick}
           onKeyDown={onKeyDown}
+          style={elapsedFill(view)}
           className={cn(
             // A long press opens the card's menu, so it mustn't also select text or show iOS's callout.
             "flex cursor-pointer select-none flex-col gap-1.5 rounded-xl p-[11px] outline-none [-webkit-touch-callout:none]",
@@ -277,4 +278,11 @@ function CardFooterLine({ footer, sessionId }: { footer: CardFooter; sessionId: 
       throw new Error(`Unhandled card footer: ${_exhaustive}`);
     }
   }
+}
+
+// A session under way fills its background from the top as it runs.
+function elapsedFill(view: CardView): CSSProperties {
+  if (view.elapsed.none) return {};
+  const to = `${view.elapsed.val * 100}%`;
+  return { backgroundImage: `linear-gradient(hsl(var(--brand) / .08) ${to}, transparent ${to})` };
 }
