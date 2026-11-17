@@ -1,6 +1,6 @@
 import { MemberList } from "./member-list";
 import { AddMemberButton } from "./add-member-button";
-import type { AddMemberTab } from "./add-member-dialog";
+import type { AddMemberMode } from "@/lib/add-member-dialog-model";
 import type { Option } from "@/types/option";
 import {
   User,
@@ -21,8 +21,7 @@ interface MemberContainerProps {
   userSession: UserSession;
   onRefresh: () => void;
   isLoading: boolean;
-  openAddMemberDialog: Option<AddMemberTab>;
-  productName: string;
+  openAddMemberDialog: Option<AddMemberMode>;
 }
 
 export function MemberContainer({
@@ -31,9 +30,8 @@ export function MemberContainer({
   userSession,
   onRefresh,
   isLoading,
-  /// Opens the AddMemberDialog on this tab
+  /// Opens the AddMemberDialog in this mode
   openAddMemberDialog,
-  productName,
 }: MemberContainerProps) {
   const { setIsACoach, isACoach } = useAuthStore((state) => state);
   const currentUserRoleState = useCurrentUserRole();
@@ -70,7 +68,6 @@ export function MemberContainer({
             openAddMemberDialog={openAddMemberDialog}
             currentUserRoleState={currentUserRoleState}
             organizationMembers={displayUsers}
-            productName={productName}
             canAddExistingMembers={canAddExistingMembers(userSession.roles)}
           />
         )}

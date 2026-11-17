@@ -42,7 +42,7 @@ function RoleStep({ member, role, onRoleChange }: Pick<AddRelationshipDialogMode
           key={choice}
           value={choice}
           title={relationshipRoleLabel(choice)}
-          description={roleDescription(member, choice)}
+          description={roleDescription(member.firstName, choice)}
           info={relationshipRoleExplanation(choice)}
         />
       ))}
