@@ -151,7 +151,7 @@ describe("AddMemberDialog – creating a member", () => {
     await fillNewPerson(user);
     await next(user);
     await pickGrace(user);
-    expect(screen.getByText("Ada Lovelace joins Acme as a member, coached by Grace Hopper")).toBeInTheDocument();
+    expect(screen.getByText("Ada Lovelace to Acme as a member, coached by Grace Hopper")).toBeInTheDocument();
     await user.click(addButton());
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());

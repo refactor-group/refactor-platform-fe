@@ -2,7 +2,7 @@ import type { StepDialogLead, StepRailItem } from "@/components/ui/step-dialog";
 import { type Member, roleDescription } from "@/lib/add-relationship-dialog-model";
 import type { Id } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
-import { RelationshipRole } from "@/types/relationship-role";
+import { RelationshipRole, relationshipRoleExplanation } from "@/types/relationship-role";
 import { type NewUser, Role, type UserLookupResult } from "@/types/user";
 
 /** Values match the members page's `?addMember=` param. */
@@ -101,8 +101,19 @@ export function accessLabel(role: Role): string {
 
 export function accessDescription(role: Role): string {
   return role === Role.Admin
-    ? "Also manages this organization's members and relationships."
+    ? "Manages this organization's members and relationships."
     : "Works with the people they're paired with.";
+}
+
+/** More than the card line says, from the card's (i). */
+export function accessExplanation(role: Role): string {
+  return role === Role.Admin
+    ? "Everything a member can do, plus adding, removing and pairing members in this organization."
+    : "Can be paired with people in this organization and work with them. Can't add or pair members.";
+}
+
+export function relationshipExplanation(relationship: JoinRelationship): Option<string> {
+  return relationship === JoinRelationship.None ? None : Some(relationshipRoleExplanation(RelationshipRole.Coachee));
 }
 
 export function relationshipLabel(relationship: JoinRelationship): string {
@@ -119,7 +130,7 @@ export function stepTitle(step: AddMemberStep, joiner: Option<Joiner>, organizat
   const possessive = joiner.some ? `${joiner.val.firstName}'s` : "Their";
   switch (step) {
     case AddMemberStep.Person:
-      return "Who's joining";
+      return "New member details";
     case AddMemberStep.Access:
       return `${possessive} access to ${organizationName}`;
     case AddMemberStep.Relationship:
@@ -145,6 +156,7 @@ interface RailInput {
 
 function railItem(step: AddMemberStep, input: RailInput): StepRailItem {
   const current = input.step === step;
+  const passed = input.order.indexOf(step) < input.order.indexOf(input.step);
   switch (step) {
     case AddMemberStep.Person:
       return {
@@ -159,9 +171,15 @@ function railItem(step: AddMemberStep, input: RailInput): StepRailItem {
         current,
       };
     case AddMemberStep.Access:
-      return { id: step, label: "Access", value: accessLabel(input.role), done: true, current };
+      return { id: step, label: "Access", value: accessLabel(input.role), done: input.role !== Role.User || passed, current };
     case AddMemberStep.Relationship:
-      return { id: step, label: "Relationship", value: relationshipLabel(input.relationship), done: true, current };
+      return {
+        id: step,
+        label: "Relationship",
+        value: relationshipLabel(input.relationship),
+        done: input.relationship !== JoinRelationship.None || passed,
+        current,
+      };
     case AddMemberStep.With:
       return {
         id: step,
@@ -185,7 +203,7 @@ export function isComplete(joiner: Option<Joiner>, relationship: JoinRelationshi
   return joiner.some && (relationship === JoinRelationship.None || coach.some);
 }
 
-/** "Ada Lovelace joins Acme as a member, coached by Grace Hopper" */
+/** "Ada Lovelace to Acme as a member, coached by Grace Hopper", under the rail's "Adding" */
 export function summaryLine(
   joiner: Joiner,
   organizationName: string,
@@ -193,7 +211,7 @@ export function summaryLine(
   relationship: JoinRelationship,
   coach: Option<Member>
 ): string {
-  const joins = `${joiner.fullName} joins ${organizationName} as ${role === Role.Admin ? "an admin" : "a member"}`;
+  const joins = `${joiner.fullName} to ${organizationName} as ${role === Role.Admin ? "an admin" : "a member"}`;
   return relationship === JoinRelationship.Coachee && coach.some ? `${joins}, coached by ${coach.val.fullName}` : joins;
 }
 

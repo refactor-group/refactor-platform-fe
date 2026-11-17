@@ -13,9 +13,12 @@ import {
   AddMemberStep,
   JOIN_RELATIONSHIPS,
   type NewPersonFields,
+  type JoinRelationship,
   accessDescription,
+  accessExplanation,
   accessLabel,
   relationshipDescription,
+  relationshipExplanation,
   relationshipLabel,
 } from "@/lib/add-member-dialog-model";
 import { type AddMemberDialogModel, useAddMemberDialog } from "@/lib/hooks/use-add-member-dialog";
@@ -27,6 +30,11 @@ const FIELDS: readonly { name: keyof NewPersonFields; label: string; type: strin
   { name: "displayName", label: "Display name", type: "text" },
   { name: "email", label: "Email", type: "email" },
 ];
+
+function explanationOf(relationship: JoinRelationship): string | undefined {
+  const explanation = relationshipExplanation(relationship);
+  return explanation.some ? explanation.val : undefined;
+}
 
 function ModeChoice({ mode, onModeChange }: Pick<AddMemberDialogModel, "mode" | "onModeChange">) {
   return (
@@ -144,6 +152,7 @@ function AccessStep({ role, onRoleChange }: Pick<AddMemberDialogModel, "role" | 
           value={choice}
           title={accessLabel(choice)}
           description={accessDescription(choice)}
+          info={accessExplanation(choice)}
         />
       ))}
     </RadioGroup>
@@ -169,6 +178,7 @@ function RelationshipStep({
           value={choice}
           title={relationshipLabel(choice)}
           description={relationshipDescription(choice, joiner.val)}
+          info={explanationOf(choice)}
         />
       ))}
     </RadioGroup>

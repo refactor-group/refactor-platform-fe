@@ -4,12 +4,14 @@ import {
   AddMemberStep,
   EMPTY_NEW_PERSON,
   JoinRelationship,
+  accessExplanation,
   coachIdOf,
   joinerOf,
   leadOf,
   newUserOf,
   railOf,
   relationshipDescription,
+  relationshipExplanation,
   stepOrder,
   stepTitle,
   summaryLine,
@@ -63,7 +65,7 @@ describe("stepOrder", () => {
 
 describe("copy", () => {
   it("names the person once known", () => {
-    expect(stepTitle(AddMemberStep.Person, None, "Acme")).toBe("Who's joining");
+    expect(stepTitle(AddMemberStep.Person, None, "Acme")).toBe("New member details");
     expect(stepTitle(AddMemberStep.Access, Some(ADA), "Acme")).toBe("Ada's access to Acme");
     expect(stepTitle(AddMemberStep.Relationship, Some(ADA), "Acme")).toBe("Ada's relationship");
     expect(stepTitle(AddMemberStep.With, Some(ADA), "Acme")).toBe("Ada's coach");
@@ -75,10 +77,18 @@ describe("copy", () => {
     );
   });
 
+  it("explains access and a relationship from the card's (i), but not None", () => {
+    expect(accessExplanation(Role.Admin)).toBe("Everything a member can do, plus adding, removing and pairing members in this organization.");
+    expect(relationshipExplanation(JoinRelationship.None)).toEqual(None);
+    expect(relationshipExplanation(JoinRelationship.Coachee)).toEqual(
+      Some("Meets with their coach, who schedules their sessions. Sees only the actions assigned to them.")
+    );
+  });
+
   it("summarizes who joins, how, and with whom", () => {
-    expect(summaryLine(ADA, "Acme", Role.User, JoinRelationship.None, None)).toBe("Ada Lovelace joins Acme as a member");
+    expect(summaryLine(ADA, "Acme", Role.User, JoinRelationship.None, None)).toBe("Ada Lovelace to Acme as a member");
     expect(summaryLine(ADA, "Acme", Role.Admin, JoinRelationship.Coachee, Some(GRACE))).toBe(
-      "Ada Lovelace joins Acme as an admin, coached by Grace Hopper"
+      "Ada Lovelace to Acme as an admin, coached by Grace Hopper"
     );
   });
 });
@@ -102,20 +112,39 @@ describe("the request", () => {
 });
 
 describe("railOf", () => {
-  it("prompts for the person until known", () => {
-    const rail = railOf({
-      step: AddMemberStep.Person,
-      order: [AddMemberStep.Person, AddMemberStep.Access, AddMemberStep.Relationship],
-      mode: AddMemberMode.Existing,
-      joiner: None,
-      role: Role.User,
-      relationship: JoinRelationship.None,
-      coach: None,
-    });
-    expect(rail.map((r) => [r.label, r.value, r.done])).toEqual([
+  const existing = {
+    order: [AddMemberStep.Person, AddMemberStep.Access, AddMemberStep.Relationship],
+    mode: AddMemberMode.Existing,
+    joiner: None,
+    role: Role.User,
+    relationship: JoinRelationship.None,
+    coach: None,
+  };
+  const doneOf = (input: Parameters<typeof railOf>[0]) => railOf(input).map((r) => [r.label, r.value, r.done]);
+
+  it("prompts for the person, and leaves defaults undone until chosen or passed", () => {
+    expect(doneOf({ ...existing, step: AddMemberStep.Person })).toEqual([
+      ["Person", "Find their account", false],
+      ["Access", "Member", false],
+      ["Relationship", "None", false],
+    ]);
+  });
+
+  it("marks a default done once passed", () => {
+    expect(doneOf({ ...existing, step: AddMemberStep.Relationship })).toEqual([
       ["Person", "Find their account", false],
       ["Access", "Member", true],
-      ["Relationship", "None", true],
+      ["Relationship", "None", false],
+    ]);
+  });
+
+  it("marks a step done once something other than its default is chosen", () => {
+    expect(
+      doneOf({ ...existing, step: AddMemberStep.Person, role: Role.Admin, relationship: JoinRelationship.Coachee })
+    ).toEqual([
+      ["Person", "Find their account", false],
+      ["Access", "Admin", true],
+      ["Relationship", "Coachee", true],
     ]);
   });
 });
