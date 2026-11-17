@@ -17,6 +17,7 @@ const h = vi.hoisted(() => ({
     isError: false as unknown,
   },
   setIsACoach: vi.fn(),
+  setCanScheduleSessions: vi.fn(),
   currentOrganizationId: "",
   setCurrentOrganizationId: vi.fn(),
   lastOrganizationIdByUser: {} as Record<string, string>,
@@ -51,10 +52,11 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
-    selector({ userId: "user-1", isLoggedIn: true, setIsACoach: h.setIsACoach }),
+    selector({ userId: "user-1", isLoggedIn: true, setIsACoach: h.setIsACoach, setCanScheduleSessions: h.setCanScheduleSessions }),
 }));
 
 import { useOrganizationSync } from "@/lib/hooks/use-organization-sync";
+import { COACH_VIEWER, COLLEAGUE_VIEWER } from "../test-utils";
 
 function resetMocks() {
   vi.clearAllMocks();
@@ -177,7 +179,7 @@ describe("useOrganizationSync — coach flag", () => {
 
   it("sets the coach flag once relationships load", () => {
     h.relationshipState = {
-      relationships: [{ id: "rel-1", coach_id: "user-1", coachee_id: "user-2" }],
+      relationships: [{ id: "rel-1", coach_id: "user-1", coachee_id: "user-2", viewer: COACH_VIEWER }],
       isLoading: false,
       isError: false,
     };
@@ -185,5 +187,19 @@ describe("useOrganizationSync — coach flag", () => {
     renderHook(() => useOrganizationSync());
 
     expect(h.setIsACoach).toHaveBeenCalledWith(true);
+    expect(h.setCanScheduleSessions).toHaveBeenCalledWith(true);
+  });
+
+  it("lets a colleague schedule without making them a coach", () => {
+    h.relationshipState = {
+      relationships: [{ id: "rel-1", coach_id: "user-1", coachee_id: "user-2", viewer: COLLEAGUE_VIEWER }],
+      isLoading: false,
+      isError: false,
+    };
+
+    renderHook(() => useOrganizationSync());
+
+    expect(h.setIsACoach).toHaveBeenCalledWith(false);
+    expect(h.setCanScheduleSessions).toHaveBeenCalledWith(true);
   });
 });

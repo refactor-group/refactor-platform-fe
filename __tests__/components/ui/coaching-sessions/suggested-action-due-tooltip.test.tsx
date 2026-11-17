@@ -11,7 +11,7 @@ import { SuggestedActionCard } from "@/components/ui/coaching-sessions/suggested
 import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { Some, None } from "@/types/option";
-import { createMockAction } from "../../../test-utils";
+import { createMockAction, COACH_VIEWER } from "../../../test-utils";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -45,7 +45,7 @@ function renderTwo() {
         <SuggestedActionCard
           key={s.id}
           suggestion={s}
-          viewerRole={RelationshipRole.Coach}
+          viewer={COACH_VIEWER}
           locale="en-US"
           coachId="coach-1"
           coachName="Jim Hodapp"

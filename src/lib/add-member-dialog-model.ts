@@ -1,9 +1,9 @@
 import type { StepDialogLead, StepRailItem } from "@/components/ui/step-dialog";
-import { type Member, roleDescription } from "@/lib/add-relationship-dialog-model";
-import type { Id } from "@/types/general";
+import { type Member, partnerTitle, roleDescription } from "@/lib/add-relationship-dialog-model";
+import { RelationshipKind } from "@/types/coaching-relationship";
 import { type Option, None, Some } from "@/types/option";
-import { RelationshipRole, relationshipRoleExplanation } from "@/types/relationship-role";
-import { type NewUser, Role, type UserLookupResult } from "@/types/user";
+import { RelationshipRole, relationshipRoleExplanation, relationshipRoleLabel } from "@/types/relationship-role";
+import { type InviteRelationship, type NewUser, Role, type UserLookupResult } from "@/types/user";
 
 /** Values match the members page's `?addMember=` param. */
 export enum AddMemberMode {
@@ -22,9 +22,23 @@ export enum AddMemberStep {
 export enum JoinRelationship {
   None = "none",
   Coachee = "coachee",
+  Colleague = "colleague",
 }
 
-export const JOIN_RELATIONSHIPS: readonly JoinRelationship[] = [JoinRelationship.None, JoinRelationship.Coachee];
+export const JOIN_RELATIONSHIPS: readonly JoinRelationship[] = [
+  JoinRelationship.None,
+  JoinRelationship.Coachee,
+  JoinRelationship.Colleague,
+];
+
+/** The new member's role in the relationship, for a choice other than None. */
+function roleOf(relationship: Exclude<JoinRelationship, JoinRelationship.None>): RelationshipRole {
+  return relationship === JoinRelationship.Coachee ? RelationshipRole.Coachee : RelationshipRole.Colleague;
+}
+
+export function joinRoleOf(relationship: JoinRelationship): Option<RelationshipRole> {
+  return relationship === JoinRelationship.None ? None : Some(roleOf(relationship));
+}
 
 export const ACCESS_ROLES: readonly Role[] = [Role.User, Role.Admin];
 
@@ -113,20 +127,25 @@ export function accessExplanation(role: Role): string {
 }
 
 export function relationshipExplanation(relationship: JoinRelationship): Option<string> {
-  return relationship === JoinRelationship.None ? None : Some(relationshipRoleExplanation(RelationshipRole.Coachee));
+  return relationship === JoinRelationship.None ? None : Some(relationshipRoleExplanation(roleOf(relationship)));
 }
 
 export function relationshipLabel(relationship: JoinRelationship): string {
-  return relationship === JoinRelationship.None ? "None" : "Coachee";
+  return relationship === JoinRelationship.None ? "None" : relationshipRoleLabel(roleOf(relationship));
 }
 
 export function relationshipDescription(relationship: JoinRelationship, joiner: Joiner): string {
   return relationship === JoinRelationship.None
     ? "Pair them later from their member card."
-    : roleDescription(joiner.firstName, RelationshipRole.Coachee);
+    : roleDescription(joiner.firstName, roleOf(relationship));
 }
 
-export function stepTitle(step: AddMemberStep, joiner: Option<Joiner>, organizationName: string): string {
+export function stepTitle(
+  step: AddMemberStep,
+  joiner: Option<Joiner>,
+  organizationName: string,
+  relationship: JoinRelationship
+): string {
   const possessive = joiner.some ? `${joiner.val.firstName}'s` : "Their";
   switch (step) {
     case AddMemberStep.Person:
@@ -136,7 +155,9 @@ export function stepTitle(step: AddMemberStep, joiner: Option<Joiner>, organizat
     case AddMemberStep.Relationship:
       return `${possessive} relationship`;
     case AddMemberStep.With:
-      return `${possessive} coach`;
+      return joiner.some && relationship !== JoinRelationship.None
+        ? partnerTitle(joiner.val.firstName, roleOf(relationship))
+        : "Choose who they work with";
     default: {
       const _exhaustive: never = step;
       throw new Error(`Unhandled add member step: ${_exhaustive}`);
@@ -151,7 +172,7 @@ interface RailInput {
   joiner: Option<Joiner>;
   role: Role;
   relationship: JoinRelationship;
-  coach: Option<Member>;
+  partner: Option<Member>;
 }
 
 function railItem(step: AddMemberStep, input: RailInput): StepRailItem {
@@ -184,8 +205,8 @@ function railItem(step: AddMemberStep, input: RailInput): StepRailItem {
       return {
         id: step,
         label: "With",
-        value: input.coach.some ? input.coach.val.fullName : "Choose a person",
-        done: input.coach.some,
+        value: input.partner.some ? input.partner.val.fullName : "Choose a person",
+        done: input.partner.some,
         current,
       };
     default: {
@@ -199,8 +220,23 @@ export function railOf(input: RailInput): StepRailItem[] {
   return input.order.map((step) => railItem(step, input));
 }
 
-export function isComplete(joiner: Option<Joiner>, relationship: JoinRelationship, coach: Option<Member>): boolean {
-  return joiner.some && (relationship === JoinRelationship.None || coach.some);
+export function isComplete(joiner: Option<Joiner>, relationship: JoinRelationship, partner: Option<Member>): boolean {
+  return joiner.some && (relationship === JoinRelationship.None || partner.some);
+}
+
+function withPartner(relationship: JoinRelationship, partner: Member): string {
+  switch (relationship) {
+    case JoinRelationship.None:
+      return "";
+    case JoinRelationship.Coachee:
+      return `, coached by ${partner.fullName}`;
+    case JoinRelationship.Colleague:
+      return `, ${partner.fullName}'s colleague`;
+    default: {
+      const _exhaustive: never = relationship;
+      throw new Error(`Unhandled join relationship: ${_exhaustive}`);
+    }
+  }
 }
 
 /** "Ada Lovelace to Acme as a member, coached by Grace Hopper", under the rail's "Adding" */
@@ -209,24 +245,28 @@ export function summaryLine(
   organizationName: string,
   role: Role,
   relationship: JoinRelationship,
-  coach: Option<Member>
+  partner: Option<Member>
 ): string {
   const joins = `${joiner.fullName} to ${organizationName} as ${role === Role.Admin ? "an admin" : "a member"}`;
-  return relationship === JoinRelationship.Coachee && coach.some ? `${joins}, coached by ${coach.val.fullName}` : joins;
+  return partner.some ? `${joins}${withPartner(relationship, partner.val)}` : joins;
 }
 
-export function coachIdOf(relationship: JoinRelationship, coach: Option<Member>): Option<Id> {
-  return relationship === JoinRelationship.Coachee && coach.some ? Some(coach.val.userId) : None;
+export function inviteRelationshipOf(relationship: JoinRelationship, partner: Option<Member>): Option<InviteRelationship> {
+  if (relationship === JoinRelationship.None || partner.none) return None;
+  return Some({
+    with_user_id: partner.val.userId,
+    kind: relationship === JoinRelationship.Colleague ? RelationshipKind.Colleague : RelationshipKind.Coaching,
+  });
 }
 
-export function newUserOf(fields: NewPersonFields, timezone: string, coachId: Option<Id>): NewUser {
+export function newUserOf(fields: NewPersonFields, timezone: string, relationship: Option<InviteRelationship>): NewUser {
   return {
     first_name: fields.firstName.trim(),
     last_name: fields.lastName.trim(),
     display_name: fields.displayName.trim(),
     email: fields.email.trim(),
     timezone,
-    ...(coachId.some ? { coach_id: coachId.val } : {}),
+    ...(relationship.some ? { relationship: relationship.val } : {}),
   };
 }
 

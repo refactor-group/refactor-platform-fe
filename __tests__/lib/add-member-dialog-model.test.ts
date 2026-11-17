@@ -5,7 +5,7 @@ import {
   EMPTY_NEW_PERSON,
   JoinRelationship,
   accessExplanation,
-  coachIdOf,
+  inviteRelationshipOf,
   joinerOf,
   leadOf,
   newUserOf,
@@ -17,6 +17,7 @@ import {
   summaryLine,
 } from "@/lib/add-member-dialog-model";
 import type { Member } from "@/lib/add-relationship-dialog-model";
+import { RelationshipKind } from "@/types/coaching-relationship";
 import { None, Some } from "@/types/option";
 import { Role } from "@/types/user";
 
@@ -65,15 +66,20 @@ describe("stepOrder", () => {
 
 describe("copy", () => {
   it("names the person once known", () => {
-    expect(stepTitle(AddMemberStep.Person, None, "Acme")).toBe("New member details");
-    expect(stepTitle(AddMemberStep.Access, Some(ADA), "Acme")).toBe("Ada's access to Acme");
-    expect(stepTitle(AddMemberStep.Relationship, Some(ADA), "Acme")).toBe("Ada's relationship");
-    expect(stepTitle(AddMemberStep.With, Some(ADA), "Acme")).toBe("Ada's coach");
+    const none = JoinRelationship.None;
+    expect(stepTitle(AddMemberStep.Person, None, "Acme", none)).toBe("New member details");
+    expect(stepTitle(AddMemberStep.Access, Some(ADA), "Acme", none)).toBe("Ada's access to Acme");
+    expect(stepTitle(AddMemberStep.Relationship, Some(ADA), "Acme", none)).toBe("Ada's relationship");
+    expect(stepTitle(AddMemberStep.With, Some(ADA), "Acme", JoinRelationship.Coachee)).toBe("Choose Ada's coach");
+    expect(stepTitle(AddMemberStep.With, Some(ADA), "Acme", JoinRelationship.Colleague)).toBe("Choose Ada's colleague");
   });
 
   it("describes the coachee choice like Pair with…", () => {
     expect(relationshipDescription(JoinRelationship.Coachee, ADA)).toBe(
       "Ada is coached by the person you pair them with in the next step."
+    );
+    expect(relationshipDescription(JoinRelationship.Colleague, ADA)).toBe(
+      "Ada and the person you pair them with in the next step work together as peers."
     );
   });
 
@@ -90,16 +96,25 @@ describe("copy", () => {
     expect(summaryLine(ADA, "Acme", Role.Admin, JoinRelationship.Coachee, Some(GRACE))).toBe(
       "Ada Lovelace to Acme as an admin, coached by Grace Hopper"
     );
+    expect(summaryLine(ADA, "Acme", Role.User, JoinRelationship.Colleague, Some(GRACE))).toBe(
+      "Ada Lovelace to Acme as a member, Grace Hopper's colleague"
+    );
   });
 });
 
 describe("the request", () => {
-  it("sends a coach only when the coachee choice has one", () => {
-    expect(coachIdOf(JoinRelationship.None, Some(GRACE))).toEqual(None);
-    expect(coachIdOf(JoinRelationship.Coachee, Some(GRACE))).toEqual(Some("grace"));
+  it("sends a relationship only for a choice with a person", () => {
+    expect(inviteRelationshipOf(JoinRelationship.None, Some(GRACE))).toEqual(None);
+    expect(inviteRelationshipOf(JoinRelationship.Coachee, None)).toEqual(None);
+    expect(inviteRelationshipOf(JoinRelationship.Coachee, Some(GRACE))).toEqual(
+      Some({ with_user_id: "grace", kind: RelationshipKind.Coaching })
+    );
+    expect(inviteRelationshipOf(JoinRelationship.Colleague, Some(GRACE))).toEqual(
+      Some({ with_user_id: "grace", kind: RelationshipKind.Colleague })
+    );
   });
 
-  it("trims the new person and leaves coach_id off without a coach", () => {
+  it("trims the new person and leaves relationship off without one", () => {
     expect(newUserOf(ADA_FIELDS, "UTC", None)).toEqual({
       first_name: "Ada",
       last_name: "Lovelace",
@@ -107,7 +122,8 @@ describe("the request", () => {
       email: "ada@example.com",
       timezone: "UTC",
     });
-    expect(newUserOf(ADA_FIELDS, "UTC", Some("grace"))).toHaveProperty("coach_id", "grace");
+    const colleague = { with_user_id: "grace", kind: RelationshipKind.Colleague };
+    expect(newUserOf(ADA_FIELDS, "UTC", Some(colleague))).toHaveProperty("relationship", colleague);
   });
 });
 
@@ -118,7 +134,7 @@ describe("railOf", () => {
     joiner: None,
     role: Role.User,
     relationship: JoinRelationship.None,
-    coach: None,
+    partner: None,
   };
   const doneOf = (input: Parameters<typeof railOf>[0]) => railOf(input).map((r) => [r.label, r.value, r.done]);
 

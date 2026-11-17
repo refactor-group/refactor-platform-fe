@@ -110,7 +110,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.spyOn(console, "log").mockImplementation(() => {});
-  mockAuthStore.mockReturnValue({ isACoach: true, userSession: { id: "me" } });
+  mockAuthStore.mockReturnValue({ isACoach: true, canScheduleSessions: true, userSession: { id: "me" } });
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

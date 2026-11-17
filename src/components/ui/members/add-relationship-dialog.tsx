@@ -85,7 +85,7 @@ interface AddRelationshipDialogProps {
   members: User[];
   relationships: CoachingRelationshipWithUserNames[];
   onClose: () => void;
-  onAdded: () => void;
+  onRelationshipsChanged: () => void;
 }
 
 export function AddRelationshipDialog(props: AddRelationshipDialogProps) {

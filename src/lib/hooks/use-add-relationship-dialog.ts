@@ -5,6 +5,7 @@ import type { PickerPerson } from "@/components/ui/person-picker";
 import type { StepDialogLead, StepRailItem } from "@/components/ui/step-dialog";
 import { useCoachingRelationshipMutation } from "@/lib/api/coaching-relationships";
 import { organizationArchivedMessage } from "@/lib/api/organization-errors";
+import { existingRelationshipOf, isPairAlreadyRelated, pairAlreadyRelatedMessage } from "@/lib/api/relationship-errors";
 import {
   AddRelationshipStep,
   type Member,
@@ -33,7 +34,8 @@ interface AddRelationshipInput {
   /** The member's current relationships. */
   relationships: CoachingRelationshipWithUserNames[];
   onClose: () => void;
-  onAdded: () => void;
+  /** After a pairing, or a refusal that shows the shown relationships were stale. */
+  onRelationshipsChanged: () => void;
 }
 
 export interface RelationshipSummary {
@@ -58,7 +60,10 @@ export interface AddRelationshipDialogModel {
   onNext: Option<() => void>;
 }
 
-function errorMessage(error: unknown): string {
+async function errorMessage(error: unknown, organizationId: Id, member: Member, partner: Member): Promise<string> {
+  if (isPairAlreadyRelated(error)) {
+    return pairAlreadyRelatedMessage(await existingRelationshipOf(error, organizationId), member.fullName, partner.fullName);
+  }
   return (
     organizationArchivedMessage(error) ??
     (isForbiddenError(error) ? PERMISSION_DENIED_MESSAGE : "Couldn't add the relationship")
@@ -71,7 +76,7 @@ export function useAddRelationshipDialog({
   members,
   relationships,
   onClose,
-  onAdded,
+  onRelationshipsChanged,
 }: AddRelationshipInput): AddRelationshipDialogModel {
   const { createNested } = useCoachingRelationshipMutation(organizationId);
   const [step, setStep] = useState(AddRelationshipStep.Role);
@@ -91,11 +96,12 @@ export function useAddRelationshipDialog({
     try {
       await createNested(organizationId, newRelationship(member.userId, partner.val.userId, role.val));
       toast.success(addedMessage(member, partner.val, role.val));
-      onAdded();
+      onRelationshipsChanged();
       onClose();
     } catch (error) {
       console.error("Error adding relationship:", error);
-      toast.error(errorMessage(error));
+      toast.error(await errorMessage(error, organizationId, member, partner.val));
+      if (isPairAlreadyRelated(error)) onRelationshipsChanged();
     } finally {
       setSubmitting(false);
     }

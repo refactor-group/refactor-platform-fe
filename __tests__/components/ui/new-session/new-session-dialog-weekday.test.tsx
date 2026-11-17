@@ -10,7 +10,7 @@ import { ALL, NEAREST, NOW, RELATIONSHIPS } from "../../../lib/scheduling/roster
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
-    selector({ userId: "me", isACoach: true, userSession: { id: "me", timezone: "America/Chicago" } }),
+    selector({ userId: "me", isACoach: true, canScheduleSessions: true, userSession: { id: "me", timezone: "America/Chicago" } }),
 }));
 vi.mock("@/lib/hooks/use-current-organization", () => ({
   useCurrentOrganization: () => ({ currentOrganizationId: "org-1" }),

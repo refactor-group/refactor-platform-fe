@@ -5,6 +5,7 @@ import { SiteHeader } from '@/components/ui/site-header';
 
 const h = vi.hoisted(() => ({
   setIsACoach: vi.fn(),
+  setCanScheduleSessions: vi.fn(),
   openActionCount: vi.fn(),
 }));
 
@@ -18,7 +19,8 @@ vi.mock('@/lib/providers/auth-store-provider', () => ({
       userId: 'user-1',
       isLoggedIn: true,
       isACoach: false,
-      setIsACoach: h.setIsACoach,
+      canScheduleSessions: false,
+      setIsACoach: h.setIsACoach, setCanScheduleSessions: h.setCanScheduleSessions,
       userSession: {
         id: 'user-1',
         first_name: 'Test',
@@ -39,7 +41,7 @@ vi.mock('@/lib/api/organizations', () => ({
 
 vi.mock('@/lib/api/coaching-relationships', () => ({
   useCoachingRelationshipList: () => ({
-    relationships: [{ id: 'rel-1', coach_id: 'user-1', coachee_id: 'user-2' }],
+    relationships: [{ id: 'rel-1', coach_id: 'user-1', coachee_id: 'user-2', viewer: { role: 'coach', can_schedule_sessions: true, sees_all_actions: true } }],
   }),
 }));
 

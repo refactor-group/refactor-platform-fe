@@ -26,6 +26,8 @@ import {
 import { GoalProgress } from "@/types/goal-progress";
 import type { GoalWithProgress } from "@/types/goal-progress";
 import { AssigneeScope } from "@/types/assigned-actions";
+import { RelationshipRole } from "@/types/relationship-role";
+import { RelationshipKind } from "@/types/coaching-relationship";
 import { type Option, Some, None } from "@/types/option";
 import { type Id, isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 import { ProgressRing } from "@/components/ui/dashboard/progress-ring";
@@ -38,6 +40,21 @@ import { GoalsOverviewCardEmpty } from "@/components/ui/dashboard/goals-overview
 const SHOW_VIEW_ALL_GOALS_LINK = false;
 
 /** Maps GoalProgress to a severity rank for computing the aggregate signal. */
+function goalsHeading(role: RelationshipRole, otherName: string): string {
+  switch (role) {
+    case RelationshipRole.Coach:
+      return `${otherName}’s active goals`;
+    case RelationshipRole.Coachee:
+      return "Your active goals";
+    case RelationshipRole.Colleague:
+      return `Active goals with ${otherName}`;
+    default: {
+      const _exhaustive: never = role;
+      throw new Error(`Unhandled relationship role: ${_exhaustive}`);
+    }
+  }
+}
+
 function progressSeverity(progress: GoalProgress): number {
   switch (progress) {
     case GoalProgress.SolidMomentum:
@@ -157,7 +174,10 @@ export function GoalsOverviewCard() {
     isError,
   } = useGoalProgressList(organizationId, relationshipId, {
     coaching_session_id: sessionId,
-    assignee: AssigneeScope.Coachee,
+    // Colleagues have no coachee side, and the backend refuses the filter there.
+    ...(upcomingSession?.relationship?.kind === RelationshipKind.Colleague
+      ? {}
+      : { assignee: AssigneeScope.Coachee }),
   });
 
   // Show loading chrome while any required fetch is in flight.
@@ -180,7 +200,7 @@ export function GoalsOverviewCard() {
       />
     );
 
-  // Resolve the user's role in this specific session — org-wide isACoach
+  // Resolve the user's role in this specific session: org-wide isACoach
   // can't disambiguate users who are coach in one relationship and coachee in
   // another within the same org.
   const participantInfo = userId
@@ -227,9 +247,7 @@ export function GoalsOverviewCard() {
                 <ProgressRing percent={overallPercent} />
                 <div>
                   <p className="text-xs text-muted-foreground">
-                    {participantInfo?.isCoach
-                      ? `${participantInfo.participantName}’s active goals`
-                      : "Your active goals"}
+                    {participantInfo ? goalsHeading(participantInfo.userRole, participantInfo.participantName) : "Your active goals"}
                   </p>
                   <p className="text-lg font-semibold tabular-nums -mt-0.5">
                     {activeGoals.length}

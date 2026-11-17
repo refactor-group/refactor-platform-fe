@@ -8,7 +8,7 @@ import {
   isAdminOrSuperAdmin,
   sortUsersAlphabetically,
 } from "@/types/user";
-import { CoachingRelationshipWithUserNames, isUserCoach } from "@/types/coaching-relationship";
+import { CoachingRelationshipWithUserNames, coachesAnyone } from "@/types/coaching-relationship";
 import { UserSession } from "@/types/user-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
@@ -39,8 +39,8 @@ export function MemberContainer({
 
   // Check if current user is a coach in ANY relationship
   useEffect(() => {
-    setIsACoach(isUserCoach(userSession.id, relationships));
-  }, [relationships, userSession.id, setIsACoach]);
+    setIsACoach(coachesAnyone(relationships));
+  }, [relationships, setIsACoach]);
 
   // Sort users: current user first, then alphabetically by name
   const displayUsers = sortUsersAlphabetically(users, userSession.id);
@@ -68,6 +68,7 @@ export function MemberContainer({
             openAddMemberDialog={openAddMemberDialog}
             currentUserRoleState={currentUserRoleState}
             organizationMembers={displayUsers}
+            relationships={relationships}
             canAddExistingMembers={canAddExistingMembers(userSession.roles)}
           />
         )}

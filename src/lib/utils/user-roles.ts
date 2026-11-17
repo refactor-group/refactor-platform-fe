@@ -3,6 +3,7 @@ import {
   CoachingRelationshipWithUserNames,
   isUserCoach,
   isUserCoachee,
+  getColleagueRelationships,
   getRelationshipsAsCoachee,
 } from "@/types/coaching-relationship";
 import { RelationshipRole, isRelationshipRole, relationshipRoleLabel } from "@/types/relationship-role";
@@ -52,6 +53,9 @@ export function getUserDisplayRoles(
   if (isUserCoachee(user.id, relationships)) {
     roles.add(RelationshipRole.Coachee);
   }
+  if (getColleagueRelationships(user.id, relationships).length > 0) {
+    roles.add(RelationshipRole.Colleague);
+  }
 
   return Array.from(roles)
     .map(role => isRelationshipRole(role) ? relationshipRoleLabel(role) : ROLE_DISPLAY_NAMES[role] ?? role)
@@ -86,4 +90,16 @@ export function getUserCoaches(
 ): readonly string[] {
   return getRelationshipsAsCoachee(userId, relationships)
     .map(r => `${r.coach_first_name} ${r.coach_last_name}`);
+}
+
+/** The names of the user's colleagues, in "FirstName LastName" format */
+export function getUserColleagues(
+  userId: Id,
+  relationships: CoachingRelationshipWithUserNames[]
+): readonly string[] {
+  return getColleagueRelationships(userId, relationships).map(r =>
+    r.coach_id === userId
+      ? `${r.coachee_first_name} ${r.coachee_last_name}`
+      : `${r.coach_first_name} ${r.coach_last_name}`
+  );
 }

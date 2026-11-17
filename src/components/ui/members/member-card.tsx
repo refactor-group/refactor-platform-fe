@@ -5,6 +5,7 @@ import { UserApi, useUserMutation } from "@/lib/api/organizations/users";
 import {
   getUserDisplayRoles,
   getUserCoaches,
+  getUserColleagues,
   getOrganizationMembershipRole,
 } from "@/lib/utils/user-roles";
 import { Badge } from "@/components/ui/badge";
@@ -84,6 +85,7 @@ export function MemberCard({
 
   // Get coaches for this user
   const coaches = getUserCoaches(userId, userRelationships);
+  const colleagues = getUserColleagues(userId, userRelationships);
   const { deleteNested: deleteUser, removeFromOrganization, updateRole } =
     useUserMutation(currentOrganizationId);
 
@@ -253,6 +255,11 @@ export function MemberCard({
         <p className="text-sm text-muted-foreground">
           <span className="font-medium">Coaches:</span> {coaches.length > 0 ? coaches.join(', ') : 'None'}
         </p>
+        {colleagues.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium">Colleagues:</span> {colleagues.join(', ')}
+          </p>
+        )}
       </div>
       {isAdminOrSuperAdmin(currentUserRoleState) && (
         <DropdownMenu
@@ -364,7 +371,7 @@ export function MemberCard({
           members={users}
           relationships={userRelationships}
           onClose={() => setAddRelationshipOpen(false)}
-          onAdded={onRefresh}
+          onRelationshipsChanged={onRefresh}
         />
       )}
     </div>

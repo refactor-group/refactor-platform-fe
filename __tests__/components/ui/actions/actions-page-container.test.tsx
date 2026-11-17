@@ -37,7 +37,7 @@ vi.mock("@/lib/providers/auth-store-provider", async (importOriginal) => {
   return {
     ...actual,
     useAuthStore: (sel: (s: Record<string, unknown>) => unknown) =>
-      sel({ isACoach: true }),
+      sel({ isACoach: true, canScheduleSessions: true }),
   };
 });
 

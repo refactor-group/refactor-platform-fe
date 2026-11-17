@@ -203,7 +203,7 @@ marked `[membership]`).
 | MEM-06 | Search for `kumquat` | COACH | No R1 or R3 hits | SRCH-06 |
 | MEM-07 | Log in | REMOVED (no org) | Toast "Your account has no access yet · Contact support". The dashboard shows no sessions | REL-17, SES-30, ACT-21 |
 | MEM-08 | Open the S3 URL | REMOVED | "Coaching Session Access Denied" page | SES-06 |
-| MEM-09 | Card menu on an S3 or SR3 session | COACH, while REMOVED is out of O1 | **Open session**, **Share link**, **Cancel session…** (and **Cancel series…** on SR3). **Resend invite** / **Resend series invite** shown but disabled. No Reschedule… or Edit series…. A short note in the menu says REMOVED is no longer in the organization | SES-21, SER-12, SES-24, SER-14 |
+| MEM-09 | Card menu on an S3 or SR3 session | COACH, while REMOVED is out of O1 | **Open session**, **Share link**, **Cancel session…** (and **Cancel series…** on SR3). No **Resend invite** / **Resend series invite**, Reschedule… or Edit series…. A short note in the menu says REMOVED is no longer in the organization | SES-21, SER-12, SES-24, SER-14 |
 | MEM-10 | New session dialog Who list | COACH | REMOVED is not offered | SES-09 |
 | MEM-11 | Week grid and upcoming card on S3 | COACH | S3 is not draggable, has no phone **Move**, and the upcoming card has no **Reschedule** | SES-15 |
 | MEM-12 | Clash step, when the overlap is S3 | COACH | S3 is not movable: only "Keep both at {time}" | SES-15 |

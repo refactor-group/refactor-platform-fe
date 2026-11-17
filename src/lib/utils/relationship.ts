@@ -1,4 +1,4 @@
-import { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
+import { CoachingRelationshipWithUserNames, RelationshipKind } from "@/types/coaching-relationship";
 import type { NameLookup } from "@/types/membership";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { User } from "@/types/user";
@@ -123,6 +123,9 @@ export function buildRelationshipWithUserNames(
     updated_at: relationship.updated_at,
     coach_is_member: relationship.coach_is_member,
     coachee_is_member: relationship.coachee_is_member,
+    viewer: relationship.viewer,
+    suggests_actions: relationship.suggests_actions,
+    scheduling_blocked_by: relationship.scheduling_blocked_by,
     coach_first_name: coach?.first_name ?? "Unknown",
     coach_last_name: coach?.last_name ?? "",
     coachee_first_name: coachee?.first_name ?? "Unknown",
@@ -138,4 +141,15 @@ export function participantNameOf(relationship: CoachingRelationshipWithUserName
     if (userId.val === relationship.coachee_id) return Some(getCoacheeName(relationship));
     return None;
   };
+}
+
+/** "You → Cara Test" for coaching, "You and Caleb Bourg" for colleagues. */
+export function relationshipPairLabel(relationship: CoachingRelationshipWithUserNames, userId: Id): string {
+  const name = (id: Id, full: string) => (id === userId ? "You" : full);
+  const coach = name(relationship.coach_id, getCoachName(relationship));
+  const coachee = name(relationship.coachee_id, getCoacheeName(relationship));
+  if (relationship.kind === RelationshipKind.Colleague) {
+    return relationship.coachee_id === userId ? `${coachee} and ${coach}` : `${coach} and ${coachee}`;
+  }
+  return `${coach} \u2192 ${coachee}`;
 }

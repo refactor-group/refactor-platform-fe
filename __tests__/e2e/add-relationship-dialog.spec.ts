@@ -62,6 +62,7 @@ const ADMIN_AUTH_STORE_STATE = {
     isLoggedIn: true,
     isCurrentCoach: false,
     isACoach: true,
+    canScheduleSessions: true,
   },
   version: 2,
 }
@@ -139,11 +140,41 @@ test.describe('Members: pair with someone (e2e)', () => {
     await dialog.getByRole('button', { name: 'Pair them' }).click()
 
     await expect.poll(() => posts.length).toBe(1)
-    expect(posts[0]).toEqual({ coach_id: PAT_ID, coachee_id: CARA_ID })
+    expect(posts[0]).toEqual({
+      coach_id: PAT_ID,
+      coachee_id: CARA_ID,
+      kind: 'coaching',
+    })
     await expect(
       page.getByText("Pat Coach is now Cara Test's coach")
     ).toBeVisible()
     await expect(dialog).toBeHidden()
+  })
+
+  test('adding a colleague POSTs the pair with kind colleague', async ({
+    page,
+  }) => {
+    const posts = await mockMemberRoutes(page, [])
+    await openPairWith(page, 'Cara Test')
+    const dialog = page.getByRole('dialog', { name: 'Pair Cara Test' })
+
+    await dialog.getByRole('radio', { name: 'Colleague' }).click()
+    await dialog.getByRole('button', { name: /^Next/ }).click()
+    await dialog.getByRole('button', { name: /Pat Coach/ }).click()
+    await expect(
+      dialog.getByText('Cara Test and Pat Coach will be colleagues')
+    ).toBeVisible()
+    await dialog.getByRole('button', { name: 'Pair them' }).click()
+
+    await expect.poll(() => posts.length).toBe(1)
+    expect(posts[0]).toEqual({
+      coach_id: CARA_ID,
+      coachee_id: PAT_ID,
+      kind: 'colleague',
+    })
+    await expect(
+      page.getByText('Cara Test and Pat Coach are now colleagues')
+    ).toBeVisible()
   })
 
   test("someone who already coaches the member can't be picked as their coach", async ({

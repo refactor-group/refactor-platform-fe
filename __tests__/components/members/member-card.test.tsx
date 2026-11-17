@@ -112,6 +112,7 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   mockAuthStore.mockReturnValue({
     isACoach: true,
+    canScheduleSessions: true,
     userSession: { id: "me" },
   });
 });

@@ -54,7 +54,7 @@ export function CoachingSessionPanelMobile({
   sessionActions,
   actionSuggestions,
   dismissedSuggestions,
-  viewerRole,
+  viewer,
   onSuggestionAccept,
   onSuggestionDismiss,
   onSuggestionRestore,
@@ -249,7 +249,7 @@ export function CoachingSessionPanelMobile({
                 sessionActions={sessionActions}
                 actionSuggestions={actionSuggestions}
                 dismissedSuggestions={dismissedSuggestions}
-                viewerRole={viewerRole}
+                viewer={viewer}
                 onSuggestionAccept={onSuggestionAccept}
                 onSuggestionDismiss={onSuggestionDismiss}
                 onSuggestionRestore={onSuggestionRestore}

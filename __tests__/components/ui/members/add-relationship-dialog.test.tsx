@@ -2,12 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { AddRelationshipDialog } from "@/components/ui/members/add-relationship-dialog";
 import { toast } from "@/lib/toast";
+import { EntityApiError } from "@/types/entity-api-error";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { User } from "@/types/user";
 
 const createNested = vi.fn();
+const listRelationships = vi.fn();
 vi.mock("@/lib/api/coaching-relationships", () => ({
   useCoachingRelationshipMutation: () => ({ createNested }),
+  CoachingRelationshipApi: { list: (...args: unknown[]) => listRelationships(...args) },
 }));
 vi.mock("@/lib/toast", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 
@@ -17,11 +20,11 @@ const user = (id: string, first: string, last: string): User =>
 const CARA = user("cara", "Cara", "Test");
 const PAT = user("pat", "Pat", "Coach");
 const ANA = user("ana", "Ana", "Bell");
-const PAT_COACHES_CARA = [{ coach_id: "pat", coachee_id: "cara" } as CoachingRelationshipWithUserNames];
+const PAT_COACHES_CARA = [{ coach_id: "pat", coachee_id: "cara", kind: "coaching" } as CoachingRelationshipWithUserNames];
 
 function renderDialog(relationships: CoachingRelationshipWithUserNames[] = []) {
   const onClose = vi.fn();
-  const onAdded = vi.fn();
+  const onRelationshipsChanged = vi.fn();
   render(
     <AddRelationshipDialog
       organizationId="org-1"
@@ -29,10 +32,10 @@ function renderDialog(relationships: CoachingRelationshipWithUserNames[] = []) {
       members={[CARA, PAT, ANA]}
       relationships={relationships}
       onClose={onClose}
-      onAdded={onAdded}
+      onRelationshipsChanged={onRelationshipsChanged}
     />
   );
-  return { onClose, onAdded };
+  return { onClose, onRelationshipsChanged };
 }
 
 const next = () => fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -53,18 +56,18 @@ describe("AddRelationshipDialog", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("adds a coach for the member", async () => {
-    const { onClose, onAdded } = renderDialog();
+    const { onClose, onRelationshipsChanged } = renderDialog();
     fireEvent.click(screen.getByRole("radio", { name: "Coachee" }));
     next();
-    expect(screen.getByRole("heading", { name: "Cara's coach" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Choose Cara's coach" })).toBeInTheDocument();
     expect(confirm()).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: /Pat Coach/ }));
     fireEvent.click(confirm());
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(createNested).toHaveBeenCalledWith("org-1", { coach_id: "pat", coachee_id: "cara" });
+    expect(createNested).toHaveBeenCalledWith("org-1", { coach_id: "pat", coachee_id: "cara", kind: "coaching" });
     expect(toast.success).toHaveBeenCalledWith("Pat Coach is now Cara Test's coach");
-    expect(onAdded).toHaveBeenCalled();
+    expect(onRelationshipsChanged).toHaveBeenCalled();
   });
 
   it("explains a role from its (i) without choosing it", async () => {
@@ -83,7 +86,76 @@ describe("AddRelationshipDialog", () => {
     next();
     fireEvent.click(screen.getByRole("button", { name: /Ana Bell/ }));
     fireEvent.click(confirm());
-    await waitFor(() => expect(createNested).toHaveBeenCalledWith("org-1", { coach_id: "cara", coachee_id: "ana" }));
+    await waitFor(() =>
+      expect(createNested).toHaveBeenCalledWith("org-1", { coach_id: "cara", coachee_id: "ana", kind: "coaching" })
+    );
+  });
+
+  it("makes the member and the partner colleagues", async () => {
+    const { onClose } = renderDialog();
+    fireEvent.click(screen.getByRole("radio", { name: "Colleague" }));
+    next();
+    expect(screen.getByRole("heading", { name: "Choose Cara's colleague" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Ana Bell/ }));
+    expect(screen.getByText("Cara Test and Ana Bell will be colleagues")).toBeInTheDocument();
+    fireEvent.click(confirm());
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(createNested).toHaveBeenCalledWith("org-1", { coach_id: "cara", coachee_id: "ana", kind: "colleague" });
+    expect(toast.success).toHaveBeenCalledWith("Cara Test and Ana Bell are now colleagues");
+  });
+
+  it("won't pick someone in a coaching relationship with the member as a colleague", () => {
+    renderDialog(PAT_COACHES_CARA);
+    fireEvent.click(screen.getByRole("radio", { name: "Colleague" }));
+    next();
+    expect(screen.getByRole("button", { name: /Pat Coach/ })).toBeDisabled();
+  });
+
+  const alreadyRelated = (details: Record<string, unknown>) =>
+    new EntityApiError(
+      "POST",
+      "/organizations/org-1/coaching_relationships",
+      Object.assign(new Error("Request failed"), {
+        isAxiosError: true,
+        response: { status: 409, data: { error: "conflict", details: { reason: "pair_already_related", ...details } } },
+      })
+    );
+
+  const pairCaraWithPatAsColleagues = () => {
+    fireEvent.click(screen.getByRole("radio", { name: "Colleague" }));
+    next();
+    fireEvent.click(screen.getByRole("button", { name: /Pat Coach/ }));
+    fireEvent.click(confirm());
+  };
+
+  it("names the relationship that refused the pairing, and refreshes the list", async () => {
+    createNested.mockRejectedValue(alreadyRelated({ relationship_id: "rel-9" }));
+    listRelationships.mockResolvedValue([{
+      ...PAT_COACHES_CARA[0],
+      id: "rel-9",
+      coach_first_name: "Pat",
+      coach_last_name: "Coach",
+      coachee_first_name: "Cara",
+      coachee_last_name: "Test",
+    }]);
+    const { onClose, onRelationshipsChanged } = renderDialog();
+    pairCaraWithPatAsColleagues();
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Pat Coach is already Cara Test's coach"));
+    expect(listRelationships).toHaveBeenCalledWith("org-1");
+    expect(onRelationshipsChanged).toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("names the pair when the refusing relationship can't be read", async () => {
+    createNested.mockRejectedValue(alreadyRelated({}));
+    renderDialog();
+    pairCaraWithPatAsColleagues();
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Cara Test and Pat Coach already have a relationship")
+    );
   });
 
   it("won't pick someone who already coaches the member", () => {

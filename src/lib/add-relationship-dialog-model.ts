@@ -1,9 +1,11 @@
 import type { PickerPerson } from "@/components/ui/person-picker";
 import type { StepDialogLead, StepRailItem } from "@/components/ui/step-dialog";
 import { initialsOf } from "@/lib/people";
-import type {
-  CoachingRelationshipWithUserNames,
-  NewCoachingRelationship,
+import {
+  type CoachingRelationshipWithUserNames,
+  type NewCoachingRelationship,
+  isPairOf,
+  RelationshipKind,
 } from "@/types/coaching-relationship";
 import type { Id } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
@@ -21,9 +23,13 @@ export const STEP_ORDER: readonly AddRelationshipStep[] = [
 ];
 
 /** What the member becomes in the new relationship. */
-export type MemberRole = RelationshipRole.Coachee | RelationshipRole.Coach;
+export type MemberRole = RelationshipRole;
 
-export const MEMBER_ROLES: readonly MemberRole[] = [RelationshipRole.Coachee, RelationshipRole.Coach];
+export const MEMBER_ROLES: readonly MemberRole[] = [
+  RelationshipRole.Coachee,
+  RelationshipRole.Coach,
+  RelationshipRole.Colleague,
+];
 
 export interface Member {
   userId: Id;
@@ -44,24 +50,53 @@ export function memberOf(user: User): Member {
 }
 
 export function newRelationship(member: Id, partner: Id, role: MemberRole): NewCoachingRelationship {
-  return role === RelationshipRole.Coachee
-    ? { coach_id: partner, coachee_id: member }
-    : { coach_id: member, coachee_id: partner };
+  switch (role) {
+    case RelationshipRole.Coachee:
+      return { coach_id: partner, coachee_id: member, kind: RelationshipKind.Coaching };
+    case RelationshipRole.Coach:
+      return { coach_id: member, coachee_id: partner, kind: RelationshipKind.Coaching };
+    case RelationshipRole.Colleague:
+      return { coach_id: member, coachee_id: partner, kind: RelationshipKind.Colleague };
+    default: {
+      const _exhaustive: never = role;
+      throw new Error(`Unhandled member role: ${_exhaustive}`);
+    }
+  }
 }
 
-/** True when the pair already holds the relationship this role would create. */
+/**
+ * The pair's existing relationship that rules this role out. A pair holds one
+ * relationship, except two people may coach each other.
+ */
+export function blockingRelationship(
+  member: Id,
+  partner: Id,
+  role: MemberRole,
+  relationships: readonly CoachingRelationshipWithUserNames[]
+): Option<CoachingRelationshipWithUserNames> {
+  const { coach_id, coachee_id, kind } = newRelationship(member, partner, role);
+  const found = relationships.find(
+    (r) =>
+      isPairOf(r, member, partner) &&
+      (kind === RelationshipKind.Colleague ||
+        r.kind === RelationshipKind.Colleague ||
+        (r.coach_id === coach_id && r.coachee_id === coachee_id))
+  );
+  return found ? Some(found) : None;
+}
+
 export function alreadyPaired(
   member: Id,
   partner: Id,
   role: MemberRole,
   relationships: readonly CoachingRelationshipWithUserNames[]
 ): boolean {
-  const { coach_id, coachee_id } = newRelationship(member, partner, role);
-  return relationships.some((r) => r.coach_id === coach_id && r.coachee_id === coachee_id);
+  return blockingRelationship(member, partner, role, relationships).some;
 }
 
-function pairedLine(member: Member, role: MemberRole): string {
-  return role === RelationshipRole.Coachee
+function pairedLine(member: Member, existing: CoachingRelationshipWithUserNames): string {
+  if (existing.kind === RelationshipKind.Colleague) return `Already ${member.firstName}'s colleague`;
+  return existing.coachee_id === member.userId
     ? `Already ${member.firstName}'s coach`
     : `Already coached by ${member.firstName}`;
 }
@@ -77,14 +112,14 @@ export function partnerChoices(
     .filter((other) => other.userId !== member.userId)
     .sort((a, b) => a.fullName.localeCompare(b.fullName))
     .map((other) => {
-      const paired = role.some && alreadyPaired(member.userId, other.userId, role.val, relationships);
+      const existing = role.some ? blockingRelationship(member.userId, other.userId, role.val, relationships) : None;
       return {
         userId: other.userId,
         fullName: other.fullName,
         initials: other.initials,
-        subline: paired ? pairedLine(member, role.val) : other.email,
+        subline: existing.some ? pairedLine(member, existing.val) : other.email,
         inactive: false,
-        selectable: !paired,
+        selectable: existing.none,
       };
     });
 }
@@ -102,9 +137,34 @@ export function selectedPartner(
 }
 
 export function roleDescription(firstName: string, role: MemberRole): string {
-  return role === RelationshipRole.Coachee
-    ? `${firstName} is coached by the person you pair them with in the next step.`
-    : `${firstName} coaches the person you pair them with in the next step.`;
+  switch (role) {
+    case RelationshipRole.Coachee:
+      return `${firstName} is coached by the person you pair them with in the next step.`;
+    case RelationshipRole.Coach:
+      return `${firstName} coaches the person you pair them with in the next step.`;
+    case RelationshipRole.Colleague:
+      return `${firstName} and the person you pair them with in the next step work together as peers.`;
+    default: {
+      const _exhaustive: never = role;
+      throw new Error(`Unhandled member role: ${_exhaustive}`);
+    }
+  }
+}
+
+/** The step title naming the person the member is paired with. */
+export function partnerTitle(firstName: string, role: MemberRole): string {
+  switch (role) {
+    case RelationshipRole.Coachee:
+      return `Choose ${firstName}'s coach`;
+    case RelationshipRole.Coach:
+      return `Choose who ${firstName} coaches`;
+    case RelationshipRole.Colleague:
+      return `Choose ${firstName}'s colleague`;
+    default: {
+      const _exhaustive: never = role;
+      throw new Error(`Unhandled member role: ${_exhaustive}`);
+    }
+  }
 }
 
 export function stepTitle(step: AddRelationshipStep, member: Member, role: Option<MemberRole>): string {
@@ -112,10 +172,7 @@ export function stepTitle(step: AddRelationshipStep, member: Member, role: Optio
     case AddRelationshipStep.Role:
       return `${member.firstName}'s role`;
     case AddRelationshipStep.Person:
-      if (role.none) return `Who ${member.firstName} works with`;
-      return role.val === RelationshipRole.Coachee
-        ? `${member.firstName}'s coach`
-        : `Who ${member.firstName} coaches`;
+      return role.some ? partnerTitle(member.firstName, role.val) : `Choose who ${member.firstName} works with`;
     default: {
       const _exhaustive: never = step;
       throw new Error(`Unhandled add relationship step: ${_exhaustive}`);
@@ -124,14 +181,33 @@ export function stepTitle(step: AddRelationshipStep, member: Member, role: Optio
 }
 
 export function summaryLine(member: Member, partner: Member, role: MemberRole): string {
-  return role === RelationshipRole.Coachee
-    ? `${partner.fullName} will coach ${member.fullName}`
-    : `${member.fullName} will coach ${partner.fullName}`;
+  switch (role) {
+    case RelationshipRole.Coachee:
+      return `${partner.fullName} will coach ${member.fullName}`;
+    case RelationshipRole.Coach:
+      return `${member.fullName} will coach ${partner.fullName}`;
+    case RelationshipRole.Colleague:
+      return `${member.fullName} and ${partner.fullName} will be colleagues`;
+    default: {
+      const _exhaustive: never = role;
+      throw new Error(`Unhandled member role: ${_exhaustive}`);
+    }
+  }
 }
 
 export function addedMessage(member: Member, partner: Member, role: MemberRole): string {
-  const partnerRole = role === RelationshipRole.Coachee ? RelationshipRole.Coach : RelationshipRole.Coachee;
-  return `${partner.fullName} is now ${member.fullName}'s ${relationshipRoleLabel(partnerRole).toLowerCase()}`;
+  switch (role) {
+    case RelationshipRole.Coachee:
+      return `${partner.fullName} is now ${member.fullName}'s coach`;
+    case RelationshipRole.Coach:
+      return `${partner.fullName} is now ${member.fullName}'s coachee`;
+    case RelationshipRole.Colleague:
+      return `${member.fullName} and ${partner.fullName} are now colleagues`;
+    default: {
+      const _exhaustive: never = role;
+      throw new Error(`Unhandled member role: ${_exhaustive}`);
+    }
+  }
 }
 
 interface RailInput {

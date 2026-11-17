@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { AddMemberDialog } from "./add-member-dialog";
 import { AddMemberMode } from "@/lib/add-member-dialog-model";
 import type { Option } from "@/types/option";
+import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { User, UserRoleState, isAdminOrSuperAdmin } from "@/types/user";
 
 interface AddMemberButtonProps {
@@ -15,6 +16,7 @@ interface AddMemberButtonProps {
   currentUserRoleState: UserRoleState;
   /// Candidates offered when pre-assigning a coach
   organizationMembers?: User[];
+  relationships: readonly CoachingRelationshipWithUserNames[];
   /// False hides adding an existing account, which has nothing to offer an
   /// admin of a single organization.
   canAddExistingMembers: boolean;
@@ -25,6 +27,7 @@ export function AddMemberButton({
   openAddMemberDialog,
   currentUserRoleState,
   organizationMembers,
+  relationships,
   canAddExistingMembers,
 }: AddMemberButtonProps) {
   const [open, setOpen] = useState(false);
@@ -52,6 +55,7 @@ export function AddMemberButton({
           onClose={() => setOpen(false)}
           onMemberAdded={onMemberAdded}
           organizationMembers={organizationMembers ?? []}
+          relationships={relationships}
           canAddExisting={isAdminOrSuperAdmin(currentUserRoleState) && canAddExistingMembers}
           initialMode={mode}
         />

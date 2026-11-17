@@ -14,7 +14,7 @@ import type { Goal } from "@/types/goal";
 import type { Id } from "@/types/general";
 import type { ItemStatus } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
-import { RelationshipRole } from "@/types/relationship-role";
+import { RESTRICTED_VIEWER, type RelationshipViewer } from "@/types/coaching-relationship";
 import type { ActionEdits, ActionSuggestion } from "@/types/transcript-suggestion";
 import { cn } from "@/components/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -40,7 +40,7 @@ export interface ActionSectionContentProps {
   /** Dismissed transcript suggestions, collapsed under the pending ones. */
   dismissedSuggestions?: ActionSuggestion[];
   /** Decides who may act on a suggestion. */
-  viewerRole?: RelationshipRole;
+  viewer?: RelationshipViewer;
   /** Resolves to the created action when the accept succeeded. */
   onSuggestionAccept?: (s: ActionSuggestion, edits: Option<ActionEdits>) => Promise<Option<Action>>;
   /** Resolves true when the suggestion was dismissed. */
@@ -80,7 +80,7 @@ export function ActionSectionContent({
   sessionActions,
   actionSuggestions = [],
   dismissedSuggestions = [],
-  viewerRole = RelationshipRole.Coachee,
+  viewer = RESTRICTED_VIEWER,
   onSuggestionAccept,
   onSuggestionDismiss,
   onSuggestionRestore,
@@ -422,7 +422,7 @@ export function ActionSectionContent({
               >
                 <SuggestedActionCard
                   suggestion={suggestion}
-                  viewerRole={viewerRole}
+                  viewer={viewer}
                   locale={locale}
                   coachId={coachId}
                   coachName={coachName}
@@ -460,7 +460,7 @@ export function ActionSectionContent({
         )}
         <DismissedSuggestions
           suggestions={dismissedSuggestions}
-          viewerRole={viewerRole}
+          viewer={viewer}
           locale={locale}
           coachId={coachId}
           coachName={coachName}

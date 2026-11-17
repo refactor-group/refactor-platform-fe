@@ -13,7 +13,7 @@ import {
   stepTitle,
   summaryLine,
 } from "@/lib/add-relationship-dialog-model";
-import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
+import { type CoachingRelationshipWithUserNames, RelationshipKind } from "@/types/coaching-relationship";
 import { None, Some } from "@/types/option";
 import { RelationshipRole } from "@/types/relationship-role";
 
@@ -32,16 +32,33 @@ const MEMBERS = [PAT, CARA, ANA];
 
 // Pat already coaches Cara.
 const RELATIONSHIPS = [
-  { coach_id: "pat", coachee_id: "cara" } as CoachingRelationshipWithUserNames,
+  { coach_id: "pat", coachee_id: "cara", kind: RelationshipKind.Coaching } as CoachingRelationshipWithUserNames,
+];
+
+// Ana and Cara are colleagues.
+const ANA_CARA_COLLEAGUES = [
+  { coach_id: "ana", coachee_id: "cara", kind: RelationshipKind.Colleague } as CoachingRelationshipWithUserNames,
 ];
 
 describe("newRelationship", () => {
   it("makes the partner the coach when the member is the coachee", () => {
-    expect(newRelationship("cara", "pat", RelationshipRole.Coachee)).toEqual({ coach_id: "pat", coachee_id: "cara" });
+    expect(newRelationship("cara", "pat", RelationshipRole.Coachee)).toEqual({
+      coach_id: "pat",
+      coachee_id: "cara",
+      kind: RelationshipKind.Coaching,
+    });
   });
 
   it("makes the member the coach when the member is the coach", () => {
-    expect(newRelationship("cara", "pat", RelationshipRole.Coach)).toEqual({ coach_id: "cara", coachee_id: "pat" });
+    expect(newRelationship("cara", "pat", RelationshipRole.Coach)).toEqual({
+      coach_id: "cara",
+      coachee_id: "pat",
+      kind: RelationshipKind.Coaching,
+    });
+  });
+
+  it("marks a colleague relationship by kind", () => {
+    expect(newRelationship("cara", "pat", RelationshipRole.Colleague)).toMatchObject({ kind: RelationshipKind.Colleague });
   });
 });
 
@@ -49,6 +66,17 @@ describe("alreadyPaired", () => {
   it("matches only the same direction", () => {
     expect(alreadyPaired("cara", "pat", RelationshipRole.Coachee, RELATIONSHIPS)).toBe(true);
     expect(alreadyPaired("cara", "pat", RelationshipRole.Coach, RELATIONSHIPS)).toBe(false);
+  });
+
+  it("rules out colleagues for a coaching pair, either way round", () => {
+    expect(alreadyPaired("cara", "pat", RelationshipRole.Colleague, RELATIONSHIPS)).toBe(true);
+    expect(alreadyPaired("pat", "cara", RelationshipRole.Colleague, RELATIONSHIPS)).toBe(true);
+  });
+
+  it("rules out every role for colleagues", () => {
+    for (const role of [RelationshipRole.Coachee, RelationshipRole.Coach, RelationshipRole.Colleague]) {
+      expect(alreadyPaired("cara", "ana", role, ANA_CARA_COLLEAGUES)).toBe(true);
+    }
   });
 });
 
@@ -63,6 +91,13 @@ describe("partnerChoices", () => {
   it("keeps an existing coach visible but unpickable when adding a coach", () => {
     const pat = partnerChoices(CARA, MEMBERS, Some(RelationshipRole.Coachee), RELATIONSHIPS).find((p) => p.userId === "pat");
     expect(pat).toMatchObject({ selectable: false, subline: "Already Cara's coach" });
+  });
+
+  it("says why a pair is ruled out by what they already are", () => {
+    const pat = partnerChoices(CARA, MEMBERS, Some(RelationshipRole.Colleague), RELATIONSHIPS).find((p) => p.userId === "pat");
+    expect(pat?.subline).toBe("Already Cara's coach");
+    const ana = partnerChoices(CARA, MEMBERS, Some(RelationshipRole.Coach), ANA_CARA_COLLEAGUES).find((p) => p.userId === "ana");
+    expect(ana).toMatchObject({ selectable: false, subline: "Already Cara's colleague" });
   });
 
   it("lets the same pair be added the other way round", () => {
@@ -82,8 +117,9 @@ describe("selectedPartner", () => {
 describe("copy", () => {
   it("titles the person step from the role", () => {
     expect(stepTitle(AddRelationshipStep.Role, CARA, None)).toBe("Cara's role");
-    expect(stepTitle(AddRelationshipStep.Person, CARA, Some(RelationshipRole.Coachee))).toBe("Cara's coach");
-    expect(stepTitle(AddRelationshipStep.Person, CARA, Some(RelationshipRole.Coach))).toBe("Who Cara coaches");
+    expect(stepTitle(AddRelationshipStep.Person, CARA, Some(RelationshipRole.Coachee))).toBe("Choose Cara's coach");
+    expect(stepTitle(AddRelationshipStep.Person, CARA, Some(RelationshipRole.Coach))).toBe("Choose who Cara coaches");
+    expect(stepTitle(AddRelationshipStep.Person, CARA, Some(RelationshipRole.Colleague))).toBe("Choose Cara's colleague");
   });
 
   it("describes each role against the next step", () => {
@@ -98,11 +134,13 @@ describe("copy", () => {
   it("says who will coach whom", () => {
     expect(summaryLine(CARA, PAT, RelationshipRole.Coachee)).toBe("Pat Coach will coach Cara Test");
     expect(summaryLine(CARA, PAT, RelationshipRole.Coach)).toBe("Cara Test will coach Pat Coach");
+    expect(summaryLine(CARA, PAT, RelationshipRole.Colleague)).toBe("Cara Test and Pat Coach will be colleagues");
   });
 
   it("confirms the partner's new role", () => {
     expect(addedMessage(CARA, PAT, RelationshipRole.Coachee)).toBe("Pat Coach is now Cara Test's coach");
     expect(addedMessage(CARA, PAT, RelationshipRole.Coach)).toBe("Pat Coach is now Cara Test's coachee");
+    expect(addedMessage(CARA, PAT, RelationshipRole.Colleague)).toBe("Cara Test and Pat Coach are now colleagues");
   });
 });
 
