@@ -64,6 +64,7 @@ Auto follows the OS). Tailwind exposes each as a color.
 | `brand-strong` | `#4b4fd0` | `#7b7ff0` | Text on `brand-tint` (In progress pill) |
 | `brand-tint` / `brand-tint-2` | `#eef0fc` / `#eceefc` | `#22233a` / `#262747` | Selected rows, open trigger, today halo |
 | `brand-border` | `#dcdff6` | `#34366a` | Hero card and "Current" chip border |
+| `brand-elapsed` | `#f8f9fe` | `#2e3060` | Elapsed fill on a session card under way |
 | `brand-dot` / `brand-month` | `#c7c9f5` / `#8f92ee` | `#3d3f7a` / `#6a6ee6` | Past session dots / selected-month dots |
 | `bg-hero-wash` | radial accent wash | dark wash | The one hero card per screen |
 
