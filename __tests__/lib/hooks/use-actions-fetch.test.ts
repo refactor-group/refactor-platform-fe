@@ -11,7 +11,8 @@ import {
   UserActionsAssigneeFilter,
 } from "@/types/assigned-actions";
 import { Some, None } from "@/types/option";
-import { createMockRelationship } from "../../test-utils";
+import { COACHEE_VIEWER, createMockRelationship } from "../../test-utils";
+import { RelationshipKind } from "@/types/coaching-relationship";
 
 const h = vi.hoisted(() => ({
   relationships: {
@@ -147,7 +148,7 @@ describe("assignmentFilterToRelationshipActionsParams", () => {
 
 describe("useActionsFetch", () => {
   const coaching = createMockRelationship({ coach_id: "user-1", coachee_id: "user-2" });
-  const coached = createMockRelationship({ coach_id: "user-3", coachee_id: "user-1" });
+  const coached = createMockRelationship({ coach_id: "user-3", coachee_id: "user-1", viewer: COACHEE_VIEWER });
   const myActions = () =>
     renderHook(() => useActionsFetch(CoachViewMode.MyActions, undefined, AssignmentFilter.Assigned));
 
@@ -156,11 +157,22 @@ describe("useActionsFetch", () => {
     h.fetch.mockReset().mockReturnValue({ actions: [], isLoading: false, isError: false, refresh: vi.fn() });
   });
 
-  it("scopes to the coach role when the user coaches someone in the organization", () => {
+  it("asks for the coach's own actions in every relationship, colleagues included", () => {
     myActions();
     expect(h.fetch).toHaveBeenCalledWith(
       "org-1",
-      expect.objectContaining({ assignee: AssigneeScope.Coach }),
+      expect.objectContaining({ assignee: "user-1" }),
+      undefined
+    );
+  });
+
+  it("sends no coachee scope for a colleague relationship", () => {
+    const colleague = createMockRelationship({ id: "rel-col", kind: RelationshipKind.Colleague });
+    h.relationships.relationships = [coaching, colleague];
+    renderHook(() => useActionsFetch(CoachViewMode.CoacheeActions, "rel-col", AssignmentFilter.All));
+    expect(h.fetch).toHaveBeenCalledWith(
+      "org-1",
+      expect.not.objectContaining({ assignee: expect.anything() }),
       undefined
     );
   });

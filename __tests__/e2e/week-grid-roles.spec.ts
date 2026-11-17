@@ -1,5 +1,13 @@
 import { test, expect, type Page, type BrowserContext } from '@playwright/test'
-import { setupAuthentication, mockCommonApiRoutes, mockRelationship, MOCK_USER_ID, AUTH_STORE_STATE } from './helpers'
+import {
+  setupAuthentication,
+  mockCommonApiRoutes,
+  mockRelationship,
+  MOCK_USER_ID,
+  AUTH_STORE_STATE,
+  COACH_VIEWER,
+  COACHEE_VIEWER,
+} from './helpers'
 
 // The phone agenda shows one day, so the grid cases pin a desktop width.
 test.use({ timezoneId: 'America/Chicago', locale: 'en-US', viewport: { width: 1280, height: 900 } })
@@ -12,6 +20,7 @@ const relationship = (id: string, coachId: string, coacheeId: string, coach: str
     coach_last_name: coach.split(' ')[1],
     coachee_first_name: coachee.split(' ')[0],
     coachee_last_name: coachee.split(' ')[1],
+    viewer: coachId === MOCK_USER_ID ? COACH_VIEWER : COACHEE_VIEWER,
   })
 type Relationship = ReturnType<typeof relationship>
 const person = (id: string, name: string) => ({
@@ -70,7 +79,12 @@ async function open(
 ) {
   await page.clock.setFixedTime(NOW)
   await setupAuthentication(page, context)
-  const auth = JSON.stringify({ ...AUTH_STORE_STATE, state: { ...AUTH_STORE_STATE.state, isACoach: input.isACoach } })
+  const auth = JSON.stringify({ ...AUTH_STORE_STATE, state: {
+      ...AUTH_STORE_STATE.state,
+      isACoach: input.isACoach,
+      canScheduleSessions: input.isACoach,
+    },
+  })
   await page.addInitScript((value) => localStorage.setItem('auth-store', value), auth)
   await mockCommonApiRoutes(page, { relationships: input.relationships })
   await page.route(

@@ -22,6 +22,7 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
     sel({
       userSession: { id: "user-1" },
       isACoach: true,
+      canScheduleSessions: true,
     }),
 }));
 

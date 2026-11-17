@@ -17,12 +17,12 @@ import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relatio
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { None, Some } from "@/types/option";
 import { Frequency, Weekday } from "@/types/recurrence";
-import { createMockSession } from "../../../test-utils";
+import { COACHEE_VIEWER, createMockSession } from "../../../test-utils";
 import { ALL, E_04, E_11, E_18, NEAREST, NOW, P_18, RELATIONSHIPS, session } from "../../../lib/scheduling/roster";
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
-    selector({ userId: "me", isACoach: true, userSession: { id: "me", timezone: "America/Chicago" } }),
+    selector({ userId: "me", isACoach: true, canScheduleSessions: true, userSession: { id: "me", timezone: "America/Chicago" } }),
 }));
 vi.mock("@/lib/hooks/use-current-organization", () => ({
   useCurrentOrganization: () => ({ currentOrganizationId: "org-1" }),
@@ -190,7 +190,7 @@ describe("Calendar keyboard across months", () => {
 describe("Resolve overlap with a session that isn't mine to move", () => {
   it("asks only to keep both or go back", () => {
     serveSessions(
-      ALL.map((s) => (s.id === "e-18" ? { ...s, relationship: { ...s.relationship!, coach_id: "someone-else" } } : s))
+      ALL.map((s) => (s.id === "e-18" ? { ...s, relationship: { ...s.relationship!, coach_id: "someone-else", viewer: COACHEE_VIEWER } } : s))
     );
     renderSchedule();
     fireEvent.click(person("Priya Raman"));

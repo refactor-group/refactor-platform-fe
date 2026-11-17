@@ -1,5 +1,5 @@
 import type { DateTime } from "ts-luxon";
-import type { PickerPerson } from "@/components/ui/new-session/person-picker";
+import type { PickerPerson } from "@/components/ui/person-picker";
 import type { StepDialogLead, StepRailItem } from "@/components/ui/step-dialog";
 import type { ScheduleData } from "@/lib/hooks/use-schedule-data";
 import { moveStart } from "@/lib/move-draft";

@@ -69,7 +69,7 @@ export function CoachingSessionPanelDesktop({
   sessionActions,
   actionSuggestions,
   dismissedSuggestions,
-  viewerRole,
+  viewer,
   onSuggestionAccept,
   onSuggestionDismiss,
   onSuggestionRestore,
@@ -288,7 +288,7 @@ export function CoachingSessionPanelDesktop({
               sessionActions={sessionActions}
               actionSuggestions={actionSuggestions}
               dismissedSuggestions={dismissedSuggestions}
-              viewerRole={viewerRole}
+              viewer={viewer}
               onSuggestionAccept={onSuggestionAccept}
               onSuggestionDismiss={onSuggestionDismiss}
               onSuggestionRestore={onSuggestionRestore}

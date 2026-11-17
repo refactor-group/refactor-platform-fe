@@ -68,7 +68,7 @@ describe("Google OAuth Flow Integration", () => {
     vi.clearAllMocks();
     mockGoogleConnection = null;
     mockZoomConnection = null;
-    mockAuthStore.mockReturnValue({ isACoach: true, userId: "user-1" });
+    mockAuthStore.mockReturnValue({ isACoach: true, canScheduleSessions: true, userId: "user-1" });
     vi.mocked(useRouter).mockReturnValue({
       push: vi.fn(),
       replace: mockReplace,

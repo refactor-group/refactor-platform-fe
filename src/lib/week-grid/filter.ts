@@ -5,7 +5,7 @@ import type { Id } from "@/types/general";
 import type { Option } from "@/types/option";
 
 export enum PersonGroup {
-  Coachees = "coachees",
+  Active = "active",
   Inactive = "inactive",
 }
 
@@ -22,12 +22,12 @@ export interface FilterSection {
   people: FilterPerson[];
 }
 
-const GROUP_ORDER: PersonGroup[] = [PersonGroup.Coachees, PersonGroup.Inactive];
+const GROUP_ORDER: PersonGroup[] = [PersonGroup.Active, PersonGroup.Inactive];
 
 function groupLabel(group: PersonGroup): string {
   switch (group) {
-    case PersonGroup.Coachees:
-      return "Coachees";
+    case PersonGroup.Active:
+      return "Active";
     case PersonGroup.Inactive:
       return "Inactive";
     default: {
@@ -38,9 +38,9 @@ function groupLabel(group: PersonGroup): string {
 }
 
 function groupOf(userId: Id, activity: Option<Map<Id, PersonActivity>>): PersonGroup {
-  if (activity.none) return PersonGroup.Coachees;
+  if (activity.none) return PersonGroup.Active;
   const theirs = activity.val.get(userId);
-  return theirs !== undefined && isInactive(theirs) ? PersonGroup.Inactive : PersonGroup.Coachees;
+  return theirs !== undefined && isInactive(theirs) ? PersonGroup.Inactive : PersonGroup.Active;
 }
 
 export function filterPeople(

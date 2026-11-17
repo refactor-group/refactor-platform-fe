@@ -20,6 +20,8 @@ import { Provider } from "@/types/provider";
 import { Frequency, Weekday } from "@/types/recurrence";
 import { EHAB, PRIYA, at as fixtureAt } from "../../components/ui/new-session/fixtures";
 import { ALL, E_18, ME, NEAREST, NOW, P_18, RELATIONSHIPS, ZONE, at, session } from "./roster";
+import { COLLEAGUE_VIEWER, createMockRelationship } from "../../test-utils";
+import { RelationshipKind } from "@/types/coaching-relationship";
 
 const NINE_TO_FIVE = { start: 9 * 60, end: 17 * 60 };
 
@@ -31,6 +33,25 @@ describe("schedulablePeople", () => {
   it("lists only the people I coach, by name", () => {
     expect(people().map((p) => p.person.fullName)).toEqual(["Dana Fox", "Ehab Badawi", "Priya Raman", "Sara Lin"]);
     expect(people().find((p) => p.person.fullName === "Ehab Badawi")?.relationshipIds).toEqual(["rel-e"]);
+  });
+
+  it("lists a colleague, whichever seat I'm stored in", () => {
+    const colleague = createMockRelationship({
+      id: "rel-c",
+      kind: RelationshipKind.Colleague,
+      coach_id: "mate",
+      coachee_id: ME,
+      coach_first_name: "Mate",
+      coach_last_name: "Peer",
+      viewer: COLLEAGUE_VIEWER,
+    });
+    const names = schedulablePeople(ME, [...RELATIONSHIPS, colleague]).map((p) => p.person.fullName);
+    expect(names).toContain("Mate Peer");
+  });
+
+  it("leaves out someone whose leaving blocks scheduling", () => {
+    const blocked = RELATIONSHIPS.map((r) => (r.id === "rel-e" ? { ...r, scheduling_blocked_by: "ehab" } : r));
+    expect(schedulablePeople(ME, blocked).map((p) => p.person.fullName)).not.toContain("Ehab Badawi");
   });
 });
 

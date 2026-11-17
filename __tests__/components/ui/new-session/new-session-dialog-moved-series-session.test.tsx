@@ -22,7 +22,7 @@ import { ALL, E_04, E_11, E_18, NEAREST, NOW, RELATIONSHIPS, ZONE, at, session }
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
-    selector({ userId: "me", isACoach: true, userSession: { id: "me", timezone: "America/Chicago" } }),
+    selector({ userId: "me", isACoach: true, canScheduleSessions: true, userSession: { id: "me", timezone: "America/Chicago" } }),
 }));
 vi.mock("@/lib/hooks/use-current-organization", () => ({
   useCurrentOrganization: () => ({ currentOrganizationId: "org-1" }),

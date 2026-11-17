@@ -10,6 +10,8 @@ interface AuthState {
   isLoggedIn: boolean;
   isCurrentCoach: boolean;
   isACoach: boolean;
+  /** May schedule in some relationship in the current organization (coach or colleague). */
+  canScheduleSessions: boolean;
 }
 
 interface AuthActions {
@@ -20,6 +22,7 @@ interface AuthActions {
   setIsCurrentCoach: (coachID: Id) => void;
   getIsCurrentCoach: () => boolean;
   setIsACoach: (isACoach: boolean) => void;
+  setCanScheduleSessions: (canScheduleSessions: boolean) => void;
   getIsACoach: () => boolean;
 }
 
@@ -31,6 +34,7 @@ export const defaultInitState: AuthState = {
   isLoggedIn: false,
   isCurrentCoach: false,
   isACoach: false,
+  canScheduleSessions: false,
 };
 
 export const createAuthStore = (initState: AuthState = defaultInitState) => {
@@ -67,6 +71,9 @@ export const createAuthStore = (initState: AuthState = defaultInitState) => {
           },
           setIsACoach: (isACoach: boolean) => {
             set({ isACoach });
+          },
+          setCanScheduleSessions: (canScheduleSessions: boolean) => {
+            set({ canScheduleSessions });
           },
           getIsACoach: () => {
             return get().isACoach;
