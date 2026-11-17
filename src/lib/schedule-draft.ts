@@ -1,5 +1,5 @@
 import { DateTime } from "ts-luxon";
-import type { PickerPerson } from "@/components/ui/new-session/person-picker";
+import type { PickerPerson } from "@/components/ui/person-picker";
 import type { StepRailItem } from "@/components/ui/step-dialog";
 import type { PersonEntry } from "@/lib/people";
 import { byActivity, isInactive, personActivity } from "@/lib/person-activity";
@@ -196,7 +196,7 @@ export function pickerPeople(input: PickerPeopleInput): PickerPerson[] {
       now
     );
     const { userId, fullName: name, initials } = entry.person;
-    return { person: { userId, fullName: name, initials, subline, inactive: false }, activity };
+    return { person: { userId, fullName: name, initials, subline, inactive: false, selectable: true }, activity };
   });
   if (nearest.none) return entries.map((e) => e.person);
   return byActivity(entries, (e) => e.activity).map((e) => ({ ...e.person, inactive: isInactive(e.activity) }));

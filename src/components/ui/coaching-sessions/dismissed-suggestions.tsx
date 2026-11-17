@@ -12,12 +12,13 @@ import { mayActOnSuggestion } from "@/lib/utils/transcript-suggestions";
 import { formatTimestamp } from "@/lib/utils/transcript-format-timestamp";
 import type { Id } from "@/types/general";
 import { None, Some, type Option } from "@/types/option";
-import { RelationshipRole } from "@/types/relationship-role";
+import type { RelationshipViewer } from "@/types/coaching-relationship";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import type { ActionSuggestion } from "@/types/transcript-suggestion";
 
 export interface DismissedSuggestionsProps {
   suggestions: ActionSuggestion[];
-  viewerRole: RelationshipRole;
+  viewer: RelationshipViewer;
   locale: string;
   coachId: Id;
   coachName: string;
@@ -57,7 +58,7 @@ export function DismissedSuggestions({ suggestions, ...rowProps }: DismissedSugg
 
 function DismissedRow({
   suggestion,
-  viewerRole,
+  viewer,
   locale,
   coachId,
   coachName,
@@ -68,20 +69,18 @@ function DismissedRow({
 }: RowProps) {
   const [pending, setPending] = useState(false);
   const { proposal, quote, segment, resolved_by: resolvedBy, resolved_at: resolvedAt } = suggestion;
+  const viewerId = useAuthStore((s) => s.userId);
   const mayRestore = mayActOnSuggestion(
-    viewerRole,
+    viewer.sees_all_actions,
     { coachId, coacheeId },
     proposal.assignee_ids ?? [],
     None
   );
 
   const nameOf = (id: Id): Option<string> => {
-    if (id === coachId) {
-      return Some(viewerRole === RelationshipRole.Coach ? "you" : firstName(coachName));
-    }
-    if (id === coacheeId) {
-      return Some(viewerRole === RelationshipRole.Coachee ? "you" : firstName(coacheeName));
-    }
+    if (id === viewerId) return Some("you");
+    if (id === coachId) return Some(firstName(coachName));
+    if (id === coacheeId) return Some(firstName(coacheeName));
     return None;
   };
   const who = resolvedBy.some ? nameOf(resolvedBy.val) : None;

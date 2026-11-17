@@ -3,14 +3,15 @@
 import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
 import { mayActOnSuggestion, suggestionDue } from "@/lib/utils/transcript-suggestions";
-import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, UndatedReason, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { Some, None, type Option } from "@/types/option";
 import { createMockAction } from "../../test-utils";
 import { createMockActionSuggestion } from "../../factories/action-suggestion.factory";
 
 const people = { coachId: "coach-1", coacheeId: "coachee-1" };
-const { Coach, Coachee } = RelationshipRole;
+// Whether the viewer sees all actions: the coach does, the coachee doesn't.
+const Coach = true;
+const Coachee = false;
 
 describe("mayActOnSuggestion", () => {
   it("lets the coach act on anything, including moving the coach", () => {

@@ -8,8 +8,9 @@ import {
 } from './helpers'
 
 // Regression guard for the coachee-actions visibility fix: a coach viewing
-// /actions must still send `assignee=coach` for the default "My Actions"
-// view and render the returned actions in the kanban.
+// /actions sends their own id as `assignee` for the default "My Actions"
+// view (every relationship, colleagues included) and renders the returned
+// actions in the kanban.
 
 const COACH_ID = SINGLE_RELATIONSHIP[0].coach_id
 const SESSION_ID = 'session-1'
@@ -56,11 +57,11 @@ const ENRICHED_SESSION = {
 }
 
 test.describe('Coach viewing /actions (regression guard)', () => {
-  test('sends batch request with assignee=coach for default "My Actions" view', async ({
+  test('sends batch request with the coach\'s own id for default "My Actions" view', async ({
     page,
     context,
   }) => {
-    // The user coaches in the current organization → Some(Coach) → assignee=coach.
+    // The user coaches in the current organization → assignee=<their own id>.
     await setupAuthentication(page, context)
     await mockCommonApiRoutes(page, {
       relationships: [{ ...SINGLE_RELATIONSHIP[0], coach_id: MOCK_USER_ID }],
@@ -112,11 +113,11 @@ test.describe('Coach viewing /actions (regression guard)', () => {
       page.getByText(COACH_ASSIGNED_ACTION.body).first()
     ).toBeVisible({ timeout: 15_000 })
 
-    // The default coach "My Actions" view sends assignee=coach, and the scope
-    // never flips while the relationships load.
+    // The default coach "My Actions" view sends the coach's own id, and the
+    // scope never flips while the relationships load.
     expect(batchUrls.length).toBeGreaterThan(0)
     for (const url of batchUrls) {
-      expect(new URL(url).searchParams.get('assignee')).toBe('coach')
+      expect(new URL(url).searchParams.get('assignee')).toBe(MOCK_USER_ID)
     }
   })
 })

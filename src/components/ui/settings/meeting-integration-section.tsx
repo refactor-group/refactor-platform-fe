@@ -52,7 +52,7 @@ const ZoomIcon: FC = () => (
 );
 
 export const MeetingIntegrationSection: FC = () => {
-  const { isACoach, userId } = useAuthStore((state) => state);
+  const { canScheduleSessions, userId } = useAuthStore((state) => state);
   const {
     connection: googleConnection,
     isLoading: googleLoading,
@@ -103,7 +103,7 @@ export const MeetingIntegrationSection: FC = () => {
     }
   }, [connectedProvider, googleRefresh, zoomRefresh]);
 
-  if (!isACoach) {
+  if (!canScheduleSessions) {
     return null;
   }
 

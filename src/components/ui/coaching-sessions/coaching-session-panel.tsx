@@ -48,7 +48,7 @@ import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
 import type { ActionEdits, ActionSuggestion, ScanStatus } from "@/types/transcript-suggestion";
-import { RelationshipRole } from "@/types/relationship-role";
+import { RESTRICTED_VIEWER, type RelationshipViewer, viewerOf } from "@/types/coaching-relationship";
 import {
   isLockedFor,
   NO_AFTER_SESSION_LOCK,
@@ -133,7 +133,7 @@ export interface CoachingSessionPanelSharedProps {
   actionSuggestions: ActionSuggestion[];
   dismissedSuggestions?: ActionSuggestion[];
   /** Coachee unless the viewer is the coach. */
-  viewerRole: RelationshipRole;
+  viewer: RelationshipViewer;
   /** Suggestion review stays available when the session's sections are locked. */
   onSuggestionAccept?: (s: ActionSuggestion, edits: Option<ActionEdits>) => Promise<Option<Action>>;
   onSuggestionDismiss?: (s: ActionSuggestion) => Promise<boolean>;
@@ -402,14 +402,11 @@ export function CoachingSessionPanel({
     ? getCoacheeName(currentCoachingRelationship)
     : undefined;
 
-  // Resolve the after-session lock scopes against this viewer's role. A viewer
-  // who isn't the coach is treated as the coachee (the more-restricted role).
-  const viewerRole =
-    userId && coachId && userId === coachId
-      ? RelationshipRole.Coach
-      : RelationshipRole.Coachee;
-  const sectionsLocked = isLockedFor(afterSessionLock.sections, viewerRole);
-  const newTopicLocked = isLockedFor(afterSessionLock.newTopic, viewerRole);
+  // The backend's view of what this viewer may do. Until it loads, the most restricted.
+  const viewerState = currentCoachingRelationship ? viewerOf(currentCoachingRelationship) : None;
+  const viewer = viewerState.some ? viewerState.val : RESTRICTED_VIEWER;
+  const sectionsLocked = isLockedFor(afterSessionLock.sections, viewer.role);
+  const newTopicLocked = isLockedFor(afterSessionLock.newTopic, viewer.role);
 
   // ── Topic provenance: author-name resolver + previous-session anchor ──
   // Names come from the resolved relationship; while it loads, ids resolve to
@@ -1136,7 +1133,7 @@ export function CoachingSessionPanel({
     onTopicEdit: handleTopicEdit,
     onTopicDelete: handleTopicDelete,
     onTopicReorder: handleTopicReorder,
-    canDeleteAnyTopic: Boolean(userId && coachId && userId === coachId),
+    canDeleteAnyTopic: viewer.can_schedule_sessions,
     onTopicStatus: handleTopicStatus,
     onTopicInsertToNotes: handleTopicInsertToNotes,
     resolveTopicAuthorName,
@@ -1153,7 +1150,7 @@ export function CoachingSessionPanel({
     sessionActions,
     actionSuggestions,
     dismissedSuggestions,
-    viewerRole,
+    viewer,
     onSuggestionAccept: suggestionReview.accept,
     onSuggestionDismiss: suggestionReview.dismiss,
     onSuggestionRestore: suggestionReview.restore,

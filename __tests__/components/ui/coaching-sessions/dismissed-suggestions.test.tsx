@@ -23,8 +23,13 @@ import {
 import { Some, None } from "@/types/option";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
-import { createMockAction } from "../../../test-utils";
+import { createMockAction, viewerFor } from "../../../test-utils";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
+
+const auth = vi.hoisted(() => ({ userId: "coach-1" }));
+vi.mock("@/lib/providers/auth-store-provider", () => ({
+  useAuthStore: (select: (s: { userId: string }) => unknown) => select({ userId: auth.userId }),
+}));
 
 vi.mock("@/lib/auth/session-guard", () => ({
   sessionGuard: { get: vi.fn(), put: vi.fn(), post: vi.fn() },
@@ -127,6 +132,7 @@ function renderSection(
   viewerRole: RelationshipRole,
   onSuggestionRestore = vi.fn().mockResolvedValue(true)
 ) {
+  auth.userId = viewerRole === RelationshipRole.Coachee ? COACHEE_ID : COACH_ID;
   render(
     <Wrapper>
       <ActionSectionContent
@@ -134,7 +140,7 @@ function renderSection(
         sessionActions={[createMockAction({ id: "a-1", body: "Existing session action" }) as Action]}
         actionSuggestions={[]}
         dismissedSuggestions={dismissedSuggestions}
-        viewerRole={viewerRole}
+        viewer={viewerFor(viewerRole)}
         locale="en-US"
         coachId={COACH_ID}
         coachName="Jim Hodapp"

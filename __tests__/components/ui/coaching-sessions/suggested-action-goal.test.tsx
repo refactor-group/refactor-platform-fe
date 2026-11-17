@@ -16,7 +16,7 @@ import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { Some, None, type Option } from "@/types/option";
 import type { Id } from "@/types/general";
-import { createMockAction, createMockGoal } from "../../../test-utils";
+import { createMockAction, createMockGoal, COACH_VIEWER } from "../../../test-utils";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 vi.mock("@/lib/toast", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
@@ -73,7 +73,7 @@ describe("Linked goal on the suggestion edit form", () => {
       <Wrapper>
         <SuggestedActionCard
           suggestion={makeSuggestion()}
-          viewerRole={RelationshipRole.Coach}
+          viewer={COACH_VIEWER}
           {...people}
           goals={[GOAL, OTHER_GOAL]}
           onAccept={onAccept}
@@ -96,7 +96,7 @@ describe("Linked goal on the suggestion edit form", () => {
       <Wrapper>
         <SuggestedActionCard
           suggestion={makeSuggestion()}
-          viewerRole={RelationshipRole.Coach}
+          viewer={COACH_VIEWER}
           {...people}
           goals={[GOAL]}
           onAccept={onAccept}
@@ -116,7 +116,7 @@ describe("Linked goal on the suggestion edit form", () => {
       <Wrapper>
         <SuggestedActionCard
           suggestion={makeSuggestion(Some("goal-2"))}
-          viewerRole={RelationshipRole.Coach}
+          viewer={COACH_VIEWER}
           {...people}
           goals={[GOAL, OTHER_GOAL]}
           onAccept={onAccept}
@@ -137,7 +137,7 @@ describe("Linked goal on the suggestion edit form", () => {
           reviewActions={[]}
           sessionActions={[]}
           actionSuggestions={[makeSuggestion()]}
-          viewerRole={RelationshipRole.Coach}
+          viewer={COACH_VIEWER}
           {...people}
           goals={[GOAL]}
           isAddingAction={false}

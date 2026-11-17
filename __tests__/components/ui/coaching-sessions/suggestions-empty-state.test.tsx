@@ -7,7 +7,7 @@ import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-s
 import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { None, Some } from "@/types/option";
-import { createMockAction } from "../../../test-utils";
+import { createMockAction, COACH_VIEWER } from "../../../test-utils";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -29,7 +29,7 @@ function renderSection(actionSuggestions: ActionSuggestion[]) {
         reviewActions={[]}
         sessionActions={[]}
         actionSuggestions={actionSuggestions}
-        viewerRole={RelationshipRole.Coach}
+        viewer={COACH_VIEWER}
         locale="en-US"
         coachId="coach-1"
         coachName="Jim Hodapp"

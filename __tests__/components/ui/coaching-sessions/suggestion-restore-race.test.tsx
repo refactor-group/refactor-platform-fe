@@ -10,9 +10,12 @@ import { RelationshipRole } from "@/types/relationship-role";
 import { Some, type Option } from "@/types/option";
 import type { ActionSuggestion } from "@/types/transcript-suggestion";
 import type { Id } from "@/types/general";
-import { createMockAction } from "../../../test-utils";
+import { createMockAction, COACH_VIEWER } from "../../../test-utils";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
+vi.mock("@/lib/providers/auth-store-provider", () => ({
+  useAuthStore: (select: (s: { userId: string }) => unknown) => select({ userId: "coach-1" }),
+}));
 vi.mock("@/lib/toast", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
 
 const COACH_ID = "coach-1";
@@ -40,7 +43,7 @@ function section(
         sessionActions={[]}
         actionSuggestions={pendingList}
         dismissedSuggestions={dismissedList}
-        viewerRole={RelationshipRole.Coach}
+        viewer={COACH_VIEWER}
         locale="en-US"
         coachId={COACH_ID}
         coachName="Jim Hodapp"

@@ -14,7 +14,7 @@ import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, type ActionSuggestion } from "@/types/transcript-suggestion";
 import { Some, None } from "@/types/option";
 import type { Action } from "@/types/action";
-import { createMockAction } from "../../../test-utils";
+import { createMockAction, COACH_VIEWER } from "../../../test-utils";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
 vi.mock("@/lib/toast", () => ({ toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }) }));
@@ -75,7 +75,7 @@ describe("possible duplicate on the card", () => {
       <Wrapper>
         <SuggestedActionCard
           suggestion={suggestion}
-          viewerRole={RelationshipRole.Coach}
+          viewer={COACH_VIEWER}
           {...people}
           {...handlers}
         />
@@ -155,7 +155,7 @@ function sectionProps(over: Record<string, unknown>) {
   return {
     reviewActions: [] as Action[],
     sessionActions: [] as Action[],
-    viewerRole: RelationshipRole.Coach,
+    viewer: COACH_VIEWER,
     ...people,
     isAddingAction: false,
     onAddingActionChange: vi.fn(),

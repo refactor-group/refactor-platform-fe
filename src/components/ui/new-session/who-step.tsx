@@ -1,6 +1,6 @@
 "use client";
 
-import { PersonPicker } from "@/components/ui/new-session/person-picker";
+import { PersonPicker } from "@/components/ui/person-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { WhoModel } from "@/lib/new-session-dialog-model";
 
@@ -34,9 +34,9 @@ export function WhoStep({ state, selectedId, onSelect }: WhoModel) {
     case "loading":
       return <WhoSkeleton />;
     case "error":
-      return <WhoNote text="Couldn't load the people you coach. Close and try again." />;
+      return <WhoNote text="Couldn't load who you can schedule with. Close and try again." />;
     case "empty":
-      return <WhoNote text="You don't coach anyone in this organization yet." />;
+      return <WhoNote text="You have nobody to schedule with in this organization yet." />;
     case "ready":
       return <PersonPicker people={state.people} selectedId={selectedId} onSelect={onSelect} />;
     default: {

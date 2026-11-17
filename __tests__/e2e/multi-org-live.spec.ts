@@ -19,10 +19,20 @@ async function login(page: Page, email: string) {
   await page.waitForURL(/dashboard/, { timeout: 20000 });
 }
 
+const nextStep = (page: Page) => page.getByRole("button", { name: "Next step" });
+const confirmAdd = (page: Page) =>
+  page.getByRole("dialog").getByRole("button", { name: "Add member", exact: true });
+
+async function pickCoach(page: Page, name: string) {
+  await page.getByRole("radio", { name: "Coachee" }).click();
+  await nextStep(page).click();
+  await page.getByRole("dialog").getByText(name, { exact: true }).click();
+}
+
 async function openAddMember(page: Page, organizationId: string) {
   await page.goto(`/organizations/${organizationId}/members`);
   await page.click('button:has-text("Add Member")');
-  await expect(page.getByRole("heading", { name: "Add New Member" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Add member", exact: true })).toBeVisible();
 }
 
 test.describe.configure({ mode: "serial" });
@@ -43,12 +53,11 @@ test("a: super admin adds Ehab to Refactor Group as a coachee", async ({ page })
   await page.fill("#displayName", "Ehab Bandar");
   await page.fill("#email", EHAB);
 
-  // The new coach picker makes him a coachee in the same request. Exact match:
-  // the org also has a "Jim Hodapp (Refactor Group)" member.
-  await page.click("#coach");
-  await page.getByRole("option", { name: "Jim Hodapp", exact: true }).click();
-
-  await page.click('button:has-text("Create Member")');
+  // The coach rides along in the same request. Exact match: the org also has
+  // a "Jim Hodapp (Refactor Group)" member.
+  await nextStep(page).click();
+  await pickCoach(page, "Jim Hodapp");
+  await confirmAdd(page).click();
 
   await expect(page.getByText("Ehab Bandar").first()).toBeVisible({ timeout: 15000 });
 });
@@ -80,15 +89,16 @@ test("c: super admin adds Ehab to BigTable as an existing member, role Admin", a
   expect(bigTable, "BigTable must exist from step b").toBeTruthy();
 
   await openAddMember(page, bigTable!.id);
-  await page.getByRole("tab", { name: "Add existing member" }).click();
+  await page.getByRole("button", { name: "Has an account" }).click();
   await page.fill("#lookupEmail", EHAB);
   await page.click('button:has-text("Find")');
 
   await expect(page.getByText("Ehab Bandar")).toBeVisible({ timeout: 15000 });
 
-  await page.click("#existingRole");
-  await page.getByRole("option", { name: "Admin" }).click();
-  await page.click('button:has-text("Add to organization")');
+  await nextStep(page).click();
+  await page.getByRole("radio", { name: "Admin" }).click();
+  await nextStep(page).click();
+  await confirmAdd(page).click();
 
   await expect(page.getByText("Ehab Bandar").first()).toBeVisible({ timeout: 15000 });
 });
@@ -109,7 +119,7 @@ test("d: Ehab, as BigTable admin, adds Jim to BigTable with himself as coach", a
   expect(bigTable, "Ehab must see BigTable, which he administers").toBeTruthy();
 
   await openAddMember(page, bigTable!.id);
-  await page.getByRole("tab", { name: "Add existing member" }).click();
+  await page.getByRole("button", { name: "Has an account" }).click();
   await page.fill("#lookupEmail", "james.hodapp@gmail.com");
   await page.click('button:has-text("Find")');
 
@@ -141,14 +151,15 @@ test("d2: workaround, the super admin adds Jim to BigTable with Ehab as coach", 
   const bigTable = orgs.find((o) => o.name === "BigTable")!;
 
   await openAddMember(page, bigTable.id);
-  await page.getByRole("tab", { name: "Add existing member" }).click();
+  await page.getByRole("button", { name: "Has an account" }).click();
   await page.fill("#lookupEmail", "james.hodapp@gmail.com");
   await page.click('button:has-text("Find")');
   await expect(page.getByText("Jim Hodapp", { exact: true })).toBeVisible({ timeout: 15000 });
 
-  await page.click("#coach");
-  await page.getByRole("option", { name: "Ehab Bandar", exact: true }).click();
-  await page.click('button:has-text("Add to organization")');
+  await nextStep(page).click();
+  await nextStep(page).click();
+  await pickCoach(page, "Ehab Bandar");
+  await confirmAdd(page).click();
 
   await expect(page.getByText("Jim Hodapp").first()).toBeVisible({ timeout: 15000 });
 });

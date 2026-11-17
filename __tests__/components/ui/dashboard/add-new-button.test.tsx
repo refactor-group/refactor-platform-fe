@@ -43,7 +43,7 @@ describe('AddNewButton', () => {
         hasAccess: true,
       };
       mockUseCurrentUserRole.mockReturnValue(userRoleState);
-      mockAuthStore.mockReturnValue({ isACoach: false });
+      mockAuthStore.mockReturnValue({ isACoach: false, canScheduleSessions: false });
 
       render(<AddNewButton onCreateSession={mockOnCreateSession} />);
 
@@ -57,7 +57,7 @@ describe('AddNewButton', () => {
         hasAccess: true,
       };
       mockUseCurrentUserRole.mockReturnValue(userRoleState);
-      mockAuthStore.mockReturnValue({ isACoach: true });
+      mockAuthStore.mockReturnValue({ isACoach: true, canScheduleSessions: true });
 
       render(<AddNewButton onCreateSession={mockOnCreateSession} />);
 
@@ -71,7 +71,7 @@ describe('AddNewButton', () => {
         hasAccess: true,
       };
       mockUseCurrentUserRole.mockReturnValue(adminRoleState);
-      mockAuthStore.mockReturnValue({ isACoach: false });
+      mockAuthStore.mockReturnValue({ isACoach: false, canScheduleSessions: false });
 
       render(<AddNewButton onCreateSession={mockOnCreateSession} />);
 
@@ -85,7 +85,7 @@ describe('AddNewButton', () => {
         hasAccess: true,
       };
       mockUseCurrentUserRole.mockReturnValue(adminRoleState);
-      mockAuthStore.mockReturnValue({ isACoach: true });
+      mockAuthStore.mockReturnValue({ isACoach: true, canScheduleSessions: true });
 
       render(<AddNewButton onCreateSession={mockOnCreateSession} />);
 
@@ -99,7 +99,7 @@ describe('AddNewButton', () => {
         hasAccess: true,
       };
       mockUseCurrentUserRole.mockReturnValue(superAdminRoleState);
-      mockAuthStore.mockReturnValue({ isACoach: true });
+      mockAuthStore.mockReturnValue({ isACoach: true, canScheduleSessions: true });
 
       render(<AddNewButton onCreateSession={mockOnCreateSession} />);
 
@@ -113,7 +113,7 @@ describe('AddNewButton', () => {
         hasAccess: true,
       };
       mockUseCurrentUserRole.mockReturnValue(superAdminRoleState);
-      mockAuthStore.mockReturnValue({ isACoach: false });
+      mockAuthStore.mockReturnValue({ isACoach: false, canScheduleSessions: false });
 
       render(<AddNewButton onCreateSession={mockOnCreateSession} />);
 
@@ -127,7 +127,7 @@ describe('AddNewButton', () => {
         hasAccess: true,
       };
       mockUseCurrentUserRole.mockReturnValue(adminRoleState);
-      mockAuthStore.mockReturnValue({ isACoach: true });
+      mockAuthStore.mockReturnValue({ isACoach: true, canScheduleSessions: true });
       mockUseCurrentOrganization.mockReturnValue({
         currentOrganizationId: null,
         setCurrentOrganizationId: vi.fn(),
