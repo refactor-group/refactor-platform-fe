@@ -45,7 +45,8 @@ const config = {
   				'tint-2': 'hsl(var(--brand-tint-2))',
   				border: 'hsl(var(--brand-border))',
   				dot: 'hsl(var(--brand-dot))',
-  				month: 'hsl(var(--brand-month))'
+  				month: 'hsl(var(--brand-month))',
+  				elapsed: 'hsl(var(--brand-elapsed))'
   			},
   			'ink-2': 'hsl(var(--ink-2))',
   			faint: 'hsl(var(--faint))',

@@ -1,8 +1,10 @@
 import { DateTime } from "ts-luxon";
 import { sessionStartIn } from "@/lib/session-window";
 import { calculateSessionUrgency, getSessionParticipantInfo } from "@/lib/utils/session";
+import { nowLineProgress } from "@/lib/week-grid/week";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
+import { None, type Option } from "@/types/option";
 import { SessionUrgency } from "@/types/session-display";
 
 export enum CardTense {
@@ -36,6 +38,8 @@ export interface CardView {
   tense: CardTense;
   /** Its start has passed. A Live card may still be minutes away. */
   started: boolean;
+  /** How far through the session now is, while it's under way. */
+  elapsed: Option<number>;
   note: CardNote;
   footer: CardFooter;
   canManage: boolean;
@@ -64,6 +68,7 @@ export function cardView(session: EnrichedCoachingSession, context: CardContext)
     name: participant?.participantName ?? "Unknown",
     tense,
     started: start.toMillis() <= context.now.toMillis(),
+    elapsed: nowLineProgress(start, session.duration_minutes, context.now),
     note: noteOf(urgency, minutesUntil(start, context.now), topicCount),
     footer: footerOf(urgency, topicCount),
     canManage: participant?.canSchedule ?? false,
@@ -102,7 +107,7 @@ export function liveTopicsText(count: number): string {
 
 export function markMoved(view: CardView): CardView {
   const tense = view.tense === CardTense.Live ? CardTense.Upcoming : view.tense;
-  return { ...view, tense, note: { kind: "moved" } };
+  return { ...view, tense, elapsed: None, note: { kind: "moved" } };
 }
 
 /** A card nobody can change: no reschedule, no drag, and a menu of Open session only. */

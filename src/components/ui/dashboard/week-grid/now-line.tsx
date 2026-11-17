@@ -20,6 +20,9 @@ function NowLine({ now }: { now: DateTime }) {
 /** Slots the now line among a day's rendered cards, or above its empty state. */
 export function withNowLine(nodes: ReactNode[], cards: GridCard[], now: Option<DateTime>): ReactNode[] {
   if (now.none) return nodes;
+  // A session under way marks now on its own card.
+  if (cards.some((c) => c.elapsed.some)) return nodes;
   const at = nowLineIndex(cards, (c) => c.start, now.val);
   return [...nodes.slice(0, at), <NowLine key="now-line" now={now.val} />, ...nodes.slice(at)];
 }
+

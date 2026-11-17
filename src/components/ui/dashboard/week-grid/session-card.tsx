@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useId, useMemo } from "react";
-import type { KeyboardEvent, ReactNode, RefObject, SyntheticEvent } from "react";
+import type { CSSProperties, KeyboardEvent, ReactNode, RefObject, SyntheticEvent } from "react";
 import Link from "next/link";
 import { useDraggable } from "@dnd-kit/core";
 import { ArrowRight, Check } from "lucide-react";
@@ -128,9 +128,10 @@ export function SessionCard({
           {...listeners}
           onClick={onClick}
           onKeyDown={onKeyDown}
+          style={elapsedFill(view)}
           className={cn(
             // A long press opens the card's menu, so it mustn't also select text or show iOS's callout.
-            "flex cursor-pointer select-none flex-col gap-1.5 rounded-xl p-[11px] outline-none [-webkit-touch-callout:none]",
+            "relative flex cursor-pointer select-none flex-col gap-1.5 rounded-xl p-[11px] outline-none [-webkit-touch-callout:none]",
             layout === SessionCardLayout.Grid && "min-h-32",
             draggable && "cursor-grab",
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
@@ -156,6 +157,7 @@ export function SessionCard({
             {view.name}
           </span>
           <CardNoteLine note={view.note} />
+          {view.elapsed.some && <NowDot elapsed={view.elapsed.val} />}
           <div className="mt-auto flex flex-wrap items-center justify-between gap-1.5">
             <CardFooterLine footer={view.footer} sessionId={view.session.id} />
             {isAgenda && (
@@ -277,4 +279,20 @@ function CardFooterLine({ footer, sessionId }: { footer: CardFooter; sessionId: 
       throw new Error(`Unhandled card footer: ${_exhaustive}`);
     }
   }
+}
+
+function elapsedFill(view: CardView): CSSProperties {
+  if (view.elapsed.none) return {};
+  const to = `${view.elapsed.val * 100}%`;
+  return { backgroundImage: `linear-gradient(hsl(var(--brand-elapsed)) ${to}, transparent ${to})` };
+}
+
+function NowDot({ elapsed }: { elapsed: number }) {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute left-0 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand"
+      style={{ top: `${elapsed * 100}%` }}
+    />
+  );
 }
