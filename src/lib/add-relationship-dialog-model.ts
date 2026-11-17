@@ -237,12 +237,13 @@ export function railOf({ step, role, partner }: RailInput): StepRailItem[] {
 
 interface LeadInput {
   step: AddRelationshipStep;
+  hasRole: boolean;
   complete: boolean;
   submitting: boolean;
   onConfirm: () => void;
 }
 
-export function leadOf({ step, complete, submitting, onConfirm }: LeadInput): StepDialogLead {
-  if (step !== AddRelationshipStep.Person) return { kind: "none" };
+export function leadOf({ step, hasRole, complete, submitting, onConfirm }: LeadInput): StepDialogLead {
+  if (step !== AddRelationshipStep.Person) return hasRole ? { kind: "none" } : { kind: "hint", text: "Choose a role first" };
   return { kind: "confirm", label: "Pair them", disabled: !complete, pending: submitting, onConfirm };
 }

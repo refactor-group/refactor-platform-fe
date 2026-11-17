@@ -121,9 +121,10 @@ export function useAddRelationshipDialog({
       role.some && partner.some
         ? Some({ partner: partner.val, line: summaryLine(member, partner.val, role.val) })
         : None,
-    lead: leadOf({ step, complete: role.some && partner.some, submitting, onConfirm: submit }),
+    lead: leadOf({ step, hasRole: role.some, complete: role.some && partner.some, submitting, onConfirm: submit }),
     position: { index: index + 1, total: STEP_ORDER.length },
     onPrev: index > 0 ? Some(() => setStep(STEP_ORDER[index - 1])) : None,
-    onNext: index < STEP_ORDER.length - 1 ? Some(() => setStep(STEP_ORDER[index + 1])) : None,
+    // The person step needs a role to tell who's already paired.
+    onNext: index < STEP_ORDER.length - 1 && role.some ? Some(() => setStep(STEP_ORDER[index + 1])) : None,
   };
 }

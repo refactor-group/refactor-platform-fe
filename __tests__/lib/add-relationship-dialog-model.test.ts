@@ -165,12 +165,16 @@ describe("railOf", () => {
 describe("leadOf", () => {
   const onConfirm = () => {};
 
-  it("shows no confirm before the last step", () => {
-    expect(leadOf({ step: AddRelationshipStep.Role, complete: true, submitting: false, onConfirm })).toEqual({ kind: "none" });
+  it("asks for a role, then shows no confirm before the last step", () => {
+    expect(leadOf({ step: AddRelationshipStep.Role, hasRole: false, complete: false, submitting: false, onConfirm })).toEqual({
+      kind: "hint",
+      text: "Choose a role first",
+    });
+    expect(leadOf({ step: AddRelationshipStep.Role, hasRole: true, complete: true, submitting: false, onConfirm })).toEqual({ kind: "none" });
   });
 
   it("disables confirm until both choices are made", () => {
-    expect(leadOf({ step: AddRelationshipStep.Person, complete: false, submitting: false, onConfirm })).toMatchObject({
+    expect(leadOf({ step: AddRelationshipStep.Person, hasRole: true, complete: false, submitting: false, onConfirm })).toMatchObject({
       kind: "confirm",
       label: "Pair them",
       disabled: true,

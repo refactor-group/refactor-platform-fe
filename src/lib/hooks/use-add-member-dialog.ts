@@ -193,12 +193,14 @@ export function useAddMemberDialog({
 
   const [mode, setMode] = useState(canAddExisting ? initialMode : AddMemberMode.Create);
   const [fields, setFields] = useState(EMPTY_NEW_PERSON);
-  const [role, setRole] = useState(Role.User);
+  const [chosenRole, setRole] = useState(Role.User);
   const [relationship, setRelationship] = useState(JoinRelationship.None);
   const [pickedPartnerId, setPickedPartnerId] = useState<Option<Id>>(None);
   const [step, setStep] = useState(AddMemberStep.Person);
   const [submitting, setSubmitting] = useState(false);
 
+  // A new account always joins as a member; only an existing one picks access.
+  const role = mode === AddMemberMode.Existing ? chosenRole : Role.User;
   const organizationName = currentOrganization?.name ?? "this organization";
   const members = organizationMembers.map(memberOf);
   // A found account may return to old relationships; show those as already paired.

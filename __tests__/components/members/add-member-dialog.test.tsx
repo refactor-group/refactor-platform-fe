@@ -376,6 +376,22 @@ describe("AddMemberDialog – attaching an existing account", () => {
     expect(toast.success).toHaveBeenCalledWith("Ada Lovelace added to this organization");
   });
 
+  it("drops an Admin choice once switched to a new person, who always joins as a member", async () => {
+    captureAdds();
+    const user = userEvent.setup();
+    renderDialog();
+
+    await findAda(user);
+    await next(user);
+    await user.click(screen.getByRole("radio", { name: "Admin" }));
+    expect(screen.getByText("Ada Lovelace to Acme as an admin")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Previous step" }));
+    await user.click(screen.getByRole("button", { name: "New person" }));
+    await fillNewPerson(user);
+
+    expect(screen.getByText("Ada Lovelace to Acme as a member")).toBeInTheDocument();
+  });
+
   it("defaults to Member, which submits the User role", async () => {
     const { attached } = captureAdds();
     const user = userEvent.setup();
