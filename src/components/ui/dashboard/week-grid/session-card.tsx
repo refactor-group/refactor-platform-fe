@@ -284,7 +284,7 @@ function CardFooterLine({ footer, sessionId }: { footer: CardFooter; sessionId: 
 function elapsedFill(view: CardView): CSSProperties {
   if (view.elapsed.none) return {};
   const to = `${view.elapsed.val * 100}%`;
-  return { backgroundImage: `linear-gradient(hsl(var(--brand) / .08) ${to}, transparent ${to})` };
+  return { backgroundImage: `linear-gradient(hsl(var(--brand) / .04) ${to}, transparent ${to})` };
 }
 
 function NowDot({ elapsed }: { elapsed: number }) {
