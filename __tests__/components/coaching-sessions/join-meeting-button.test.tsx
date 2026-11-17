@@ -62,14 +62,14 @@ beforeEach(() => {
 
 describe("JoinMeetingButton — disabled (no meeting URL)", () => {
   it("renders a disabled button when meetingUrl is missing", () => {
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={undefined} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={undefined} controlsRecording={true} />);
     const button = screen.getByRole("button", { name: /join meeting/i });
     expect(button).toBeDisabled();
   });
 
   it("does NOT render the dropdown menu options when disabled", async () => {
     const user = userEvent.setup();
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={undefined} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={undefined} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     expect(
       screen.queryByText(/join with transcription/i)
@@ -82,7 +82,7 @@ describe("JoinMeetingButton — disabled (no meeting URL)", () => {
 describe("JoinMeetingButton — coach idle dropdown", () => {
   it("calls window.open synchronously BEFORE startRecording when 'Join with transcription' is clicked", async () => {
     const user = userEvent.setup();
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
 
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
@@ -107,7 +107,7 @@ describe("JoinMeetingButton — coach idle dropdown", () => {
 
   it("only calls window.open (no API call) for 'Join without transcription'", async () => {
     const user = userEvent.setup();
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
 
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
@@ -124,7 +124,7 @@ describe("JoinMeetingButton — coach idle dropdown", () => {
     const user = userEvent.setup();
     startRecording.mockRejectedValueOnce(new Error("Recall.ai unavailable"));
 
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     const item = await screen.findByRole("menuitem", {
       name: /join with transcription/i,
@@ -149,7 +149,7 @@ describe("JoinMeetingButton — coach idle, existing transcription on the sessio
       status: TranscriptionStatus.Completed,
     };
 
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
       await screen.findByRole("menuitem", { name: /join with transcription/i })
@@ -170,7 +170,7 @@ describe("JoinMeetingButton — coach idle, existing transcription on the sessio
       status: TranscriptionStatus.Completed,
     };
 
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
       await screen.findByRole("menuitem", { name: /join with transcription/i })
@@ -198,7 +198,7 @@ describe("JoinMeetingButton — coach idle, existing transcription on the sessio
       status: TranscriptionStatus.Completed,
     };
 
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
       await screen.findByRole("menuitem", { name: /join with transcription/i })
@@ -219,7 +219,7 @@ describe("JoinMeetingButton — coach idle, existing transcription on the sessio
       status: TranscriptionStatus.Completed,
     };
 
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
       await screen.findByRole("menuitem", {
@@ -245,7 +245,7 @@ describe("JoinMeetingButton — coach idle, existing transcription on the sessio
       status: TranscriptionStatus.Failed,
     };
 
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
       await screen.findByRole("menuitem", { name: /join with transcription/i })
@@ -270,7 +270,7 @@ describe.each([
     const user = userEvent.setup();
     recordingHookState.recording = { status };
 
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
 
     const trigger = screen.getByRole("button", { name: /join meeting/i });
     expect(trigger).not.toBeDisabled();
@@ -290,7 +290,7 @@ describe.each([
     const user = userEvent.setup();
     recordingHookState.recording = { status };
 
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
       await screen.findByRole("menuitem", { name: /open meeting/i })
@@ -317,7 +317,7 @@ describe.each([
       started_at: new Date(Date.now() - 65_000).toISOString(),
     };
 
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
 
     const label = await screen.findByTestId("join-meeting-elapsed-label");
@@ -334,7 +334,7 @@ describe.each([
   it("renders the label without a timer when started_at is absent (bot in InMeeting before BE sets started_at)", async () => {
     const user = userEvent.setup();
     recordingHookState.recording = { status };
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
 
     const label = await screen.findByTestId("join-meeting-elapsed-label");
@@ -350,7 +350,7 @@ describe.each([
       started_at: new Date().toISOString(),
     };
 
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
 
     const label = await screen.findByTestId("join-meeting-elapsed-label");
@@ -370,7 +370,7 @@ describe.each([
       started_at: new Date().toISOString(),
     };
 
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
       await screen.findByRole("menuitem", { name: /stop recording/i })
@@ -391,7 +391,7 @@ describe.each([
       started_at: new Date().toISOString(),
     };
 
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
     await user.click(
       await screen.findByRole("menuitem", { name: /stop recording/i })
@@ -415,7 +415,7 @@ describe("JoinMeetingButton — coach processing", () => {
       status: MeetingRecordingStatus.Processing,
     };
 
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
 
     const trigger = screen.getByRole("button", { name: /join meeting/i });
     expect(trigger).not.toBeDisabled();
@@ -440,7 +440,7 @@ describe.each([
 ])("JoinMeetingButton — coach terminal (status=%s) returns to idle", (status) => {
   it("renders the Join Meeting dropdown trigger", () => {
     recordingHookState.recording = { status };
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     expect(
       screen.getByRole("button", { name: /join meeting/i })
     ).not.toBeDisabled();
@@ -470,7 +470,7 @@ describe("JoinMeetingButton — coachee idle", () => {
       <JoinMeetingButton
         sessionId="s-1"
         meetingUrl={MEETING_URL}
-        isCoach={false}
+        controlsRecording={false}
       />
     );
     const button = screen.getByRole("button", { name: /join meeting/i });
@@ -486,7 +486,7 @@ describe("JoinMeetingButton — coachee idle", () => {
       <JoinMeetingButton
         sessionId="s-1"
         meetingUrl={MEETING_URL}
-        isCoach={false}
+        controlsRecording={false}
       />
     );
 
@@ -506,7 +506,7 @@ describe("JoinMeetingButton — coachee idle", () => {
       <JoinMeetingButton
         sessionId="s-1"
         meetingUrl={MEETING_URL}
-        isCoach={false}
+        controlsRecording={false}
       />
     );
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
@@ -520,7 +520,7 @@ describe("JoinMeetingButton — coachee idle", () => {
       <JoinMeetingButton
         sessionId="s-1"
         meetingUrl={MEETING_URL}
-        isCoach={false}
+        controlsRecording={false}
       />
     );
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
@@ -544,7 +544,7 @@ describe("JoinMeetingButton — coachee idle", () => {
       <JoinMeetingButton
         sessionId="s-1"
         meetingUrl={MEETING_URL}
-        isCoach={false}
+        controlsRecording={false}
       />
     );
     const button = screen.getByRole("button", { name: /join meeting/i });
@@ -572,7 +572,7 @@ describe.each([
         <JoinMeetingButton
           sessionId="s-1"
           meetingUrl={MEETING_URL}
-          isCoach={false}
+          controlsRecording={false}
         />
       );
       const button = screen.getByRole("button", { name: /join meeting/i });
@@ -590,7 +590,7 @@ describe.each([
         <JoinMeetingButton
           sessionId="s-1"
           meetingUrl={MEETING_URL}
-          isCoach={false}
+          controlsRecording={false}
         />
       );
       await user.click(screen.getByRole("button", { name: /join meeting/i }));
@@ -613,7 +613,7 @@ describe.each([
         <JoinMeetingButton
           sessionId="s-1"
           meetingUrl={MEETING_URL}
-          isCoach={false}
+          controlsRecording={false}
         />
       );
       expect(screen.queryByText(/transcribing/i)).not.toBeInTheDocument();
@@ -648,7 +648,7 @@ describe.each([
         <JoinMeetingButton
           sessionId="s-1"
           meetingUrl={MEETING_URL}
-          isCoach={false}
+          controlsRecording={false}
         />
       );
 
@@ -671,7 +671,7 @@ describe.each([
         <JoinMeetingButton
           sessionId="s-1"
           meetingUrl={MEETING_URL}
-          isCoach={false}
+          controlsRecording={false}
         />
       );
 
@@ -695,7 +695,7 @@ describe("JoinMeetingButton — role-agnostic disabled state", () => {
       <JoinMeetingButton
         sessionId="s-1"
         meetingUrl={undefined}
-        isCoach={true}
+        controlsRecording={true}
       />
     );
     const coachLabel = screen
@@ -709,7 +709,7 @@ describe("JoinMeetingButton — role-agnostic disabled state", () => {
       <JoinMeetingButton
         sessionId="s-1"
         meetingUrl={undefined}
-        isCoach={false}
+        controlsRecording={false}
       />
     );
     expect(
@@ -738,7 +738,7 @@ describe("JoinMeetingButton — recording dot on camera icon", () => {
       status,
       started_at: new Date().toISOString(),
     };
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     const dot = screen.getByTestId(RECORDING_DOT);
     expect(dot.className).toContain("bg-red-500");
     expect(dot.className).toContain("motion-safe:animate-pulse");
@@ -752,7 +752,7 @@ describe("JoinMeetingButton — recording dot on camera icon", () => {
       status,
       started_at: new Date().toISOString(),
     };
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={false} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={false} />);
     const dot = screen.getByTestId(RECORDING_DOT);
     expect(dot.className).toContain("bg-red-500");
     expect(dot.className).toContain("motion-safe:animate-pulse");
@@ -768,7 +768,7 @@ describe("JoinMeetingButton — recording dot on camera icon", () => {
     MeetingRecordingStatus.Cancelled,
   ])("does NOT render the dot for status=%s (coach)", (status) => {
     recordingHookState.recording = { status };
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     expect(screen.queryByTestId(RECORDING_DOT)).not.toBeInTheDocument();
   });
 
@@ -782,12 +782,12 @@ describe("JoinMeetingButton — recording dot on camera icon", () => {
     MeetingRecordingStatus.Cancelled,
   ])("does NOT render the dot for status=%s (coachee)", (status) => {
     recordingHookState.recording = { status };
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={false} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={false} />);
     expect(screen.queryByTestId(RECORDING_DOT)).not.toBeInTheDocument();
   });
 
   it("does NOT render the dot when idle (no recording)", () => {
-    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} isCoach={true} />);
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     expect(screen.queryByTestId(RECORDING_DOT)).not.toBeInTheDocument();
   });
 });
@@ -804,7 +804,7 @@ describe("JoinMeetingButton — role transitions don't leak privileges", () => {
       <JoinMeetingButton
         sessionId="s-1"
         meetingUrl={MEETING_URL}
-        isCoach={true}
+        controlsRecording={true}
       />
     );
 
@@ -821,7 +821,7 @@ describe("JoinMeetingButton — role transitions don't leak privileges", () => {
       <JoinMeetingButton
         sessionId="s-1"
         meetingUrl={MEETING_URL}
-        isCoach={false}
+        controlsRecording={false}
       />
     );
 

@@ -1,5 +1,12 @@
 import type { BrowserContext, Page, Route } from '@playwright/test'
-import { AUTH_STORE_STATE, MOCK_USER_ID, SINGLE_RELATIONSHIP, mockCommonApiRoutes, setupAuthentication } from './helpers'
+import {
+  AUTH_STORE_STATE,
+  COACHEE_VIEWER,
+  MOCK_USER_ID,
+  SINGLE_RELATIONSHIP,
+  mockCommonApiRoutes,
+  setupAuthentication,
+} from './helpers'
 
 // ─── Clock and people ────────────────────────────────────────────────
 
@@ -40,6 +47,7 @@ const MY_COACH_RELATIONSHIP = {
   coach_last_name: 'Abernathy-Whitfield',
   coachee_first_name: COACH.first_name,
   coachee_last_name: COACH.last_name,
+  viewer: COACHEE_VIEWER,
 }
 
 export const RELATIONSHIPS = [...COACHED, MY_COACH_RELATIONSHIP]

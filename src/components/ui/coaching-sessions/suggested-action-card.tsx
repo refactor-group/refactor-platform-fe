@@ -24,7 +24,7 @@ import { useTapTooltip } from "@/lib/hooks/use-tap-tooltip";
 import type { Id } from "@/types/general";
 import type { Goal } from "@/types/goal";
 import { None, Some, type Option } from "@/types/option";
-import { RelationshipRole } from "@/types/relationship-role";
+import type { RelationshipViewer } from "@/types/coaching-relationship";
 import { proposalEdits, type ActionEdits, type ActionSuggestion } from "@/types/transcript-suggestion";
 
 const markdownComponents = {
@@ -37,7 +37,7 @@ const markdownComponents = {
 
 export interface SuggestedActionCardProps {
   suggestion: ActionSuggestion;
-  viewerRole: RelationshipRole;
+  viewer: RelationshipViewer;
   locale: string;
   coachId: Id;
   coachName: string;
@@ -78,7 +78,7 @@ export function SuggestedActionCard(props: SuggestedActionCardProps) {
 
 function SuggestionView({
   suggestion,
-  viewerRole,
+  viewer,
   locale,
   coachId,
   coachName,
@@ -101,7 +101,7 @@ function SuggestionView({
         : Some(proposalEdits(proposal, { assignee_ids: assigneeIds }))
     );
   const mayAct = mayActOnSuggestion(
-    viewerRole,
+    viewer.sees_all_actions,
     { coachId, coacheeId },
     assigneeIds,
     None
@@ -234,7 +234,7 @@ function SuggestionView({
 
 function SuggestionEditBack({
   suggestion,
-  viewerRole,
+  viewer,
   locale,
   coachId,
   coachName,
@@ -265,7 +265,7 @@ function SuggestionEditBack({
     coacheeName
   );
   const disabledReasons =
-    viewerRole === RelationshipRole.Coachee
+    !viewer.sees_all_actions
       ? { [coachId]: "Only your coach can assign an action to themselves." }
       : {};
   const action = {

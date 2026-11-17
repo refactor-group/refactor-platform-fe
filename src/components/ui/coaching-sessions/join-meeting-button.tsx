@@ -44,14 +44,14 @@ import { type Option, Some, None } from "@/types/option";
 interface JoinMeetingButtonProps {
   sessionId: Id | null;
   meetingUrl: string | undefined;
-  /** Coach owns the bot lifecycle; coachee only opens the Meet URL. */
-  isCoach: boolean;
+  /** Starts and stops the recording bot (coach or colleague); a coachee only opens the Meet URL. */
+  controlsRecording: boolean;
 }
 
 export function JoinMeetingButton({
   sessionId,
   meetingUrl,
-  isCoach,
+  controlsRecording,
 }: JoinMeetingButtonProps) {
   const { recording, startRecording, stopRecording } =
     useMeetingRecording(sessionId);
@@ -79,7 +79,7 @@ export function JoinMeetingButton({
   // Coachee: plain single-click camera icon in every state. Dot conveys
   // "the coach started a recording" passively; we don't restructure the
   // coachee's join affordance around lifecycle they don't own.
-  if (!isCoach) {
+  if (!controlsRecording) {
     return <CoacheeIdleButton onJoin={openMeeting} showRecordingDot={isLive} />;
   }
 

@@ -1,7 +1,7 @@
 import { DateTime } from "ts-luxon";
 import { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 import { Id } from "@/types/general";
-import { isMember } from "@/types/coaching-relationship";
+import { schedulingBlockedBy, viewerOf } from "@/types/coaching-relationship";
 import { SessionUrgency } from "@/types/session-display";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { RelationshipRole } from "@/types/relationship-role";
@@ -263,15 +263,15 @@ export type SessionParticipantInfo = {
   readonly firstName: string;
   /** The participant's last name (for avatar initials) */
   readonly lastName: string;
-  /** The viewer's role in the session (Coach or Coachee) */
+  /** The viewer's role in the session, from the backend */
   readonly userRole: RelationshipRole;
-  /** Whether the viewer is the coach in this session */
-  readonly isCoach: boolean;
+  /** The viewer may schedule, reschedule and cancel in this relationship, from the backend */
+  readonly canSchedule: boolean;
   /** True when the counterpart user object was not loaded; participantName
    *  in that case is a "(data not loaded)" placeholder, not a real name. */
   readonly isMissing: boolean;
-  /** The participant is still in the organization; if not, nothing new can be scheduled with them. */
-  readonly counterpartIsMember: boolean;
+  /** Nobody has left the organization in a way that blocks scheduling, from the backend. */
+  readonly schedulingOpen: boolean;
 } | null;
 
 /**
@@ -288,21 +288,24 @@ export function getSessionParticipantInfo(
 ): SessionParticipantInfo {
   const relationship = session.relationship;
   if (!relationship) return null;
+  const viewer = viewerOf(relationship);
+  if (viewer.none) return null;
 
-  const isCoach = relationship.coach_id === userId;
-  const userRole = isCoach ? RelationshipRole.Coach : RelationshipRole.Coachee;
-  const participant = isCoach ? session.coachee : session.coach;
-  const counterpartIsMember = isMember(relationship, isCoach ? relationship.coachee_id : relationship.coach_id);
+  const userRole = viewer.val.role;
+  const canSchedule = viewer.val.can_schedule_sessions;
+  const schedulingOpen = schedulingBlockedBy(relationship).none;
+  // Identity, not permission: the other person is whoever isn't the viewer.
+  const participant = relationship.coach_id === userId ? session.coachee : session.coach;
 
   if (!participant) {
     return {
-      participantName: isCoach ? "Coachee (data not loaded)" : "Coach (data not loaded)",
+      participantName: "(data not loaded)",
       firstName: "",
       lastName: "",
       userRole,
-      isCoach,
+      canSchedule,
       isMissing: true,
-      counterpartIsMember,
+      schedulingOpen,
     };
   }
 
@@ -315,9 +318,9 @@ export function getSessionParticipantInfo(
     firstName: participant.first_name,
     lastName: participant.last_name,
     userRole,
-    isCoach,
+    canSchedule,
     isMissing: false,
-    counterpartIsMember,
+    schedulingOpen,
   };
 }
 

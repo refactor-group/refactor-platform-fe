@@ -30,6 +30,12 @@ describe("notAMemberRefusalOf", () => {
     );
   });
 
+  it("reads a colleague refusal naming the other colleague", () => {
+    const refusal = notAMemberRefusalOf(axiosError(409, refusalBody("participant_not_a_member", { user_id: "u-2" })));
+    expect(refusal.some && refusal.val.reason).toBe(NotAMemberReason.Participant);
+    expect(refusal.some && refusal.val.userId).toEqual(Some("u-2"));
+  });
+
   it("reads an assignee refusal from an EntityApiError", () => {
     const refusal = notAMemberRefusalOf(entityError(409, refusalBody("assignee_not_a_member")));
     expect(refusal.some && refusal.val.reason).toBe(NotAMemberReason.Assignee);

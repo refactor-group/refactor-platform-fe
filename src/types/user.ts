@@ -1,5 +1,6 @@
 import { Id } from "@/types/general";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
+import type { RelationshipKind } from "@/types/coaching-relationship";
 
 /**
  * Represents a user role assignment within an organization or at the system level.
@@ -73,8 +74,14 @@ export interface NewUser {
   email: string;
   password?: string;
   timezone: string;
-  /// Coach to assign in the same request. Omitted when no coach is chosen.
-  coach_id?: Id;
+  /// A relationship made in the same request. Omitted for none.
+  relationship?: InviteRelationship;
+}
+
+/** Coaching: `with_user_id` coaches the invitee. Colleague: the other colleague. */
+export interface InviteRelationship {
+  with_user_id: Id;
+  kind: RelationshipKind;
 }
 
 export interface NewUserPassword {

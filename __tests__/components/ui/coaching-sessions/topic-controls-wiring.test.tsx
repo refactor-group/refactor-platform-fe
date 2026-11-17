@@ -125,6 +125,11 @@ vi.mock("@/lib/hooks/use-current-coaching-relationship", () => ({
       coach_last_name: "Hodapp",
       coachee_first_name: "Caleb",
       coachee_last_name: "Bourg",
+      // What the backend computes for whoever is signed in.
+      viewer:
+        mockUserId === "coach-1"
+          ? { role: "coach", can_schedule_sessions: true, sees_all_actions: true }
+          : { role: "coachee", can_schedule_sessions: false, sees_all_actions: false },
     },
     isLoading: false,
     isError: false,

@@ -6,6 +6,8 @@ import {
   MOCK_ORGANIZATIONS,
   SINGLE_RELATIONSHIP,
   mockCommonApiRoutes,
+  mockRelationship,
+  COACHEE_VIEWER,
 } from './helpers'
 
 // Canary: a coachee viewing /actions should send the batch request with NO
@@ -72,7 +74,7 @@ const UNASSIGNED_ACTION = mockAction(
 async function setupAsCoachee(page: Page, context: BrowserContext) {
   const coacheeAuth = {
     ...AUTH_STORE_STATE,
-    state: { ...AUTH_STORE_STATE.state, isACoach: false },
+    state: { ...AUTH_STORE_STATE.state, isACoach: false, canScheduleSessions: false },
   }
   await page.addInitScript(
     ({ auth, org }) => {
@@ -103,7 +105,14 @@ test.describe('Coachee viewing /actions', () => {
     context,
   }) => {
     await setupAsCoachee(page, context)
-    await mockCommonApiRoutes(page)
+    await mockCommonApiRoutes(page, {
+      relationships: [
+        mockRelationship('rel-1', {
+          coachee_id: MOCK_USER_ID,
+          viewer: COACHEE_VIEWER,
+        }),
+      ],
+    })
 
     // Override the catch-all to also serve the user's organization list
     await page.route('**/users/current/organizations', async (route) => {

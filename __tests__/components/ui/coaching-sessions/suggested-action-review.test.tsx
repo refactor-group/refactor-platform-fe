@@ -15,7 +15,7 @@ import { DueSource, type ActionEdits, type ActionSuggestion } from "@/types/tran
 import { Some, None, type Option } from "@/types/option";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
-import { createMockAction } from "../../../test-utils";
+import { createMockAction, COACH_VIEWER, viewerFor } from "../../../test-utils";
 import { NonMemberIdsProvider } from "@/components/ui/coaching-sessions/non-member-ids-context";
 import { createMockActionSuggestion } from "../../../factories/action-suggestion.factory";
 
@@ -100,7 +100,7 @@ describe("SuggestedActionCard actions", () => {
       <Wrapper>
         <SuggestedActionCard
           suggestion={suggestion}
-          viewerRole={viewerRole}
+          viewer={viewerFor(viewerRole)}
           {...people}
           {...handlers}
         />
@@ -201,7 +201,7 @@ describe("SuggestedActionCard when a proposed assignee is no longer a member", (
         <NonMemberIdsProvider ids={[COACHEE_ID]}>
           <SuggestedActionCard
             suggestion={makeSuggestion({ assignees: [COACH_ID, COACHEE_ID] })}
-            viewerRole={RelationshipRole.Coach}
+            viewer={COACH_VIEWER}
             {...people}
             onAccept={onAccept}
           />
@@ -231,7 +231,7 @@ describe("ActionSectionContent review flow", () => {
       reviewActions: [],
       sessionActions,
       actionSuggestions: suggestions,
-      viewerRole: RelationshipRole.Coach,
+      viewer: COACH_VIEWER,
       locale: "en-US",
       coachId: COACH_ID,
       coachName: "Jim Hodapp",

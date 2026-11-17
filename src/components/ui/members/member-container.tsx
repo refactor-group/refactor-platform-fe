@@ -1,6 +1,6 @@
 import { MemberList } from "./member-list";
 import { AddMemberButton } from "./add-member-button";
-import type { AddMemberTab } from "./add-member-dialog";
+import type { AddMemberMode } from "@/lib/add-member-dialog-model";
 import type { Option } from "@/types/option";
 import {
   User,
@@ -8,7 +8,7 @@ import {
   isAdminOrSuperAdmin,
   sortUsersAlphabetically,
 } from "@/types/user";
-import { CoachingRelationshipWithUserNames, isUserCoach } from "@/types/coaching-relationship";
+import { CoachingRelationshipWithUserNames, coachesAnyone } from "@/types/coaching-relationship";
 import { UserSession } from "@/types/user-session";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentUserRole } from "@/lib/hooks/use-current-user-role";
@@ -21,8 +21,7 @@ interface MemberContainerProps {
   userSession: UserSession;
   onRefresh: () => void;
   isLoading: boolean;
-  openAddMemberDialog: Option<AddMemberTab>;
-  productName: string;
+  openAddMemberDialog: Option<AddMemberMode>;
 }
 
 export function MemberContainer({
@@ -31,9 +30,8 @@ export function MemberContainer({
   userSession,
   onRefresh,
   isLoading,
-  /// Opens the AddMemberDialog on this tab
+  /// Opens the AddMemberDialog in this mode
   openAddMemberDialog,
-  productName,
 }: MemberContainerProps) {
   const { setIsACoach, isACoach } = useAuthStore((state) => state);
   const currentUserRoleState = useCurrentUserRole();
@@ -41,8 +39,8 @@ export function MemberContainer({
 
   // Check if current user is a coach in ANY relationship
   useEffect(() => {
-    setIsACoach(isUserCoach(userSession.id, relationships));
-  }, [relationships, userSession.id, setIsACoach]);
+    setIsACoach(coachesAnyone(relationships));
+  }, [relationships, setIsACoach]);
 
   // Sort users: current user first, then alphabetically by name
   const displayUsers = sortUsersAlphabetically(users, userSession.id);
@@ -70,7 +68,7 @@ export function MemberContainer({
             openAddMemberDialog={openAddMemberDialog}
             currentUserRoleState={currentUserRoleState}
             organizationMembers={displayUsers}
-            productName={productName}
+            relationships={relationships}
             canAddExistingMembers={canAddExistingMembers(userSession.roles)}
           />
         )}

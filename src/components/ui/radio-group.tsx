@@ -3,9 +3,10 @@
 import * as React from "react"
 import { useId } from "react"
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group"
-import { Circle } from "lucide-react"
+import { Circle, Info } from "lucide-react"
 
 import { cn } from "@/components/lib/utils"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 const RadioGroup = React.forwardRef<
   React.ElementRef<typeof RadioGroupPrimitive.Root>,
@@ -47,19 +48,24 @@ interface RadioCardItemProps {
   title: string
   description: string
   disabled?: boolean
+  /** Shown from an (i) button on the card, for when the description isn't enough. */
+  info?: string
 }
 
-function RadioCardItem({ value, title, description, disabled }: RadioCardItemProps) {
+function RadioCardItem({ value, title, description, disabled, info }: RadioCardItemProps) {
   const id = useId()
   const titleId = `${id}-title`
   const descriptionId = `${id}-description`
-  return (
+  const item = (
     <RadioGroupPrimitive.Item
       value={value}
       disabled={disabled}
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
-      className="group flex min-h-14 w-full items-center gap-3 rounded-[12px] border bg-card px-4 py-2.5 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand motion-reduce:transition-none"
+      className={cn(
+        "group flex min-h-14 w-full items-center gap-3 rounded-[12px] border bg-card px-4 py-2.5 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-brand motion-reduce:transition-none",
+        info && "pr-14"
+      )}
     >
       <span
         aria-hidden
@@ -74,6 +80,28 @@ function RadioCardItem({ value, title, description, disabled }: RadioCardItemPro
         </span>
       </span>
     </RadioGroupPrimitive.Item>
+  )
+  if (!info) return item
+  // A sibling, not a child: a button can't sit inside the radio's button.
+  return (
+    <div className="relative">
+      {item}
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label={`About ${title}`}
+            className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-ink-2 transition-colors duration-150 hover:bg-fill hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Info className="h-4 w-4" aria-hidden />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-64 p-3 text-sm">
+          <p className="font-medium text-foreground">{title}</p>
+          <p className="mt-1 text-muted-foreground">{info}</p>
+        </PopoverContent>
+      </Popover>
+    </div>
   )
 }
 

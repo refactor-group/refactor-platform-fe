@@ -50,10 +50,10 @@ const DESTRUCTIVE_ITEM_CLASS = "text-destructive focus:text-destructive focus:bg
 
 export function SessionCardMenu({ view, onAction, children }: SessionCardMenuProps) {
   const context: SessionActionContext = {
-    isCoach: view.canManage,
+    canSchedule: view.canManage,
     isLocked: !view.editable,
     hasStarted: view.started,
-    counterpartIsMember: view.counterpartIsMember,
+    schedulingOpen: view.schedulingOpen,
   };
   const items = sessionActionsFor(view.session, context);
   // A closing menu still sees outside pointerdowns while it fades out; those clicks are real.
@@ -73,7 +73,7 @@ export function SessionCardMenu({ view, onAction, children }: SessionCardMenuPro
             />
           </Fragment>
         ))}
-        {!view.counterpartIsMember && (
+        {!view.schedulingOpen && (
           <>
             <ContextMenuSeparator />
             <p className="max-w-56 px-2 py-1.5 text-xs text-muted-foreground">
@@ -98,7 +98,6 @@ function SessionCardMenuItem({
   return (
     <ContextMenuItem
       onSelect={onSelect}
-      disabled={!item.enabled}
       data-testid={sessionActionTestId(item.action)}
       className={cn(isDestructive(item.group) && DESTRUCTIVE_ITEM_CLASS)}
     >

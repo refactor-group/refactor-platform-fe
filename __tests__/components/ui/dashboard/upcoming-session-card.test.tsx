@@ -1,10 +1,7 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DateTime } from "ts-luxon";
-import {
-  createEnrichedSessionAt,
-  createMockGoal,
-} from "../../../test-utils";
+import { createEnrichedSessionAt, createMockGoal, COACHEE_VIEWER } from "../../../test-utils";
 import type { EnrichedCoachingSession, CoachingSession } from "@/types/coaching-session";
 import type { Action } from "@/types/action";
 import { ItemStatus } from "@/types/general";
@@ -60,6 +57,7 @@ const baseAuthState = {
     roles: [],
   },
   isACoach: true,
+  canScheduleSessions: true,
 };
 
 function setAuth(state = baseAuthState) {
@@ -318,10 +316,13 @@ describe("UpcomingSessionCard — populated state", () => {
       ...baseAuthState,
       userSession: { ...baseAuthState.userSession, id: "coachee-1" },
       isACoach: false,
+      canScheduleSessions: false,
     });
+    const base = createEnrichedSessionAt(15);
     const imminent = createEnrichedSessionAt(15, {
       id: "imminent",
       coaching_relationship_id: "rel-1",
+      relationship: { ...base.relationship!, viewer: COACHEE_VIEWER },
     });
     setSessions([imminent]);
 
@@ -378,7 +379,7 @@ describe("UpcomingSessionCard — populated state", () => {
   });
 
   it("hides the empty-state schedule button when the viewer cannot create sessions", () => {
-    setAuth({ ...baseAuthState, isACoach: false });
+    setAuth({ ...baseAuthState, isACoach: false, canScheduleSessions: false });
     setSessions([]);
     render(<UpcomingSessionCard onCreateSession={vi.fn()} />);
     expect(

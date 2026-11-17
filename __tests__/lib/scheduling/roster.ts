@@ -3,7 +3,7 @@ import { toSessionDate } from "@/lib/session-window";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { None, Some } from "@/types/option";
-import { createMockEnrichedSession, createMockRelationship } from "../../test-utils";
+import { COACHEE_VIEWER, COACH_VIEWER, createMockEnrichedSession, createMockRelationship } from "../../test-utils";
 
 /**
  * A coach ("me") in America/Chicago on Monday, August 17, 2026 at 10:00 AM.
@@ -52,6 +52,7 @@ export const RELATIONSHIPS: CoachingRelationshipWithUserNames[] = [
     coach_last_name: BOSS.last,
     coachee_first_name: "Jim",
     coachee_last_name: "Hodapp",
+    viewer: COACHEE_VIEWER,
   }),
 ];
 
@@ -92,6 +93,7 @@ export function session(spec: SessionSpec): EnrichedCoachingSession {
       id: spec.relationshipId,
       coach_id: spec.asCoachee ? spec.person.id : ME,
       coachee_id: spec.asCoachee ? ME : spec.person.id,
+      viewer: spec.asCoachee ? COACHEE_VIEWER : COACH_VIEWER,
     },
     coach: spec.asCoachee ? other : me,
     coachee: spec.asCoachee ? me : other,

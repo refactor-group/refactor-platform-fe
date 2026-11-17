@@ -1,20 +1,19 @@
 import { DateTime } from "ts-luxon";
 import type { Id } from "@/types/general";
 import { None, Some, type Option } from "@/types/option";
-import { RelationshipRole } from "@/types/relationship-role";
 import { DueSource, UndatedReason, type ActionSuggestion } from "@/types/transcript-suggestion";
 
 /**
- * Mirrors the backend rule: the coachee may not act on a coach-only
- * suggestion, nor add or remove the coach as an assignee.
+ * Display for the backend's `sees_all_actions`: a viewer without it (a coachee) may not
+ * act on a coach-only suggestion, nor add or remove the coach as an assignee.
  */
 export function mayActOnSuggestion(
-  viewer: RelationshipRole,
+  seesAllActions: boolean,
   people: { coachId: Id; coacheeId: Id },
   stored: Id[],
   requested: Option<Id[]>
 ): boolean {
-  if (viewer === RelationshipRole.Coach) return true;
+  if (seesAllActions) return true;
   const coachStored = stored.includes(people.coachId);
   const coachOnly = coachStored && !stored.includes(people.coacheeId);
   const movesCoach = requested.some && requested.val.includes(people.coachId) !== coachStored;

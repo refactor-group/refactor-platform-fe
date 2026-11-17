@@ -42,7 +42,7 @@ describe("MeetingIntegrationSection", () => {
 
   describe("when user is not a coach", () => {
     it("does not render the section", () => {
-      mockAuthStore.mockReturnValue({ isACoach: false, userId: "user-1" });
+      mockAuthStore.mockReturnValue({ isACoach: false, canScheduleSessions: false, userId: "user-1" });
 
       const { container } = render(<MeetingIntegrationSection />);
       expect(container.innerHTML).toBe("");
@@ -51,7 +51,7 @@ describe("MeetingIntegrationSection", () => {
 
   describe("when user is a coach and disconnected", () => {
     beforeEach(() => {
-      mockAuthStore.mockReturnValue({ isACoach: true, userId: "user-1" });
+      mockAuthStore.mockReturnValue({ isACoach: true, canScheduleSessions: true, userId: "user-1" });
     });
 
     it("shows the platform dropdown", () => {
@@ -81,7 +81,7 @@ describe("MeetingIntegrationSection", () => {
 
   describe("when Google is connected", () => {
     beforeEach(() => {
-      mockAuthStore.mockReturnValue({ isACoach: true, userId: "user-1" });
+      mockAuthStore.mockReturnValue({ isACoach: true, canScheduleSessions: true, userId: "user-1" });
       mockGoogleConnection = createMockGoogleOAuthConnectionState();
     });
 
@@ -114,7 +114,7 @@ describe("MeetingIntegrationSection", () => {
 
   describe("when Zoom is connected", () => {
     beforeEach(() => {
-      mockAuthStore.mockReturnValue({ isACoach: true, userId: "user-1" });
+      mockAuthStore.mockReturnValue({ isACoach: true, canScheduleSessions: true, userId: "user-1" });
       mockZoomConnection = createMockZoomOAuthConnectionState();
     });
 
