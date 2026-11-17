@@ -68,6 +68,7 @@ export function MemberContainer({
             openAddMemberDialog={openAddMemberDialog}
             currentUserRoleState={currentUserRoleState}
             organizationMembers={displayUsers}
+            relationships={relationships}
             canAddExistingMembers={canAddExistingMembers(userSession.roles)}
           />
         )}

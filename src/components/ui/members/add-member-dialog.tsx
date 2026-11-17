@@ -22,6 +22,7 @@ import {
   relationshipLabel,
 } from "@/lib/add-member-dialog-model";
 import { type AddMemberDialogModel, useAddMemberDialog } from "@/lib/hooks/use-add-member-dialog";
+import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { User } from "@/types/user";
 
 const FIELDS: readonly { name: keyof NewPersonFields; label: string; type: string }[] = [
@@ -222,6 +223,7 @@ interface AddMemberDialogProps {
   onMemberAdded: () => void;
   /** Who they can be paired with. */
   organizationMembers: User[];
+  relationships: readonly CoachingRelationshipWithUserNames[];
   /** False offers only creating a new account. */
   canAddExisting: boolean;
   initialMode: AddMemberMode;

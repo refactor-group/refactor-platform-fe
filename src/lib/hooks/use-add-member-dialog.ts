@@ -12,6 +12,7 @@ import {
   type NewPersonFields,
   inviteRelationshipOf,
   isComplete,
+  joinRoleOf,
   joinerOf,
   leadOf,
   newUserOf,
@@ -20,18 +21,20 @@ import {
   stepTitle,
   summaryLine,
 } from "@/lib/add-member-dialog-model";
-import { type Member, memberOf, selectedPartner } from "@/lib/add-relationship-dialog-model";
+import { type Member, memberOf, partnerChoices as pairedPartnerChoices, selectedPartner } from "@/lib/add-relationship-dialog-model";
 import {
   organizationArchivedMessage,
   USER_ALREADY_IN_ORGANIZATION_MESSAGE,
   userAlreadyInOrganizationMessage,
 } from "@/lib/api/organization-errors";
 import { useUserMutation } from "@/lib/api/organizations/users";
-import { pairAlreadyRelatedMessage } from "@/lib/api/relationship-errors";
+import { existingRelationshipOf, isPairAlreadyRelated, pairAlreadyRelatedMessage } from "@/lib/api/relationship-errors";
 import { UserApi, userLookupRateLimitedMessage } from "@/lib/api/users";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import { initialsOf } from "@/lib/people";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { toast } from "@/lib/toast";
+import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { type Id, isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
 import { Role, type User, type UserLookupResult } from "@/types/user";
@@ -41,6 +44,8 @@ interface AddMemberInput {
   onMemberAdded: () => void;
   /** Who they can be paired with. Empty skips the relationship step. */
   organizationMembers: User[];
+  /** The organization's relationships, which a found account may already be in. */
+  relationships: readonly CoachingRelationshipWithUserNames[];
   canAddExisting: boolean;
   initialMode: AddMemberMode;
 }
@@ -81,6 +86,16 @@ export interface AddMemberDialogModel {
   onNext: Option<() => void>;
 }
 
+function foundMemberOf(found: UserLookupResult): Member {
+  return {
+    userId: found.id,
+    firstName: found.first_name,
+    fullName: `${found.first_name} ${found.last_name}`.trim(),
+    initials: initialsOf(found.first_name, found.last_name),
+    email: found.email,
+  };
+}
+
 function partnerChoices(members: readonly Member[]): PickerPerson[] {
   return [...members]
     .sort((a, b) => a.fullName.localeCompare(b.fullName))
@@ -94,9 +109,16 @@ function partnerChoices(members: readonly Member[]): PickerPerson[] {
     }));
 }
 
-function addErrorMessage(error: unknown, joiner: Joiner, partner: Option<Member>): string {
+async function addErrorMessage(
+  error: unknown,
+  organizationId: Id,
+  joiner: Joiner,
+  partner: Option<Member>
+): Promise<string> {
+  if (partner.some && isPairAlreadyRelated(error)) {
+    return pairAlreadyRelatedMessage(await existingRelationshipOf(error, organizationId), joiner.fullName, partner.val.fullName);
+  }
   return (
-    (partner.some ? pairAlreadyRelatedMessage(error, joiner.fullName, partner.val.fullName) : null) ??
     userAlreadyInOrganizationMessage(error) ??
     organizationArchivedMessage(error) ??
     (isForbiddenError(error) ? PERMISSION_DENIED_MESSAGE : "Couldn't add the member")
@@ -161,6 +183,7 @@ export function useAddMemberDialog({
   onClose,
   onMemberAdded,
   organizationMembers,
+  relationships,
   canAddExisting,
   initialMode,
 }: AddMemberInput): AddMemberDialogModel {
@@ -178,7 +201,11 @@ export function useAddMemberDialog({
 
   const organizationName = currentOrganization?.name ?? "this organization";
   const members = organizationMembers.map(memberOf);
-  const people = partnerChoices(members);
+  // A found account may return to old relationships; show those as already paired.
+  const people =
+    mode === AddMemberMode.Existing && lookup.found.some
+      ? pairedPartnerChoices(foundMemberOf(lookup.found.val), members, joinRoleOf(relationship), relationships)
+      : partnerChoices(members);
   const partner = selectedPartner(pickedPartnerId, people, members);
   const joiner = joinerOf(mode, fields, lookup.found);
   const order = stepOrder(mode, relationship, people.length > 0);
@@ -201,7 +228,7 @@ export function useAddMemberDialog({
       onClose();
     } catch (error) {
       console.error("Error adding member:", error);
-      toast.error(addErrorMessage(error, joiner.val, partner));
+      toast.error(await addErrorMessage(error, currentOrganizationId, joiner.val, partner));
     } finally {
       setSubmitting(false);
     }

@@ -36,6 +36,10 @@ function roleOf(relationship: Exclude<JoinRelationship, JoinRelationship.None>):
   return relationship === JoinRelationship.Coachee ? RelationshipRole.Coachee : RelationshipRole.Colleague;
 }
 
+export function joinRoleOf(relationship: JoinRelationship): Option<RelationshipRole> {
+  return relationship === JoinRelationship.None ? None : Some(roleOf(relationship));
+}
+
 export const ACCESS_ROLES: readonly Role[] = [Role.User, Role.Admin];
 
 export interface NewPersonFields {

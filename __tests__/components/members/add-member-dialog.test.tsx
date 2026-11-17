@@ -7,6 +7,7 @@ import { AddMemberDialog } from "@/components/ui/members/add-member-dialog";
 import { AddMemberMode } from "@/lib/add-member-dialog-model";
 import { USER_LOOKUP_RATE_LIMITED_MESSAGE } from "@/lib/api/users";
 import { toast } from "@/lib/toast";
+import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { User } from "@/types/user";
 
 // A concrete base URL so msw can match the real API calls this dialog makes.
@@ -58,7 +59,13 @@ function renderDialog({
   canAddExisting = true,
   members = [GRACE],
   initialMode = AddMemberMode.Create,
-}: { canAddExisting?: boolean; members?: User[]; initialMode?: AddMemberMode } = {}) {
+  relationships = [],
+}: {
+  canAddExisting?: boolean;
+  members?: User[];
+  initialMode?: AddMemberMode;
+  relationships?: CoachingRelationshipWithUserNames[];
+} = {}) {
   const onClose = vi.fn();
   const onMemberAdded = vi.fn();
   render(
@@ -66,6 +73,7 @@ function renderDialog({
       onClose={onClose}
       onMemberAdded={onMemberAdded}
       organizationMembers={members}
+      relationships={relationships}
       canAddExisting={canAddExisting}
       initialMode={initialMode}
     />
@@ -412,6 +420,54 @@ describe("AddMemberDialog – attaching an existing account", () => {
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Ada Lovelace and Grace Hopper already have a relationship"));
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("names an existing colleague relationship that refused the pairing", async () => {
+    captureAdds({ status: 409, body: { error: "conflict", details: { reason: "pair_already_related", relationship_id: "rel-9" } } });
+    server.use(
+      http.get("*/organizations/:organizationId/coaching_relationships", () =>
+        HttpResponse.json({
+          status_code: 200,
+          data: [{
+            id: "rel-9",
+            kind: "colleague",
+            coach_id: GRACE.id,
+            coachee_id: ADA.id,
+            coach_first_name: "Grace",
+            coach_last_name: "Hopper",
+            coachee_first_name: "Ada",
+            coachee_last_name: "Lovelace",
+          }],
+        })
+      )
+    );
+    const user = userEvent.setup();
+    renderDialog();
+
+    await findAda(user);
+    await next(user);
+    await next(user);
+    await pickGrace(user);
+    await user.click(addButton());
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Ada Lovelace and Grace Hopper are already colleagues"));
+  });
+
+  it("shows a found account's existing relationships as already paired", async () => {
+    captureAdds();
+    const graceAndAda = { coach_id: GRACE.id, coachee_id: ADA.id, kind: "colleague" } as CoachingRelationshipWithUserNames;
+    const user = userEvent.setup();
+    renderDialog({ relationships: [graceAndAda] });
+
+    await findAda(user);
+    await next(user);
+    await next(user);
+    await user.click(screen.getByRole("radio", { name: "Coachee" }));
+    await next(user);
+
+    const grace = screen.getByRole("button", { name: /Grace Hopper/ });
+    expect(grace).toBeDisabled();
+    expect(grace).toHaveTextContent("Already Ada's colleague");
   });
 
   it("surfaces the already-a-member conflict rather than a generic error", async () => {

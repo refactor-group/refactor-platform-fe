@@ -364,7 +364,7 @@ export function MemberCard({
           members={users}
           relationships={userRelationships}
           onClose={() => setAddRelationshipOpen(false)}
-          onAdded={onRefresh}
+          onRelationshipsChanged={onRefresh}
         />
       )}
     </div>

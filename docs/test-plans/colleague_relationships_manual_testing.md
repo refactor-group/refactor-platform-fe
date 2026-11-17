@@ -78,22 +78,27 @@ From the Members page, member card **⋯ > Pair with…**.
 |---|---|---|---|---|
 | COL-01 | Pair MEMBER with COACH, role **Colleague** | ADMIN | The person step reads "Choose Member's colleague". Request body has `kind: "colleague"`. Toast "{Member} and {Coach} are now colleagues". Both member cards show Colleague in Roles and a "Colleagues:" line naming the other; neither lists the other under "Coaches:" | KIND-04 |
 | COL-02 | Pair COACH with MEMBER, role **Colleague** (the other order) | ADMIN | Succeeds with the same relationship `id` as COL-01; neither card lists a second relationship | KIND-11 |
-| COL-03 | Pair COACH with MEMBER as **Coach** or **Coachee**, while RC exists | ADMIN | The picker shows MEMBER as already paired and not pickable. Forcing the POST (stale dialog: open it before COL-01) gets the `pair_already_related` toast; the dialog stays open; nothing new is listed | KIND-13 |
-| COL-04 | Pair COACH with COACHEE as **Colleague**, while R1 exists | ADMIN | Same as COL-03, against the coaching relationship | KIND-12 |
+| COL-03 | Pair COACH with MEMBER as **Coach** or **Coachee**, while RC exists | ADMIN | The picker shows MEMBER dimmed, "Already Coach's colleague", not pickable. Forcing the POST (stale dialog: pick MEMBER, then create RC with curl, then **Pair them**) gets the toast "{Coach} and {Member} are already colleagues"; the dialog stays open, MEMBER turns dimmed and **Pair them** is disabled; nothing new is listed | KIND-13 |
+| COL-04 | Pair COACH with COACHEE as **Colleague**, while R1 exists | ADMIN | Same as COL-03, against the coaching relationship. The toast reads "{Coach} is already {Coachee}'s coach" | KIND-12 |
 | COL-05 | Pair COACHEE with COACH as **Coach** (the other way round from R1) | ADMIN | Allowed, as before phase 4. Delete it afterwards | KIND-14 |
+| COL-06 | Pair two people as **Colleague** through a stale dialog after the same pairing was made elsewhere | ADMIN | Succeeds with the existing relationship's `id` (no refusal, no duplicate) and the "are now colleagues" toast | KIND-11 |
+| COL-07 | The **(i)** on each role card | ADMIN | Opens a popover beside the card without choosing it. Coachee: "Meets with their coach, who schedules their sessions. Sees only the actions assigned to them." Coach: "Schedules and runs sessions with their coachee, and sees every action in the relationship." Colleague: "Works with a peer as an equal. Either of them can schedule sessions, and both see every action they share." | — |
 
 ### 3.2 Adding members with a relationship (`COL-1x`)
 
-Header **Add New > Organization member**, and **Add existing member**.
+Members page **Add Member**: the **New person** and **Has an account** chips. COL-14 re-adds REMOVED; remove them again before COL-15.
 
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
 | COL-10 | Add a new member, Relationship **None** | ADMIN | Body has no `relationship`. The member appears with no relationship | ORG-01 |
-| COL-11 | Add a new member, Relationship **Coach**, with COACH | ADMIN | Body has `relationship: {with_user_id: COACH, kind: "coaching"}`, no `coach_id`. COACH coaches the new member | ORG-01 |
+| COL-11 | Add a new member, Relationship **Coachee**, with COACH | ADMIN | Body has `relationship: {with_user_id: COACH, kind: "coaching"}`, no `coach_id`. COACH coaches the new member | ORG-01 |
 | COL-12 | Add a new member, Relationship **Colleague**, with COACH | ADMIN | Body has `kind: "colleague"`. The new member and COACH are listed as colleagues | KIND-15 |
 | COL-13 | Add a new member as **Colleague** with someone not in O1 (OUTSIDER, through a stale picker or `page.route` rewrite) | ADMIN | The refusal toast shows and the dialog stays open. After a reload, the members list has no user with that email and COACH has no new relationship | KIND-18 |
 | COL-14 | Add existing member (a former member with no relationship to COACH), Relationship **Colleague**, with COACH | ADMIN | Body goes to `…/users/{id}/role` with `relationship: {with_user_id, kind: "colleague"}`. Member and colleague relationship both appear | KIND-16 |
-| COL-15 | Add existing member REMOVED as **Colleague** with COACH, while R3 exists | ADMIN | The `pair_already_related` toast. After a reload, REMOVED is not listed as a member and has no new relationship | KIND-17 |
+| COL-15 | Add existing member REMOVED as **Colleague** with COACH, while R3 exists | ADMIN | The With step shows COACH dimmed, "Already Removed's coach", not pickable. Forcing it (stale dialog or `page.route` rewrite) gets the toast "{Coach} is already {Removed}'s coach" and the dialog stays open. After a reload, REMOVED is not listed as a member and has no new relationship | KIND-17 |
+| COL-16 | **Has an account** lookups: OUTSIDER (only in O2), REMOVED (a former member), MEMBER (a current one) | ADMIN | OUTSIDER: "No user found with that email." (an admin can't see accounts outside their organizations). REMOVED: found, shown as a card with **Clear**. MEMBER: "They're already a member of this organization", and **Next** stays disabled | ORG-01 |
+| COL-17 | Step 1, the rail and the summary | ADMIN | Step 1 reads "New member details" in both chips. On step 1, Access and Relationship are not ticked; each ticks once passed or once something other than its default is chosen. The rail's **Adding** block reads "{Name} to {O1} as a member", then ", coached by {Coach}" or ", {Coach}'s colleague" | — |
+| COL-18 | The **(i)** on the Access and Relationship cards | ADMIN | Member: "Can be paired with people in this organization and work with them. Can't add or pair members." Admin: "Everything a member can do, plus adding, removing and pairing members in this organization." Coachee and Colleague as in COL-07; None has no (i) | — |
 
 ### 3.3 Labels (`COL-2x`)
 
