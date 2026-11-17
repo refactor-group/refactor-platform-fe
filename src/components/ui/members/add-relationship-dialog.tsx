@@ -20,7 +20,7 @@ import {
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { Id } from "@/types/general";
 import { Some } from "@/types/option";
-import { relationshipRoleLabel } from "@/types/relationship-role";
+import { relationshipRoleExplanation, relationshipRoleLabel } from "@/types/relationship-role";
 import type { User } from "@/types/user";
 
 function roleOf(value: string): MemberRole {
@@ -43,6 +43,7 @@ function RoleStep({ member, role, onRoleChange }: Pick<AddRelationshipDialogMode
           value={choice}
           title={relationshipRoleLabel(choice)}
           description={roleDescription(member, choice)}
+          info={relationshipRoleExplanation(choice)}
         />
       ))}
     </RadioGroup>

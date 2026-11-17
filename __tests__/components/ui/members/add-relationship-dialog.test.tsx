@@ -67,6 +67,16 @@ describe("AddRelationshipDialog", () => {
     expect(onAdded).toHaveBeenCalled();
   });
 
+  it("explains a role from its (i) without choosing it", async () => {
+    renderDialog();
+    fireEvent.click(screen.getByRole("button", { name: "About Coachee" }));
+
+    expect(
+      await screen.findByText("Meets with their coach, who schedules their sessions. Sees only the actions assigned to them.")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Coachee" })).not.toBeChecked();
+  });
+
   it("adds a coachee for the member", async () => {
     renderDialog();
     fireEvent.click(screen.getByRole("radio", { name: "Coach" }));
