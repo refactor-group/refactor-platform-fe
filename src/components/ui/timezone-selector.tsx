@@ -11,6 +11,7 @@ import {
 import { getTimezones } from "@/lib/timezone-utils";
 
 interface TimezoneSelectorProps {
+  id?: string;
   value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
@@ -18,6 +19,7 @@ interface TimezoneSelectorProps {
 }
 
 export function TimezoneSelector({
+  id,
   value,
   onValueChange,
   placeholder = "Select time zone",
@@ -29,7 +31,7 @@ export function TimezoneSelector({
 
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className={className}>
+      <SelectTrigger id={id} className={className}>
         <SelectValue
           placeholder={isLoading ? "Loading timezones..." : placeholder}
         />

@@ -16,6 +16,7 @@ export interface MenuPerson {
   firstName: string;
   fullName: string;
   initials: string;
+  email: string;
 }
 
 export interface WhenLine {

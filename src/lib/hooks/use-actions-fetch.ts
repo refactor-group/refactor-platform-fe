@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react";
 import type { SWRConfiguration } from "swr";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import {
@@ -13,7 +14,7 @@ import {
   CoachViewMode,
   UserActionsAssigneeFilter,
 } from "@/types/assigned-actions";
-import { coachesAnyone, RelationshipKind } from "@/types/coaching-relationship";
+import { RelationshipKind, seesAllActionsIn } from "@/types/coaching-relationship";
 import type { Id } from "@/types/general";
 import { type Option, Some, None, unwrapOr } from "@/types/option";
 
@@ -50,18 +51,18 @@ export function assignmentFilterToRelationshipActionsParams(
 
 /**
  * None = the broad view; lets the backend's visibility predicate narrow.
- * My Actions is the coach's own id: everything assigned to them in every relationship,
- * coaching or colleague. A colleague relationship has no coachee side, so Coachee
- * Actions filtered to one sends no scope.
+ * My Actions is the user's own id whenever they can see others' actions (a coach or a
+ * colleague), so the backend doesn't return those too. A colleague relationship has no
+ * coachee side, so Coachee Actions filtered to one sends no scope.
  */
 function selectAssigneeScope(
   userId: Id,
-  isACoach: boolean,
+  seesOthersActions: boolean,
   isCoacheeMode: boolean,
   filteredToColleagues: boolean
 ): Option<AssigneeScope | Id> {
   if (isCoacheeMode) return filteredToColleagues ? None : Some(AssigneeScope.Coachee);
-  if (isACoach) return Some(userId);
+  if (seesOthersActions) return Some(userId);
   return None;
 }
 
@@ -69,7 +70,7 @@ function selectAssigneeScope(
  * Fetches actions via the batch relationship-actions endpoint.
  *
  * All views hit the same endpoint, differentiated by `assignee`:
- * - Coach "My Actions" toggle: assignee=<own user id>, across coaching and colleague relationships
+ * - "My Actions" for a coach or colleague: assignee=<own user id>, across coaching and colleague relationships
  * - Coach "Coachee Actions" toggle: assignee=coachee (strict-contains)
  * - Coachee broad view: assignee omitted (backend visibility predicate returns
  *   self-assigned ∪ unassigned)
@@ -103,12 +104,24 @@ export function useActionsFetch(
   const filteredToColleagues = relationships.some(
     (r) => r.id === relationshipId && r.kind === RelationshipKind.Colleague
   );
-  const assigneeScope = selectAssigneeScope(userId, coachesAnyone(relationships), isCoacheeMode, filteredToColleagues);
+  const assigneeScope = selectAssigneeScope(
+    userId,
+    relationships.some(seesAllActionsIn),
+    isCoacheeMode,
+    filteredToColleagues
+  );
 
-  const params = assignmentFilterToRelationshipActionsParams(assignmentFilter, assigneeScope);
+  // Scoped to the user's own id, All would match Assigned; it means theirs plus unassigned.
+  const mineAndUnassigned =
+    assignmentFilter === AssignmentFilter.All && assigneeScope.some && assigneeScope.val === userId;
+  const params = assignmentFilterToRelationshipActionsParams(
+    mineAndUnassigned ? AssignmentFilter.Assigned : assignmentFilter,
+    assigneeScope
+  );
+  const orgId = roleKnown ? currentOrganizationId : null;
 
-  const { actions, isLoading, isError, refresh } = useBatchRelationshipActions(
-    roleKnown ? currentOrganizationId : null,
+  const main = useBatchRelationshipActions(
+    orgId,
     {
       assignee: params.assignee,
       assignee_filter: params.assigneeFilter,
@@ -116,11 +129,28 @@ export function useActionsFetch(
     },
     options
   );
+  const unassigned = useBatchRelationshipActions(
+    mineAndUnassigned ? orgId : null,
+    { assignee_filter: UserActionsAssigneeFilter.Unassigned, coaching_relationship_id: relationshipId },
+    options
+  );
+
+  // Stable across renders, so the board's memos downstream keep their inputs.
+  const actions = useMemo(
+    () => (mineAndUnassigned ? [...main.actions, ...unassigned.actions] : main.actions),
+    [mineAndUnassigned, main.actions, unassigned.actions]
+  );
+  const { refresh: refreshMain } = main;
+  const { refresh: refreshUnassigned } = unassigned;
+  const refresh = useCallback(
+    () => Promise.all([refreshMain(), mineAndUnassigned ? refreshUnassigned() : undefined]),
+    [refreshMain, refreshUnassigned, mineAndUnassigned]
+  );
 
   return {
     actions,
-    isLoading: relationshipsLoading || isLoading,
-    isError: !!relationshipsError || isError,
+    isLoading: relationshipsLoading || main.isLoading || (mineAndUnassigned && unassigned.isLoading),
+    isError: !!relationshipsError || main.isError || (mineAndUnassigned && unassigned.isError),
     refresh,
   };
 }

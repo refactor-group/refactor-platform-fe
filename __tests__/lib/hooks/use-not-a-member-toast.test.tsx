@@ -19,6 +19,12 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
   useCurrentOrganization: () => ({ currentOrganizationId: "org-current" }),
 }));
 
+const revalidate = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/hooks/use-sse-cache-invalidation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/hooks/use-sse-cache-invalidation")>()),
+  revalidateEndpointCaches: revalidate,
+}));
+
 const { useNotAMemberToast } = await import("@/lib/hooks/use-not-a-member-toast");
 
 const role = (r: Role, organizationId: string | null): UserRole =>
@@ -57,6 +63,14 @@ describe("useNotAMemberToast", () => {
     expect(action?.label).toBe("Add back");
     action?.onClick();
     expect(push).toHaveBeenCalledWith("/organizations/org-1/members?addMember=existing");
+  });
+
+  it("refreshes the refused organization's members, relationships and sessions", () => {
+    show(adminOfRefused);
+    const paths = revalidate.mock.calls.map(([, , path]) => path);
+    expect(paths).toEqual(
+      expect.arrayContaining(["/coaching_relationships", "/coaching_sessions", "/organizations/org-1/users"])
+    );
   });
 
   it("points anyone else at an admin, with no button", () => {

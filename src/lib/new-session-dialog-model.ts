@@ -28,6 +28,7 @@ import { sessionStartIn } from "@/lib/session-window";
 import type { NewSessionRequest } from "@/lib/stores/new-session-dialog-store";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
+import type { Organization } from "@/types/organization";
 import { type Option, None, Some } from "@/types/option";
 import type { Provider } from "@/types/provider";
 import { Frequency, type RecurrenceEnd, type Weekday } from "@/types/recurrence";
@@ -40,7 +41,16 @@ export type WhoState =
   | { kind: "empty" }
   | { kind: "ready"; people: PickerPerson[] };
 
+/** Which org to schedule in. Only this dialog sees the pick; the app's current org stays. */
+export interface OrganizationChoice {
+  options: { id: Id; name: string }[];
+  selectedId: Id;
+  onChange: (organizationId: Id) => void;
+}
+
 export interface WhoModel {
+  /** None unless the user is in more than one org. */
+  organization: Option<OrganizationChoice>;
   state: WhoState;
   selectedId: Option<Id>;
   onSelect: (userId: Id) => void;
@@ -155,6 +165,14 @@ export function startAt(day: Option<DateTime>, time: Option<string>): Option<Dat
   if (day.none || time.none) return None;
   const [hour, minute] = time.val.split(":").map(Number);
   return Some(day.val.set({ hour, minute, second: 0, millisecond: 0 }));
+}
+
+/** The orgs someone can schedule in, by name; archived ones can't take new sessions. */
+export function organizationOptions(organizations: readonly Organization[]): OrganizationChoice["options"] {
+  return organizations
+    .filter((o) => !o.archived_at)
+    .map(({ id, name }) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function whoState(data: ScheduleData): WhoState {

@@ -5,6 +5,7 @@ export enum AddBackPurpose {
   ScheduleSessions = "schedule_sessions",
   ResendInvite = "resend_invite",
   AssignActions = "assign_actions",
+  ChangeRelationship = "change_relationship",
 }
 
 function purposeText(purpose: AddBackPurpose): string {
@@ -15,6 +16,8 @@ function purposeText(purpose: AddBackPurpose): string {
       return "to resend the invite";
     case AddBackPurpose.AssignActions:
       return "to assign actions";
+    case AddBackPurpose.ChangeRelationship:
+      return "to change the relationship";
     default: {
       const _exhaustive: never = purpose;
       throw new Error(`Unhandled add-back purpose: ${_exhaustive}`);

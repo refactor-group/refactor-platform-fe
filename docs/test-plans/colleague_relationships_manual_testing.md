@@ -20,6 +20,7 @@ them into this file.
 
 ## 1. Prerequisites
 
+- Section 3.10 (and COL-28, COL-29, COL-41, COL-47) need fe#565 and the rs#517 backend.
 - Frontend on `http://localhost:3000` with fe#559 and fe#561; backend on `http://localhost:4000` on
   the phase 4 branch, including handoff 4-6 (contract `ColleagueRelationshipsPhase4` v5:
   `viewer`, `scheduling_blocked_by`, `suggests_actions` on every relationship). Without them the FE
@@ -99,6 +100,7 @@ Members page **Add Member**: the **New person** and **Has an account** chips. CO
 | COL-16 | **Has an account** lookups: OUTSIDER (only in O2), REMOVED (a former member), MEMBER (a current one) | ADMIN | OUTSIDER: "No user found with that email." (an admin can't see accounts outside their organizations). REMOVED: found, shown as a card with **Clear**. MEMBER: "They're already a member of this organization", and **Next** stays disabled | ORG-01 |
 | COL-17 | Step 1, the rail and the summary | ADMIN | Step 1 reads "New member details" in both chips. On step 1, Access and Relationship are not ticked; each ticks once passed or once something other than its default is chosen. The rail's **Adding** block reads "{Name} to {O1} as a member", then ", coached by {Coach}" or ", {Coach}'s colleague" | — |
 | COL-18 | The **(i)** on the Access and Relationship cards | ADMIN | Member: "Can be paired with people in this organization and work with them. Can't add or pair members." Admin: "Everything a member can do, plus adding, removing and pairing members in this organization." Coachee and Colleague as in COL-07; None has no (i) | — |
+| COL-19 | New person's **Time zone**, and its (i) | ADMIN | Starts on the admin's own zone; the (i) reads "Yours unless you pick another. They can change it later." Picking another zone sends it as `timezone` in the create body, and the new account has it (their profile shows it) | ORG-01 |
 
 ### 3.3 Labels (`COL-2x`)
 
@@ -115,6 +117,8 @@ open it for R1 as COACH and COACHEE and check the coaching words are unchanged.
 | COL-25 | Dashboard upcoming card, no session today | MEMBER: the scheduling button, not "Your coach will schedule" | SES-27 |
 | COL-26 | Cancel and remove toasts, Pair with… and Add member toasts | Name the other person; no coach or coachee word | |
 | COL-27 | Open an RC session URL as ADMIN (not a participant) | Denial copy names no role ("Only the people meeting in it can view this session.") | SES-05 |
+| COL-28 | Session page header presence dots, with the other colleague in a second browser context | Each dot follows its own person: yours turns green when you open the page, the other's only while they're on it, and grey again within a few seconds of them leaving. Run it as COACH and as MEMBER, then the same on an R1 session (coach and coachee dots) | |
+| COL-29 | Header **Join session** switcher, per organization | Shown to anyone who coaches or is a colleague there, even with one relationship: MEMBER (colleague of one), COACH. Never to someone only ever coached there (COACHEE), however many coaches they have, nor to ADMIN with no relationship | |
 
 ### 3.4 Scheduling between colleagues (`COL-3x`)
 
@@ -151,12 +155,13 @@ KID is coached by COACH and a colleague of OTHER_COACH in RC2.
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
 | COL-40 | RC session panel actions | COACH, MEMBER | Each sees every RC action, whoever is assigned | ACT-14 |
-| COL-41 | Actions page, Assignment All | MEMBER | Every RC action, including ones assigned to COACH; the batch request has no `assignee` | ACT-02 |
-| COL-42 | Actions page, My Actions | COACH | The batch request sends `assignee=<COACH's id>`; the board shows COACH's actions from R1 and RC alike | contract v5 section 4 |
+| COL-41 | Actions page, Assignment **Assigned**, **Unassigned**, **All** (seed RC with one action each: MEMBER only, COACH only, both, nobody) | MEMBER | Assigned: MEMBER-only and both, never COACH-only; the request sends `assignee=<MEMBER's id>&assignee_filter=assigned`. Unassigned: only the unassigned one. All: Assigned's list plus the unassigned one, from two requests (the Assigned one and `assignee_filter=unassigned`). No two options show the same list | ACT-02 |
+| COL-42 | Actions page, My Actions, then Assignment All | COACH | The batch request sends `assignee=<COACH's id>`; the board shows COACH's actions from R1 and RC alike. All adds the unassigned R1 and RC actions, as in COL-41 | contract v5 section 4 |
 | COL-43 | Coachee Actions view (`assignee=coachee`) | COACH | R1 actions only; no RC action; no error toast or denial page | contract v5 section 4 |
 | COL-44 | Coachee Actions with the relationship filter on RC | COACH | The request has no `assignee`; no error | contract v5 section 4 |
 | COL-45 | `/actions?view=coachee_actions` typed by hand | MEMBER | An empty result, not a 403 or the denial page | contract v5 section 4 |
 | COL-46 | Dashboard goals card for an upcoming RC session | COACH, MEMBER | The goal progress request has no `assignee`; no error card | contract v5 section 4 |
+| COL-47 | Header **Actions** badge, with COL-41's seed | MEMBER, COACH | Counts only the viewer's own open actions, shared ones included: MEMBER's badge says 2. Adding a COACH-only RC action leaves MEMBER's badge unchanged | |
 
 ### 3.6 Removed colleague (`COL-5x`)
 
@@ -196,7 +201,23 @@ mock Resend capture.
 | COL-81 | A reminder sweep for an RC session | Both colleagues get one reminder each, naming the other. A second sweep sends nothing | JOB-06, MAIL-15 |
 | COL-82 | The same triggers on R1 | Coaching emails unchanged | KIND-06 |
 
-### 3.10 Regression (`COL-9x`)
+### 3.10 Changing a relationship's kind (`COL-Ax`)
+
+Needs the phase 5 backend (rs#517: `PUT …/coaching_relationships/{id}/kind`, contract
+`RelationshipKindSwitch` v3). Open the dialog from a member card's ⋯ menu, **Change relationship…**,
+as ADMIN. Keep the other participant in a second browser context for the live rows.
+
+| ID | Control | Viewer | Expected | BE |
+|---|---|---|---|---|
+| COL-A0 | Step 1 for COACH | ADMIN | Each person COACH works with, once, named with their email and what they are to COACH ("Coach's colleague", "coached by Coach"). Someone who left is shown but can't be picked | |
+| COL-A1 | Step 2, role | ADMIN | The current role is preselected and marked "(current)"; the next arrow stays disabled until another role is picked | |
+| COL-A2 | Switch RC to coaching, COACH coaching MEMBER | ADMIN | Review lists the consequences in plain words ("{Name} will see N actions assigned to {Other}", who gains or loses scheduling), or "Nothing else changes for them". Nothing is saved until **Change relationship**; then the toast names both people, and both member cards update | KIND-28, KIND-29 |
+| COL-A3 | Reverse R1 (the coachee becomes the coach) | ADMIN | Review reads "{Coachee} will coach {Coach}"; after confirming, the cards show the new direction | KIND-30, KIND-32 |
+| COL-A4 | Refusals: a participant left (stale dialog), the pair is already related the other way, the relationship was deleted, an archived organization | ADMIN | Toasts: who left, with Add back; "{A} is already {B}'s coach" (or colleagues); "This relationship no longer exists"; "This organization is archived · It can't be changed", which closes the dialog whether it comes from the review or from confirming. Nothing changes. After "who left", the members list drops them at once, and Add back, clicked on the Members page itself, opens Add member on "Has an account", where Find locates them; re-adding works, and the URL loses `?addMember` once the dialog closes | KIND-33, KIND-36, KIND-44 |
+| COL-A5 | The other participant's open tabs during COL-A2 | COACH, MEMBER | Members page, session page and Actions page update without a refresh | KIND-43 |
+| COL-A6 | Mock Resend capture after COL-A2 | | Upcoming sessions' invites are resent to both, worded for the new kind | KIND-38 |
+
+### 3.11 Regression (`COL-9x`)
 
 | ID | Control | Expected |
 |---|---|---|

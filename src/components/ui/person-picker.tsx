@@ -5,7 +5,7 @@ import { cn } from "@/components/lib/utils";
 import { PersonAvatar } from "@/components/ui/avatar";
 import { CheckDisc } from "@/components/ui/check-disc";
 import { PersonSearchField, PersonSearchSize } from "@/components/ui/person-search";
-import { matchesPersonName } from "@/lib/people";
+import { matchesPerson } from "@/lib/people";
 import type { Id } from "@/types/general";
 import type { Option } from "@/types/option";
 
@@ -13,7 +13,9 @@ export interface PickerPerson {
   userId: Id;
   fullName: string;
   initials: string;
-  subline: string;
+  /** Shown under every name: it's what tells two people with the same name apart. */
+  email: string;
+  subline: Option<string>;
   inactive: boolean;
   /** False shows the person, with their subline saying why, but they can't be picked. */
   selectable: boolean;
@@ -35,7 +37,7 @@ function visiblePeople(
   showInactive: boolean,
   selectedId: Option<Id>
 ): PickerPerson[] {
-  if (query.trim()) return people.filter((p) => matchesPersonName(p.fullName, query));
+  if (query.trim()) return people.filter((p) => matchesPerson(p, query));
   return people.filter((p) => !p.inactive || showInactive || isSelected(p, selectedId));
 }
 
@@ -76,9 +78,12 @@ function PersonCard({ person, selected, onSelect }: PersonCardProps) {
       <PersonAvatar userId={person.userId} initials={person.initials} size={36} />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="line-clamp-2 break-words text-sm font-medium text-foreground">{person.fullName}</span>
-        <span className="line-clamp-2 text-xs text-muted-foreground tabular-nums">
-          <Subline text={person.subline} />
-        </span>
+        <span className="truncate text-xs text-muted-foreground">{person.email}</span>
+        {person.subline.some && (
+          <span className="line-clamp-2 text-xs text-muted-foreground tabular-nums">
+            <Subline text={person.subline.val} />
+          </span>
+        )}
       </span>
       {selected && <CheckDisc size={20} tone="brand" />}
     </button>

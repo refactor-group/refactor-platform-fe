@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { AddMemberDialog } from "./add-member-dialog";
 import { AddMemberMode } from "@/lib/add-member-dialog-model";
-import type { Option } from "@/types/option";
+import { None, type Option } from "@/types/option";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { User, UserRoleState, isAdminOrSuperAdmin } from "@/types/user";
 
@@ -13,6 +13,7 @@ interface AddMemberButtonProps {
   onMemberAdded: () => void;
   /// Opens the AddMemberDialog in this mode
   openAddMemberDialog: Option<AddMemberMode>;
+  onDialogClose: () => void;
   currentUserRoleState: UserRoleState;
   /// Candidates offered when pre-assigning a coach
   organizationMembers?: User[];
@@ -25,6 +26,7 @@ interface AddMemberButtonProps {
 export function AddMemberButton({
   onMemberAdded,
   openAddMemberDialog,
+  onDialogClose,
   currentUserRoleState,
   organizationMembers,
   relationships,
@@ -34,10 +36,15 @@ export function AddMemberButton({
   // The link's mode applies to the dialog it opens; the button always starts on Create.
   const [mode, setMode] = useState(AddMemberMode.Create);
 
-  useEffect(() => {
-    setOpen(openAddMemberDialog.some);
-    if (openAddMemberDialog.some) setMode(openAddMemberDialog.val);
-  }, [openAddMemberDialog]);
+  // Each request (a new Some) opens the dialog; None never closes one that's open.
+  const [seenRequest, setSeenRequest] = useState<Option<AddMemberMode>>(None);
+  if (openAddMemberDialog !== seenRequest) {
+    setSeenRequest(openAddMemberDialog);
+    if (openAddMemberDialog.some) {
+      setMode(openAddMemberDialog.val);
+      setOpen(true);
+    }
+  }
 
   const openFromButton = () => {
     setMode(AddMemberMode.Create);
@@ -52,7 +59,10 @@ export function AddMemberButton({
       </Button>
       {open && (
         <AddMemberDialog
-          onClose={() => setOpen(false)}
+          onClose={() => {
+            setOpen(false);
+            onDialogClose();
+          }}
           onMemberAdded={onMemberAdded}
           organizationMembers={organizationMembers ?? []}
           relationships={relationships}

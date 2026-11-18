@@ -28,6 +28,8 @@ const PRIYA: Person = { id: "priya", first: "Priya", last: "Raman" };
 const SARA: Person = { id: "sara", first: "Sara", last: "Lin" };
 const BOSS: Person = { id: "boss", first: "Boss", last: "Person" };
 
+const emailOf = (person: Person) => `${person.first.toLowerCase()}@example.com`;
+
 const coaching = (id: string, person: Person): CoachingRelationshipWithUserNames =>
   createMockRelationship({
     id,
@@ -37,6 +39,8 @@ const coaching = (id: string, person: Person): CoachingRelationshipWithUserNames
     coach_last_name: "Hodapp",
     coachee_first_name: person.first,
     coachee_last_name: person.last,
+    coach_email: "jim@example.com",
+    coachee_email: emailOf(person),
   });
 
 export const RELATIONSHIPS: CoachingRelationshipWithUserNames[] = [
@@ -52,6 +56,8 @@ export const RELATIONSHIPS: CoachingRelationshipWithUserNames[] = [
     coach_last_name: BOSS.last,
     coachee_first_name: "Jim",
     coachee_last_name: "Hodapp",
+    coach_email: emailOf(BOSS),
+    coachee_email: "jim@example.com",
     viewer: COACHEE_VIEWER,
   }),
 ];
@@ -64,6 +70,7 @@ function user(person: Person) {
     id: person.id,
     first_name: person.first,
     last_name: person.last,
+    email: emailOf(person),
     display_name: `${person.first} ${person.last}`,
   };
 }

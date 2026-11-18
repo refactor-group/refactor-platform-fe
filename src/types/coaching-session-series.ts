@@ -1,8 +1,9 @@
 import { DateTime } from "ts-luxon";
-import { Id } from "@/types/general";
+import { Id, countOf } from "@/types/general";
 import {
   Frequency,
   RecurrenceEnd,
+  WEEKDAYS_ORDERED,
   Weekday,
   frequencyLabel,
   utcDateTimeToUntilDate,
@@ -28,6 +29,8 @@ interface SeriesRuleRaw {
   start_at: string;
   recurrence: SeriesRecurrenceRaw;
   duration_minutes: number;
+  /** The zone its weekdays are in: the creator's when published. Older rules omit it (UTC). */
+  timezone?: string;
 }
 
 export interface CoachingSessionSeriesRaw {
@@ -56,8 +59,11 @@ export interface SeriesRecurrence {
 
 export interface SeriesRule {
   start_at: string;
+  /** In `timezone`, the rule's own zone; read them with {@link ruleIn}. */
   recurrence: SeriesRecurrence;
   duration_minutes: number;
+  /** The zone its weekdays are in: the creator's when published. */
+  timezone: string;
 }
 
 export interface CoachingSessionSeries {
@@ -75,6 +81,27 @@ export interface CoachingSessionSeriesWithSessions extends CoachingSessionSeries
   coaching_sessions: CoachingSession[];
 }
 
+/**
+ * The rule with its weekdays as they fall in `timezone` at the slot `at`. The rule keeps them in
+ * its own zone, so a series made in Tokyo on Wednesdays at 9:00 AM repeats on Tuesdays in New
+ * York. Measured at a real slot, since daylight saving can move the day for some occurrences.
+ */
+export function ruleIn(rule: SeriesRule, at: DateTime, timezone: string): SeriesRule {
+  const weekdays = rule.recurrence.by_weekdays;
+  const here = at.setZone(timezone);
+  const there = at.setZone(rule.timezone);
+  // An unknown zone name can't be converted, so keep the rule's days.
+  if (!weekdays || !here.isValid || !there.isValid) return rule;
+  // Within a day either way, so a 6 is a -1 across the week's end.
+  const days = (((here.weekday - there.weekday) % 7) + 7) % 7;
+  if (days === 0) return rule;
+  const shifted = new Set(weekdays.map((day) => WEEKDAYS_ORDERED[(WEEKDAYS_ORDERED.indexOf(day) + days) % 7]));
+  return {
+    ...rule,
+    recurrence: { ...rule.recurrence, by_weekdays: WEEKDAYS_ORDERED.filter((day) => shifted.has(day)) },
+  };
+}
+
 function parseSeriesRule(raw: SeriesRuleRaw, timezone: string): SeriesRule {
   const { recurrence } = raw;
   // count/until are one-of, and the absent one may be null or omitted — treat
@@ -85,6 +112,8 @@ function parseSeriesRule(raw: SeriesRuleRaw, timezone: string): SeriesRule {
   return {
     start_at: raw.start_at,
     duration_minutes: raw.duration_minutes,
+    // Older rules omit it; the backend reads those as UTC.
+    timezone: raw.timezone ?? "UTC",
     recurrence: {
       frequency: recurrence.frequency,
       interval: recurrence.interval,
@@ -136,6 +165,7 @@ export function defaultCoachingSessionSeries(): CoachingSessionSeries {
     rule: {
       start_at: "",
       duration_minutes: FALLBACK_DURATION_MINUTES,
+      timezone: "UTC",
       recurrence: {
         frequency: Frequency.Weekly,
         interval: 1,
@@ -209,7 +239,7 @@ export function seriesRepeatsText(rule: SeriesRule): string {
 }
 
 function sessionCountText(n: number): string {
-  return `${n} session${n === 1 ? "" : "s"}`;
+  return countOf(n, "session");
 }
 
 /** When a series ends, e.g. "Until Aug 15, 2026", "After 8 sessions" or "No end date". */

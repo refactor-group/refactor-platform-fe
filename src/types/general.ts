@@ -96,3 +96,8 @@ export const transformEntityDates = (data: any): any => {
 
   return transformed;
 };
+
+/** "1 session", "3 sessions": a count with its noun, made plural by adding "s". */
+export function countOf(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}

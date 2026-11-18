@@ -52,3 +52,44 @@ export function pairAlreadyRelatedMessage(
   if (r.kind === RelationshipKind.Colleague) return `${first} and ${second} are already colleagues`;
   return `${fullName(r.coach_first_name, r.coach_last_name)} is already ${fullName(r.coachee_first_name, r.coachee_last_name)}'s coach`;
 }
+
+export interface ActionsBecomingVisible {
+  userId: Id;
+  byAssignee: { assigneeId: Id; count: number }[];
+}
+
+/** What a kind switch would change, from its unconfirmed 409. */
+export interface KindSwitchConsequences {
+  actionsBecomingVisible: ActionsBecomingVisible[];
+  schedulingGained: Id[];
+  schedulingLost: Id[];
+}
+
+const idsOf = (value: unknown): Id[] =>
+  Array.isArray(value) ? value.filter((id): id is Id => typeof id === "string") : [];
+
+function byAssigneeOf(value: unknown): ActionsBecomingVisible["byAssignee"] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) =>
+    typeof entry?.assignee_id === "string" && typeof entry?.count === "number"
+      ? [{ assigneeId: entry.assignee_id, count: entry.count }]
+      : []
+  );
+}
+
+function actionsBecomingVisibleOf(value: unknown): ActionsBecomingVisible[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) =>
+    typeof entry?.user_id === "string" ? [{ userId: entry.user_id, byAssignee: byAssigneeOf(entry.by_assignee) }] : []
+  );
+}
+
+export function kindSwitchConsequencesOf(error: unknown): Option<KindSwitchConsequences> {
+  const details = conflictDetailsOf(error);
+  if (details.none || details.val.reason !== "kind_switch_needs_confirmation") return None;
+  return Some({
+    actionsBecomingVisible: actionsBecomingVisibleOf(details.val.actions_becoming_visible),
+    schedulingGained: idsOf(details.val.scheduling_gained),
+    schedulingLost: idsOf(details.val.scheduling_lost),
+  });
+}

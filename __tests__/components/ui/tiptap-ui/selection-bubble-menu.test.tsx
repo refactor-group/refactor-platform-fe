@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
-import { render, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { cleanup, render, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { EditorProvider } from "@tiptap/react";
 import Document from "@tiptap/extension-document";
 import Paragraph from "@tiptap/extension-paragraph";
@@ -140,6 +140,13 @@ describe("SelectionBubbleMenu", () => {
     vi.clearAllMocks();
     mockWriteText.mockClear();
     document.body.innerHTML = "";
+  });
+
+  // TipTap destroys an unmounted editor on a 1 ms timer; let it run while `window` still exists,
+  // or it can fire after the file's environment is torn down.
+  afterEach(async () => {
+    cleanup();
+    await new Promise((resolve) => setTimeout(resolve, 5));
   });
 
   const renderEditor = (content: string) => {

@@ -18,9 +18,14 @@ import { useSSEEventHandler } from './use-sse-event-handler';
  * which only matched the literal top-level path and silently skipped
  * user-scoped and relationship-scoped caches.
  *
- * Constraint: `endpointPath` must be a plain path segment like `/actions`
- * or `/goals` (no regex metacharacters).
+ * `endpointPath` is a pattern (callers may pass `[^/]+`), so wrap any id that
+ * came from a response in {@link escapeRegExp}.
  */
+/** Text matched literally inside an `endpointPath` pattern. */
+export function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function matchesEndpoint(
   url: string,
   baseUrl: string,
@@ -275,6 +280,15 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
   // event carries no title, so refetch the reads that surface display_title.
   useSSEEventHandler(eventSource, 'coaching_session_title_updated', () => {
     invalidateEndpoint('/coaching_sessions', 'coaching_session_title_updated');
+  });
+
+  // RELATIONSHIP KIND EVENTS - Roles and capabilities come from the relationship;
+  // session lists carry them, and action and suggestion visibility follow.
+  // /coaching_sessions also covers each session's transcript suggestions.
+  useSSEEventHandler(eventSource, 'coaching_relationship_kind_changed', () => {
+    invalidateEndpoint('/coaching_relationships', 'coaching_relationship_kind_changed');
+    invalidateEndpoint('/coaching_sessions', 'coaching_relationship_kind_changed');
+    invalidateEndpoint('/actions', 'coaching_relationship_kind_changed');
   });
 
   // TRANSCRIPT SUGGESTION EVENTS - Coarse: refetch the session's suggestion lists.

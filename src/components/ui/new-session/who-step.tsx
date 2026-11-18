@@ -1,8 +1,9 @@
 "use client";
 
 import { PersonPicker } from "@/components/ui/person-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { WhoModel } from "@/lib/new-session-dialog-model";
+import type { OrganizationChoice, WhoModel } from "@/lib/new-session-dialog-model";
 
 const SKELETON_CARDS = 4;
 
@@ -29,7 +30,29 @@ function WhoNote({ text }: { text: string }) {
   return <p className="text-sm text-muted-foreground">{text}</p>;
 }
 
-export function WhoStep({ state, selectedId, onSelect }: WhoModel) {
+function OrganizationSelect({ options, selectedId, onChange }: OrganizationChoice) {
+  return (
+    <div className="flex max-w-[360px] items-center gap-3">
+      <label htmlFor="new-session-organization" className="shrink-0 text-sm text-muted-foreground">
+        Organization
+      </label>
+      <Select value={selectedId} onValueChange={onChange}>
+        <SelectTrigger id="new-session-organization" className="h-11 rounded-input bg-card text-item modal:h-10">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.id} value={option.id}>
+              {option.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function WhoBody({ state, selectedId, onSelect }: Omit<WhoModel, "organization">) {
   switch (state.kind) {
     case "loading":
       return <WhoSkeleton />;
@@ -44,4 +67,14 @@ export function WhoStep({ state, selectedId, onSelect }: WhoModel) {
       throw new Error(`Unhandled who state: ${JSON.stringify(_exhaustive)}`);
     }
   }
+}
+
+export function WhoStep({ organization, ...who }: WhoModel) {
+  if (organization.none) return <WhoBody {...who} />;
+  return (
+    <div className="flex flex-col gap-4">
+      <OrganizationSelect {...organization.val} />
+      <WhoBody {...who} />
+    </div>
+  );
 }

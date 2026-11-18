@@ -6,7 +6,7 @@ import { useSWRConfig } from "swr";
 import { siteConfig } from "@/site.config";
 import { AddBackPurpose, notAMemberMessage } from "@/lib/api/membership-errors";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
-import { revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
+import { escapeRegExp, revalidateEndpointCaches } from "@/lib/hooks/use-sse-cache-invalidation";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { toast } from "@/lib/toast";
 import type { NameLookup, NotAMemberRefusal } from "@/types/membership";
@@ -45,6 +45,8 @@ export function useNotAMemberToast(): ShowNotAMember {
       const base = siteConfig.env.backendServiceURL;
       void revalidateEndpointCaches(mutate, base, "/coaching_relationships");
       void revalidateEndpointCaches(mutate, base, "/coaching_sessions");
+      // So the members list, and Add back's lookup, no longer count them as a member.
+      if (orgId) void revalidateEndpointCaches(mutate, base, `/organizations/${escapeRegExp(orgId)}/users`);
     },
     [router, mutate, roles, currentOrganizationId]
   );

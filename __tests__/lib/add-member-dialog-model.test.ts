@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   AddMemberMode,
   AddMemberStep,
-  EMPTY_NEW_PERSON,
+  emptyNewPerson,
   JoinRelationship,
   accessExplanation,
   inviteRelationshipOf,
@@ -21,7 +21,7 @@ import { RelationshipKind } from "@/types/coaching-relationship";
 import { None, Some } from "@/types/option";
 import { Role } from "@/types/user";
 
-const ADA_FIELDS = { firstName: " Ada ", lastName: "Lovelace", displayName: "Ada", email: "ada@example.com" };
+const ADA_FIELDS = { firstName: " Ada ", lastName: "Lovelace", displayName: "Ada", email: "ada@example.com", timezone: "UTC" };
 const ADA = { firstName: "Ada", fullName: "Ada Lovelace", email: "ada@example.com" };
 const GRACE: Member = {
   userId: "grace",
@@ -33,7 +33,7 @@ const GRACE: Member = {
 
 describe("joinerOf", () => {
   it("needs every new-person field and an email-shaped address", () => {
-    expect(joinerOf(AddMemberMode.Create, EMPTY_NEW_PERSON, None)).toEqual(None);
+    expect(joinerOf(AddMemberMode.Create, emptyNewPerson("UTC"), None)).toEqual(None);
     expect(joinerOf(AddMemberMode.Create, { ...ADA_FIELDS, email: "ada" }, None)).toEqual(None);
     expect(joinerOf(AddMemberMode.Create, ADA_FIELDS, None)).toEqual(Some(ADA));
   });
@@ -41,7 +41,7 @@ describe("joinerOf", () => {
   it("takes an existing person from the lookup", () => {
     const found = { id: "ada", first_name: "Ada", last_name: "Lovelace", email: "ada@example.com" };
     expect(joinerOf(AddMemberMode.Existing, ADA_FIELDS, None)).toEqual(None);
-    expect(joinerOf(AddMemberMode.Existing, EMPTY_NEW_PERSON, Some(found))).toEqual(Some(ADA));
+    expect(joinerOf(AddMemberMode.Existing, emptyNewPerson("UTC"), Some(found))).toEqual(Some(ADA));
   });
 });
 
@@ -115,7 +115,7 @@ describe("the request", () => {
   });
 
   it("trims the new person and leaves relationship off without one", () => {
-    expect(newUserOf(ADA_FIELDS, "UTC", None)).toEqual({
+    expect(newUserOf(ADA_FIELDS, None)).toEqual({
       first_name: "Ada",
       last_name: "Lovelace",
       display_name: "Ada",
@@ -123,7 +123,11 @@ describe("the request", () => {
       timezone: "UTC",
     });
     const colleague = { with_user_id: "grace", kind: RelationshipKind.Colleague };
-    expect(newUserOf(ADA_FIELDS, "UTC", Some(colleague))).toHaveProperty("relationship", colleague);
+    expect(newUserOf(ADA_FIELDS, Some(colleague))).toHaveProperty("relationship", colleague);
+  });
+
+  it("sends the time zone chosen for the new person", () => {
+    expect(newUserOf({ ...ADA_FIELDS, timezone: "Europe/London" }, None)).toHaveProperty("timezone", "Europe/London");
   });
 });
 
@@ -144,6 +148,8 @@ describe("railOf", () => {
       ["Access", "Member", false],
       ["Relationship", "None", false],
     ]);
+    const created = { ...existing, mode: AddMemberMode.Create, order: [AddMemberStep.Person, AddMemberStep.Relationship] };
+    expect(doneOf({ ...created, step: AddMemberStep.Person })[0]).toEqual(["Person", "Enter their account details", false]);
   });
 
   it("marks a default done once passed", () => {
@@ -172,7 +178,7 @@ describe("leadOf", () => {
   it("hints at what the first step needs", () => {
     expect(
       leadOf({ step: AddMemberStep.Person, order, mode: AddMemberMode.Create, joiner: None, complete: false, submitting: false, onConfirm })
-    ).toEqual({ kind: "hint", text: "Fill in their details" });
+    ).toEqual({ kind: "hint", text: "Fill in their account details" });
   });
 
   it("confirms on the last step, disabled until complete", () => {

@@ -10,6 +10,8 @@ describe("otherParticipant", () => {
     coachee_id: "coachee",
     coachee_first_name: "Mary Ann",
     coachee_last_name: "Lee",
+    coach_email: "jan@example.com",
+    coachee_email: "maryann@example.com",
   });
 
   it("builds the other person from their first and last names", () => {
@@ -18,7 +20,13 @@ describe("otherParticipant", () => {
       firstName: "Jan",
       fullName: "Jan Van Dyke",
       initials: "JV",
+      email: "jan@example.com",
     });
-    expect(otherParticipant(rel, "coach")).toMatchObject({ userId: "coachee", fullName: "Mary Ann Lee", initials: "ML" });
+    expect(otherParticipant(rel, "coach")).toMatchObject({
+      userId: "coachee",
+      fullName: "Mary Ann Lee",
+      initials: "ML",
+      email: "maryann@example.com",
+    });
   });
 });

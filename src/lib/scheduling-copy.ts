@@ -6,11 +6,12 @@ import { type Option, None, Some } from "@/types/option";
 import { Provider } from "@/types/provider";
 import type { SeriesRecurrence } from "@/types/coaching-session-series";
 import { Frequency, type RecurrenceEnd, WEEKDAYS_ORDERED, type Weekday, frequencySupportsWeekdays } from "@/types/recurrence";
+import { countOf } from "@/types/general";
 
 const FIRST_SESSION_WEEKDAY_DAYS = 6;
 
 export function sessionCount(count: number): string {
-  return `${count} session${count === 1 ? "" : "s"}`;
+  return countOf(count, "session");
 }
 
 /** A session length, "50 min". */

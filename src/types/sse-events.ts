@@ -2,6 +2,7 @@ import type { Id } from './general';
 import type { Action } from './action';
 import type { Agreement } from './agreement';
 import type { Goal } from './goal';
+import type { RelationshipKind } from './coaching-relationship';
 
 /**
  * Base SSE event structure matching backend serialization
@@ -110,6 +111,20 @@ export type CoachingSessionGoalDeletedEvent = BaseSSEEvent<
   }
 >;
 
+// ==================== RELATIONSHIP EVENTS ====================
+
+// An admin switched the kind or who coaches; a reversal keeps from === to.
+// Roles, capabilities and action visibility all follow, so refetch broadly.
+export type CoachingRelationshipKindChangedEvent = BaseSSEEvent<
+  'coaching_relationship_kind_changed',
+  {
+    coaching_relationship_id: Id;
+    organization_id: Id;
+    from: RelationshipKind;
+    to: RelationshipKind;
+  }
+>;
+
 // ==================== SYSTEM EVENTS ====================
 
 export type ForceLogoutEvent = BaseSSEEvent<
@@ -189,6 +204,7 @@ export type SSEEvent =
   | GoalDeletedEvent
   | CoachingSessionGoalCreatedEvent
   | CoachingSessionGoalDeletedEvent
+  | CoachingRelationshipKindChangedEvent
   | ForceLogoutEvent
   | MeetingRecordingUpdatedEvent
   | TranscriptionUpdatedEvent

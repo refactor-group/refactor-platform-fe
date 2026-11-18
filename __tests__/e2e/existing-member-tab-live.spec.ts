@@ -52,7 +52,7 @@ test("@single-org jim, admin of Refactor Group only, sees no existing-account ch
   await expect(existingTab(page)).toHaveCount(0);
   // The create form is still fully available.
   await expect(page.getByLabel("First name")).toBeVisible();
-  await expect(page.getByText("Fill in their details")).toBeVisible();
+  await expect(page.getByText("Fill in their account details")).toBeVisible();
 });
 
 test("@single-org ehab, admin of BigTable only, sees no existing-account choice", async ({
