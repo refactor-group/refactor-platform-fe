@@ -160,6 +160,27 @@ Pills, `text-item font-medium`, no border, icon + label `gap-2`, 16px lucide ico
 Circles, 36–40px, `bg-fill hover:bg-fill-hover text-ink-2`. Inside menus: 28px, transparent,
 hover `bg-fill`, disabled `text-disabled-icon`. Always set `aria-label`.
 
+### Info buttons (i)
+
+An (i) explains what a choice or field *means*, for people who need it, without adding prose
+for everyone else. It sits beside a field label, or at the right edge of a choice card, and
+nowhere else.
+
+- **What goes in it:** meaning and consequences ("what a Colleague can do", "whose time zone this
+  is"). Never instructions needed to finish the step; those go in the label or the footer hint.
+  Never errors.
+- **Trigger:** lucide `Info` at 16px, round, `text-ink-2 hover:bg-fill hover:text-foreground`.
+  32px beside a label (`-my-2` keeps the row height), 40px on a card. `aria-label="About {title}"`.
+  A sibling of the control it explains, never inside it (a button can't sit inside another button).
+- **Opens on click or tap** (a Popover, not a Tooltip), so it works on touch. Escape or an outside
+  click closes it.
+- **Content:** `w-64 p-3 text-sm`. The title in `font-medium text-foreground`, then one or two
+  short sentences in `text-muted-foreground`. No links, no actions.
+- **One component:** `InfoButton` in `components/ui/info-button.tsx`, used by `RadioCardItem` and
+  by field labels.
+
+Examples: the role cards in Pair with…, Add member and Change relationship…; Time zone in Add member.
+
 ### Chips (Target)
 
 `rounded-full text-xs font-medium`, height 22–26. Selected `bg-primary text-primary-foreground`;
