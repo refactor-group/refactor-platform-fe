@@ -22,8 +22,13 @@ vi.mock("@/lib/timezone-utils", () => ({
   getBrowserTimezone: () => "UTC",
   getTimezones: () => [
     { value: "UTC", label: "UTC" },
+    { value: "America/New_York", label: "New York" },
     { value: "Europe/London", label: "London" },
   ],
+}));
+// The admin's profile zone differs from the browser's, which is UTC above.
+vi.mock("@/lib/providers/auth-store-provider", () => ({
+  useAuthStore: (select: (s: unknown) => unknown) => select({ userSession: { timezone: "America/New_York" } }),
 }));
 
 const ADA = { id: "user-9", first_name: "Ada", last_name: "Lovelace", email: "ada@example.com" };
@@ -172,7 +177,7 @@ describe("AddMemberDialog – creating a member", () => {
     expect(created[0]).toMatchObject({
       first_name: "Ada",
       email: "new@example.com",
-      timezone: "UTC",
+      timezone: "America/New_York",
       relationship: { with_user_id: GRACE.id, kind: "coaching" },
     });
     expect(created[0]).not.toHaveProperty("coach_id");
@@ -181,13 +186,13 @@ describe("AddMemberDialog – creating a member", () => {
     expect(toast.success).toHaveBeenCalledWith("Ada Lovelace added");
   });
 
-  it("starts on the admin's time zone and sends the one picked instead", async () => {
+  it("starts on the admin's profile time zone and sends the one picked instead", async () => {
     const { created } = captureAdds();
     const user = userEvent.setup();
     renderDialog();
 
     const zone = screen.getByRole("combobox", { name: "Time zone" });
-    expect(zone).toHaveTextContent("UTC");
+    expect(zone).toHaveTextContent("New York");
     await user.click(screen.getByRole("button", { name: "About Time zone" }));
     expect(await screen.findByText("Yours unless you pick another. They can change it later.")).toBeInTheDocument();
     await user.keyboard("{Escape}");

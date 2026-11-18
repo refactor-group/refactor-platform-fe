@@ -32,6 +32,7 @@ import { existingRelationshipOf, isPairAlreadyRelated, pairAlreadyRelatedMessage
 import { UserApi, userLookupRateLimitedMessage } from "@/lib/api/users";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { initialsOf } from "@/lib/people";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { toast } from "@/lib/toast";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
@@ -193,7 +194,8 @@ export function useAddMemberDialog({
   const { lookup, onLookupEmailChange, onFind, onClearFound } = useEmailLookup(organizationMembers);
 
   const [mode, setMode] = useState(canAddExisting ? initialMode : AddMemberMode.Create);
-  const [fields, setFields] = useState(() => emptyNewPerson(getBrowserTimezone()));
+  const adminTimezone = useAuthStore((state) => state.userSession?.timezone);
+  const [fields, setFields] = useState(() => emptyNewPerson(adminTimezone || getBrowserTimezone()));
   const [chosenRole, setRole] = useState(Role.User);
   const [relationship, setRelationship] = useState(JoinRelationship.None);
   const [pickedPartnerId, setPickedPartnerId] = useState<Option<Id>>(None);
