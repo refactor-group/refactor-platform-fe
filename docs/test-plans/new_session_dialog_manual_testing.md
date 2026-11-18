@@ -83,7 +83,7 @@ Open the dialog with the mouse, then press Tab once.
 
 Look at the grid.
 
-**Pass:** A, B and C show, D and E don't. Each card has a 36px avatar, the full name and a sub-line: "Usually Tuesdays, 2:30 PM" for A, "Usually {weekday}s, {time}" for C. No card says "coachee".
+**Pass:** A, B and C show, D and E don't. Each card has a 36px avatar, the full name, their email and a sub-line: "Usually Tuesdays, 2:30 PM" for A, "Usually {weekday}s, {time}" for C. No card says "coachee".
 
 ### Case B2: show everyone
 
@@ -132,6 +132,18 @@ Search for an inactive person and pick them, then clear the search.
 Reschedule A's next session alone ("This session only") from Tuesday 2:30 PM to Wednesday 9:00 AM. Open the dialog and pick A, then go to When. Afterwards, reschedule that moved session to Thursday at 2:30 PM with "This and following sessions", then open the dialog again.
 
 **Pass:** after the single move, A's card still reads "Usually Tuesdays, 2:30 PM", and When prefills A's next free Tuesday at 2:30 PM. One moved session never changes someone's usual time. On the way, Repeat has only Thursday selected (not Tuesday or Wednesday) and the confirm is enabled. After the series moves, the card reads "Usually Thursdays, 2:30 PM".
+
+### Case B10: two people with the same name
+
+Give B the same first and last name as A (Members page, or the backend's user edit), then open the dialog. Search for part of A's email.
+
+**Pass:** both cards read the same name and differ only by email. The search finds A by email alone.
+
+### Case B11: choosing the organization
+
+Log in as someone in two or more organizations who can schedule in each (for example a colleague in one and a coach in the other), with the header on the first. Open the dialog. Switch the Organization field to the other organization, then back.
+
+**Pass:** an Organization field above the search shows the header's organization, and lists every active organization the user belongs to, by name, never an archived one. Switching lists that organization's people and clears any pick (the rail's Who reads "Choose a person"). The header still shows the first organization, before and after the session is created. Someone in only one organization sees no Organization field. A session made in the other organization appears on the dashboard and, after switching the header, in that organization.
 
 ## 4. Part C: When (PR 5)
 
@@ -353,9 +365,9 @@ Double-click the confirm.
 
 ### Case F4: errors
 
-Try offline (block all requests), with Google disconnected (revoke it in Settings first), and in an archived organization.
+Try offline (block all requests), with Google disconnected (revoke it in Settings first), and in an archived organization. Then answer the create with a 502, once with Google connected and once with no meeting provider (Playwright `page.route` fulfilling `POST **/coaching_sessions` with status 502, or stop the backend's docs-collab-server).
 
-**Pass:** one-line toasts: "Couldn't create the session · Check your connection and try again", then "Google Meet is disconnected · Reconnect it in Settings" with a redirect to Settings, then the archived-organization message. On the retryable ones the dialog stays open with your choices.
+**Pass:** one-line toasts: "Couldn't create the session · Check your connection and try again", then "Google Meet is disconnected · Reconnect it in Settings" with a redirect to Settings, then the archived-organization message. The 502 with Google reads "Couldn't create the Google Meet link · Try again"; without a provider, "Couldn't create the session · Something went wrong on our end. Try again in a few minutes". On the retryable ones the dialog stays open with your choices.
 
 ### Case F5: meeting line
 
