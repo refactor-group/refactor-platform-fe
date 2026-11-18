@@ -45,6 +45,8 @@ export function useNotAMemberToast(): ShowNotAMember {
       const base = siteConfig.env.backendServiceURL;
       void revalidateEndpointCaches(mutate, base, "/coaching_relationships");
       void revalidateEndpointCaches(mutate, base, "/coaching_sessions");
+      // So the members list, and Add back's lookup, no longer count them as a member.
+      if (orgId) void revalidateEndpointCaches(mutate, base, `/organizations/${orgId}/users`);
     },
     [router, mutate, roles, currentOrganizationId]
   );
