@@ -71,6 +71,49 @@ describe("parseCoachingSessionSeries", () => {
     ]);
   });
 
+  describe("weekdays in the viewer's zone", () => {
+    // Wednesday 9:00 AM in Tokyo is Wednesday 00:00 UTC.
+    const tokyo = (by_weekdays: Weekday[], start_at = "2026-11-25T00:00:00") =>
+      rawSeries({
+        rule: {
+          start_at,
+          duration_minutes: 60,
+          timezone: "Asia/Tokyo",
+          recurrence: { frequency: Frequency.Weekly, interval: 1, by_weekdays, count: 8, until: null },
+        },
+      });
+    const daysIn = (raw: CoachingSessionSeriesRaw, zone: string) =>
+      parseCoachingSessionSeries(raw, zone).rule.recurrence.by_weekdays;
+
+    it("keeps them for a viewer in the series' own zone", () => {
+      expect(daysIn(tokyo([Weekday.Wed]), "Asia/Tokyo")).toEqual([Weekday.Wed]);
+    });
+
+    it("moves them back a day where the slot falls on the evening before", () => {
+      expect(daysIn(tokyo([Weekday.Mon, Weekday.Wed]), "America/New_York")).toEqual([Weekday.Tue, Weekday.Sun]);
+    });
+
+    it("moves them forward a day where the slot falls on the next morning", () => {
+      // Wednesday 11:00 PM in New York is Thursday 04:00 UTC and Thursday 1:00 PM in Tokyo.
+      const newYork = rawSeries({
+        rule: {
+          start_at: "2026-11-26T04:00:00",
+          duration_minutes: 60,
+          timezone: "America/New_York",
+          recurrence: { frequency: Frequency.Weekly, interval: 1, by_weekdays: [Weekday.Wed, Weekday.Sun], count: 8, until: null },
+        },
+      });
+      expect(daysIn(newYork, "Asia/Tokyo")).toEqual([Weekday.Mon, Weekday.Thu]);
+    });
+
+    it("reads a rule without a zone as UTC, as the backend does", () => {
+      const utc = tokyo([Weekday.Wed]);
+      delete (utc.rule as { timezone?: string }).timezone;
+      expect(daysIn(utc, "America/New_York")).toEqual([Weekday.Tue]);
+      expect(daysIn(utc, "UTC")).toEqual([Weekday.Wed]);
+    });
+  });
+
   it("lifts a present count to Some and a null until to None", () => {
     const result = parseCoachingSessionSeries(rawSeries(), TZ);
 

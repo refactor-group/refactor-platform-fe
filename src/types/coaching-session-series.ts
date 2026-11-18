@@ -3,6 +3,7 @@ import { Id } from "@/types/general";
 import {
   Frequency,
   RecurrenceEnd,
+  WEEKDAYS_ORDERED,
   Weekday,
   frequencyLabel,
   utcDateTimeToUntilDate,
@@ -28,6 +29,8 @@ interface SeriesRuleRaw {
   start_at: string;
   recurrence: SeriesRecurrenceRaw;
   duration_minutes: number;
+  /** The zone its weekdays are in: the creator's when published. Older rules omit it (UTC). */
+  timezone?: string;
 }
 
 export interface CoachingSessionSeriesRaw {
@@ -75,6 +78,20 @@ export interface CoachingSessionSeriesWithSessions extends CoachingSessionSeries
   coaching_sessions: CoachingSession[];
 }
 
+/**
+ * The rule's weekdays as they fall in `timezone`. The rule keeps them in its own zone, so a
+ * series made in Tokyo on Wednesdays at 9:00 AM repeats on Tuesdays in New York.
+ */
+function weekdaysIn(weekdays: Weekday[], rule: SeriesRuleRaw, timezone: string): Weekday[] {
+  const start = DateTime.fromISO(rule.start_at, { zone: "utc" });
+  const shift = start.setZone(timezone).weekday - start.setZone(rule.timezone ?? "UTC").weekday;
+  // Within a day either way, so a 6 is a -1 across the week's end.
+  const days = ((shift % 7) + 7) % 7;
+  if (!start.isValid || days === 0) return weekdays;
+  const shifted = new Set(weekdays.map((day) => WEEKDAYS_ORDERED[(WEEKDAYS_ORDERED.indexOf(day) + days) % 7]));
+  return WEEKDAYS_ORDERED.filter((day) => shifted.has(day));
+}
+
 function parseSeriesRule(raw: SeriesRuleRaw, timezone: string): SeriesRule {
   const { recurrence } = raw;
   // count/until are one-of, and the absent one may be null or omitted — treat
@@ -89,7 +106,7 @@ function parseSeriesRule(raw: SeriesRuleRaw, timezone: string): SeriesRule {
       frequency: recurrence.frequency,
       interval: recurrence.interval,
       ...(recurrence.by_weekdays
-        ? { by_weekdays: recurrence.by_weekdays }
+        ? { by_weekdays: weekdaysIn(recurrence.by_weekdays, raw, timezone) }
         : {}),
       count: count !== null ? Some(count) : None,
       // `until` is a date in the domain (the form's end-picker). The backend
