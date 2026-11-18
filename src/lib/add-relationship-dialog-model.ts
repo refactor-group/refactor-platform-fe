@@ -39,6 +39,8 @@ export interface Member {
   email: string;
 }
 
+type Named = Pick<Member, "fullName">;
+
 export function memberOf(user: User): Member {
   return {
     userId: user.id,
@@ -94,12 +96,14 @@ export function alreadyPaired(
   return blockingRelationship(member, partner, role, relationships).some;
 }
 
-function pairedLine(member: Member, existing: CoachingRelationshipWithUserNames): string {
-  if (existing.kind === RelationshipKind.Colleague) return `Already ${member.firstName}'s colleague`;
-  return existing.coachee_id === member.userId
-    ? `Already ${member.firstName}'s coach`
-    : `Already coached by ${member.firstName}`;
+/** What the other person is to the member: "Ada's coach", "coached by Ada" or "Ada's colleague". */
+export function relationLine(member: Member, existing: CoachingRelationshipWithUserNames): string {
+  if (existing.kind === RelationshipKind.Colleague) return `${member.firstName}'s colleague`;
+  return existing.coachee_id === member.userId ? `${member.firstName}'s coach` : `coached by ${member.firstName}`;
 }
+
+const pairedLine = (member: Member, existing: CoachingRelationshipWithUserNames): string =>
+  `Already ${relationLine(member, existing)}`;
 
 /** Everyone but the member, by name. Anyone already paired this way shows but can't be picked. */
 export function partnerChoices(
@@ -180,7 +184,7 @@ export function stepTitle(step: AddRelationshipStep, member: Member, role: Optio
   }
 }
 
-export function summaryLine(member: Member, partner: Member, role: MemberRole): string {
+export function summaryLine(member: Named, partner: Named, role: MemberRole): string {
   switch (role) {
     case RelationshipRole.Coachee:
       return `${partner.fullName} will coach ${member.fullName}`;
@@ -195,7 +199,7 @@ export function summaryLine(member: Member, partner: Member, role: MemberRole): 
   }
 }
 
-export function addedMessage(member: Member, partner: Member, role: MemberRole): string {
+export function addedMessage(member: Named, partner: Named, role: MemberRole): string {
   switch (role) {
     case RelationshipRole.Coachee:
       return `${partner.fullName} is now ${member.fullName}'s coach`;

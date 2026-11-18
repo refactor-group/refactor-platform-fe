@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
+  ArrowLeftRight,
   MoreHorizontal,
   Send,
   UserPlus,
@@ -55,6 +56,9 @@ import {
 } from "@/lib/api/organization-errors";
 import { toast } from "@/lib/toast";
 import { AddRelationshipDialog } from "@/components/ui/members/add-relationship-dialog";
+import { ChangeRelationshipDialog } from "@/components/ui/members/change-relationship-dialog";
+import { memberOf } from "@/lib/add-relationship-dialog-model";
+import { hasChangeableRelationship } from "@/lib/change-relationship-dialog-model";
 
 interface MemberCardProps {
   user: User;
@@ -218,6 +222,7 @@ export function MemberCard({
     user.invite_status === "expired" && isAdminOrSuperAdmin(currentUserRoleState);
 
   const [addRelationshipOpen, setAddRelationshipOpen] = useState(false);
+  const [changeRelationshipOpen, setChangeRelationshipOpen] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
@@ -285,6 +290,14 @@ export function MemberCard({
             <DropdownMenuItem onClick={() => setAddRelationshipOpen(true)}>
               <UserPlus className="mr-2 h-4 w-4" /> Pair with…
             </DropdownMenuItem>
+            {userRelationships.length > 0 && (
+              <DropdownMenuItem
+                onClick={() => setChangeRelationshipOpen(true)}
+                disabled={!hasChangeableRelationship(memberOf(user), userRelationships)}
+              >
+                <ArrowLeftRight className="mr-2 h-4 w-4" /> Change relationship…
+              </DropdownMenuItem>
+            )}
             {/* Gated locally as well as by the menu's own admin check, so the
                 guarantee survives a restructure of this menu. */}
             {isAdminOrSuperAdmin(currentUserRoleState) &&
@@ -371,6 +384,16 @@ export function MemberCard({
           members={users}
           relationships={userRelationships}
           onClose={() => setAddRelationshipOpen(false)}
+          onRelationshipsChanged={onRefresh}
+        />
+      )}
+
+      {changeRelationshipOpen && (
+        <ChangeRelationshipDialog
+          organizationId={currentOrganizationId}
+          member={user}
+          relationships={userRelationships}
+          onClose={() => setChangeRelationshipOpen(false)}
           onRelationshipsChanged={onRefresh}
         />
       )}

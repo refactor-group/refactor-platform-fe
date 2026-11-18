@@ -115,6 +115,11 @@ export interface NewCoachingRelationship {
   kind: RelationshipKind;
 }
 
+/** Body of a kind switch: coaching names its coach; colleagues have none. */
+export type RelationshipKindChange =
+  | { kind: RelationshipKind.Coaching; coach_id: Id; confirmed: boolean }
+  | { kind: RelationshipKind.Colleague; confirmed: boolean };
+
 /** Whether two people already share a relationship of any kind, either way round. */
 export function isPairOf(relationship: CoachingRelationshipWithUserNames, a: Id, b: Id): boolean {
   return (

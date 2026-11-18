@@ -35,3 +35,23 @@ describe("topics_changed", () => {
     expect(revalidated([week, topics, actions])).toEqual([week, topics]);
   });
 });
+
+describe("coaching_relationship_kind_changed", () => {
+  it("refreshes relationships, sessions, suggestions and actions, and nothing else", () => {
+    renderHook(() => useSSECacheInvalidation(null));
+    mutate.mockClear();
+    handlers.get("coaching_relationship_kind_changed")!();
+    const base = siteConfig.env.backendServiceURL;
+    const relationships = `${base}/organizations/o-1/coaching_relationships`;
+    const sessions = [`${base}/users/u-1/coaching_sessions`, { from_date: "2026-08-17" }];
+    const suggestions = `${base}/coaching_sessions/s-1/transcript_suggestions`;
+    const actions = `${base}/users/u-1/actions`;
+    const goals = `${base}/goals`;
+    expect(revalidated([relationships, sessions, suggestions, actions, goals])).toEqual([
+      relationships,
+      sessions,
+      suggestions,
+      actions,
+    ]);
+  });
+});

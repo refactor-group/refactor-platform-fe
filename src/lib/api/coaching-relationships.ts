@@ -5,6 +5,7 @@ import { Id } from "@/types/general";
 import {
   NewCoachingRelationship,
   CoachingRelationshipWithUserNames,
+  RelationshipKindChange,
   defaultCoachingRelationshipWithUserNames,
 } from "@/types/coaching-relationship";
 import { EntityApi } from "./entity-api";
@@ -78,6 +79,20 @@ export const CoachingRelationshipApi = {
       entity
     );
   },
+
+  /**
+   * Switches a relationship's kind or who coaches. Unconfirmed, a real switch is refused
+   * with a 409 listing its consequences; nothing changes until it's re-sent confirmed.
+   */
+  changeKind: async (
+    organizationId: Id,
+    relationshipId: Id,
+    change: RelationshipKindChange
+  ): Promise<CoachingRelationshipWithUserNames> =>
+    EntityApi.updateFn<RelationshipKindChange, CoachingRelationshipWithUserNames>(
+      `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}/${relationshipId}/kind`,
+      change
+    ),
 
   /**
    * Unimplemented

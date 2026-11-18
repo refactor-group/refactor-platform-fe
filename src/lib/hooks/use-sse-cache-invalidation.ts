@@ -277,6 +277,15 @@ export function useSSECacheInvalidation(eventSource: EventSource | null) {
     invalidateEndpoint('/coaching_sessions', 'coaching_session_title_updated');
   });
 
+  // RELATIONSHIP KIND EVENTS - Roles and capabilities come from the relationship;
+  // session lists carry them, and action and suggestion visibility follow.
+  // /coaching_sessions also covers each session's transcript suggestions.
+  useSSEEventHandler(eventSource, 'coaching_relationship_kind_changed', () => {
+    invalidateEndpoint('/coaching_relationships', 'coaching_relationship_kind_changed');
+    invalidateEndpoint('/coaching_sessions', 'coaching_relationship_kind_changed');
+    invalidateEndpoint('/actions', 'coaching_relationship_kind_changed');
+  });
+
   // TRANSCRIPT SUGGESTION EVENTS - Coarse: refetch the session's suggestion lists.
   useSSEEventHandler(eventSource, 'transcript_suggestions_changed', (event) => {
     invalidateSessionSuggestions(event.data.coaching_session_id, 'transcript_suggestions_changed');
