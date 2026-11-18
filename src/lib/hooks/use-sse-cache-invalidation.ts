@@ -18,9 +18,14 @@ import { useSSEEventHandler } from './use-sse-event-handler';
  * which only matched the literal top-level path and silently skipped
  * user-scoped and relationship-scoped caches.
  *
- * Constraint: `endpointPath` must be a plain path segment like `/actions`
- * or `/goals` (no regex metacharacters).
+ * `endpointPath` is a pattern (callers may pass `[^/]+`), so wrap any id that
+ * came from a response in {@link escapeRegExp}.
  */
+/** Text matched literally inside an `endpointPath` pattern. */
+export function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function matchesEndpoint(
   url: string,
   baseUrl: string,

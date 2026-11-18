@@ -238,6 +238,18 @@ describe("NewSessionDialog: organization", () => {
     expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Acme Corp", "Refactor Group"]);
   });
 
+  it("starts on an active organization when the header's is archived", () => {
+    serveOrganizations([
+      { id: "org-1", name: "Acme Corp", archived_at: "2026-01-01T00:00:00Z" },
+      { id: "org-2", name: "Refactor Group" },
+      { id: "org-4", name: "Zeta" },
+    ]);
+    renderDialog();
+    expect(organization()).toHaveTextContent("Refactor Group");
+    expect(person("Sara Lin")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Ehab Badawi/ })).not.toBeInTheDocument();
+  });
+
   it("lists the chosen organization's people and drops the pick", () => {
     renderDialog();
     fireEvent.click(person("Ehab Badawi"));

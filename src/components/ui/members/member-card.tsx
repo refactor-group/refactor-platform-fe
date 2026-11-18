@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { UserApi, useUserMutation } from "@/lib/api/organizations/users";
@@ -88,6 +88,10 @@ export function MemberCard({
   const displayRoles = getUserDisplayRoles(user, currentOrganizationId, userRelationships);
 
   // Get coaches for this user
+  const canChangeRelationship = useMemo(
+    () => hasChangeableRelationship(memberOf(user), userRelationships),
+    [user, userRelationships]
+  );
   const coaches = getUserCoaches(userId, userRelationships);
   const colleagues = getUserColleagues(userId, userRelationships);
   const { deleteNested: deleteUser, removeFromOrganization, updateRole } =
@@ -293,7 +297,7 @@ export function MemberCard({
             {userRelationships.length > 0 && (
               <DropdownMenuItem
                 onClick={() => setChangeRelationshipOpen(true)}
-                disabled={!hasChangeableRelationship(memberOf(user), userRelationships)}
+                disabled={!canChangeRelationship}
               >
                 <ArrowLeftRight className="mr-2 h-4 w-4" /> Change relationship…
               </DropdownMenuItem>

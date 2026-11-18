@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MenuPerson } from "@/components/ui/join-session/types";
 import type { PickerPerson } from "@/components/ui/person-picker";
 import type { StepDialogLead, StepRailItem } from "@/components/ui/step-dialog";
@@ -91,6 +91,19 @@ export function useChangeRelationshipDialog({
   const changed = role.some && currentRole.some && role.val !== currentRole.val;
   const index = STEP_ORDER.indexOf(step);
 
+  // The review was for the relationship as it was; if it changes meanwhile (another admin, a live
+  // event), go back to the role, which shows what it is now.
+  const shape = relationship.some ? `${relationship.val.kind}:${relationship.val.coach_id}` : "";
+  const [reviewedShape, setReviewedShape] = useState(shape);
+  if (step === ChangeRelationshipStep.Review && shape !== reviewedShape) {
+    setReviewedShape(shape);
+    setPreview({ kind: "idle" });
+    setChosenRole(None);
+    setStep(ChangeRelationshipStep.Role);
+  }
+
+  const requests = useLatestRequest();
+
   const nameOf = (userId: Id): string => {
     if (userId === member.userId) return member.fullName;
     if (partner.some && userId === partner.val.userId) return partner.val.fullName;
@@ -123,6 +136,7 @@ export function useChangeRelationshipDialog({
 
   const loadPreview = async () => {
     if (relationship.none || partner.none || role.none) return;
+    const isCurrent = requests.start();
     setPreview({ kind: "loading" });
     try {
       await CoachingRelationshipApi.changeKind(
@@ -130,10 +144,12 @@ export function useChangeRelationshipDialog({
         relationship.val.id,
         kindChange(member.userId, partner.val.userId, role.val, false)
       );
+      if (!isCurrent()) return;
       // Already that way: nothing was changed or needs confirming.
       onRelationshipsChanged();
       onClose();
     } catch (error) {
+      if (!isCurrent()) return;
       const consequences = kindSwitchConsequencesOf(error);
       if (consequences.some) {
         setPreview({ kind: "ready", consequences: consequences.val });
@@ -146,6 +162,7 @@ export function useChangeRelationshipDialog({
 
   const confirm = async () => {
     if (relationship.none || partner.none || role.none) return;
+    const isCurrent = requests.start();
     setSubmitting(true);
     try {
       await CoachingRelationshipApi.changeKind(
@@ -153,18 +170,21 @@ export function useChangeRelationshipDialog({
         relationship.val.id,
         kindChange(member.userId, partner.val.userId, role.val, true)
       );
+      if (!isCurrent()) return;
       toast.success(addedMessage(member, partner.val, role.val));
       onRelationshipsChanged();
       onClose();
     } catch (error) {
-      await refuse(error, partner.val.fullName);
+      if (isCurrent()) await refuse(error, partner.val.fullName);
     } finally {
       setSubmitting(false);
     }
   };
 
   const goTo = (next: ChangeRelationshipStep) => {
+    requests.cancel();
     setPreview({ kind: "idle" });
+    setReviewedShape(shape);
     setStep(next);
     if (next === ChangeRelationshipStep.Review) void loadPreview();
   };
@@ -194,6 +214,25 @@ export function useChangeRelationshipDialog({
     onPrev: index > 0 && preview.kind !== "loading" ? Some(() => goTo(STEP_ORDER[index - 1])) : None,
     onNext: index < STEP_ORDER.length - 1 && canAdvance ? Some(() => goTo(STEP_ORDER[index + 1])) : None,
   };
+}
+
+/**
+ * Drops answers the dialog has moved on from: each start() returns a check that turns false
+ * once a newer request starts, cancel() runs, or the dialog closes.
+ */
+function useLatestRequest() {
+  const latest = useRef(0);
+  useEffect(() => () => void (latest.current += 1), []);
+  return useMemo(
+    () => ({
+      start: () => {
+        const mine = ++latest.current;
+        return () => latest.current === mine;
+      },
+      cancel: () => void (latest.current += 1),
+    }),
+    []
+  );
 }
 
 function reviewOf(

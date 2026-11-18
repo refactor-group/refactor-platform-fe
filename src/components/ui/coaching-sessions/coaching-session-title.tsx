@@ -79,8 +79,10 @@ const CoachingSessionTitle: FC = () => {
   };
 
   // By account, not announced role: colleagues both announce "colleague".
-  const presenceOf = (userId: Id): UserPresence | undefined =>
-    presenceState?.users.get(userId);
+  const presenceOf = (userId: Id): Option<UserPresence> => {
+    const presence = presenceState?.users.get(userId);
+    return presence ? Some(presence) : None;
+  };
 
   if (!session || !relationship) return null;
 

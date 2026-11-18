@@ -20,7 +20,10 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
 }));
 
 const revalidate = vi.hoisted(() => vi.fn());
-vi.mock("@/lib/hooks/use-sse-cache-invalidation", () => ({ revalidateEndpointCaches: revalidate }));
+vi.mock("@/lib/hooks/use-sse-cache-invalidation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/hooks/use-sse-cache-invalidation")>()),
+  revalidateEndpointCaches: revalidate,
+}));
 
 const { useNotAMemberToast } = await import("@/lib/hooks/use-not-a-member-toast");
 

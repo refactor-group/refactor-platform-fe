@@ -215,6 +215,22 @@ describe("useActionsFetch", () => {
       expect(result.current.actions.map((a) => a.id)).toEqual(["mine", "free"]);
     });
 
+    it("keeps the merged list and refresh stable across renders", () => {
+      const mine = { actions: [action("mine")], isLoading: false, isError: false, refresh: vi.fn() };
+      const free = { actions: [action("free")], isLoading: false, isError: false, refresh: vi.fn() };
+      const none = { actions: [], isLoading: false, isError: false, refresh: vi.fn() };
+      h.fetch.mockImplementation((orgId: unknown, params: { assignee_filter?: string }) =>
+        orgId === null ? none : params.assignee_filter === UserActionsAssigneeFilter.Unassigned ? free : mine
+      );
+      const { result, rerender } = renderHook(() =>
+        useActionsFetch(CoachViewMode.MyActions, undefined, AssignmentFilter.All)
+      );
+      const first = result.current;
+      rerender();
+      expect(result.current.actions).toBe(first.actions);
+      expect(result.current.refresh).toBe(first.refresh);
+    });
+
     it("fetches only once for Assigned", () => {
       h.fetch.mockImplementation(serve);
       const { result } = myActions();

@@ -51,16 +51,22 @@ const NEEDS_CONFIRMATION = conflict({
 function renderDialog() {
   const onClose = vi.fn();
   const onRelationshipsChanged = vi.fn();
-  render(
+  const dialog = (relationships: CoachingRelationshipWithUserNames[]) => (
     <ChangeRelationshipDialog
       organizationId="org-1"
       member={CARA}
-      relationships={[PAT_COACHES_CARA]}
+      relationships={relationships}
       onClose={onClose}
       onRelationshipsChanged={onRelationshipsChanged}
     />
   );
-  return { onClose, onRelationshipsChanged };
+  const view = render(dialog([PAT_COACHES_CARA]));
+  return {
+    onClose,
+    onRelationshipsChanged,
+    rerender: (relationships: CoachingRelationshipWithUserNames[]) => view.rerender(dialog(relationships)),
+    unmount: view.unmount,
+  };
 }
 
 const next = () => fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -174,5 +180,30 @@ describe("ChangeRelationshipDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Change relationship" }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(toast.error).toHaveBeenCalledWith("This organization is archived · It can't be changed");
+  });
+
+  it("goes back to the role when the relationship changes during the review", async () => {
+    changeKind.mockRejectedValueOnce(NEEDS_CONFIRMATION);
+    const { rerender } = renderDialog();
+    makeCaraPatsColleague();
+    await screen.findByText("Cara Test will see 3 actions assigned to Pat Coach");
+
+    // Another admin made them colleagues meanwhile.
+    rerender([{ ...PAT_COACHES_CARA, kind: RelationshipKind.Colleague }]);
+    expect(screen.getByRole("radio", { name: "Colleague (current)" })).toBeChecked();
+    expect(screen.getByText("Choose a different role")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Change relationship" })).not.toBeInTheDocument();
+  });
+
+  it("says nothing about an answer that lands after the dialog closed", async () => {
+    let answer: (error: unknown) => void = () => {};
+    changeKind.mockReturnValueOnce(new Promise((_, reject) => (answer = reject)));
+    const { unmount } = renderDialog();
+    makeCaraPatsColleague();
+    unmount();
+    answer(conflict({ reason: "participant_not_a_member", user_id: "pat", organization_id: "org-1" }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(showNotAMember).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
   });
 });

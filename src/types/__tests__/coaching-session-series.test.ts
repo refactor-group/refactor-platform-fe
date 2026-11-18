@@ -20,6 +20,7 @@ import {
   isCoachingSessionSeries,
   parseCoachingSessionSeries,
   parseCoachingSessionSeriesWithSessions,
+  ruleIn,
   seriesRecurrenceToEnd,
 } from "@/types/coaching-session-series";
 
@@ -71,47 +72,11 @@ describe("parseCoachingSessionSeries", () => {
     ]);
   });
 
-  describe("weekdays in the viewer's zone", () => {
-    // Wednesday 9:00 AM in Tokyo is Wednesday 00:00 UTC.
-    const tokyo = (by_weekdays: Weekday[], start_at = "2026-11-25T00:00:00") =>
-      rawSeries({
-        rule: {
-          start_at,
-          duration_minutes: 60,
-          timezone: "Asia/Tokyo",
-          recurrence: { frequency: Frequency.Weekly, interval: 1, by_weekdays, count: 8, until: null },
-        },
-      });
-    const daysIn = (raw: CoachingSessionSeriesRaw, zone: string) =>
-      parseCoachingSessionSeries(raw, zone).rule.recurrence.by_weekdays;
-
-    it("keeps them for a viewer in the series' own zone", () => {
-      expect(daysIn(tokyo([Weekday.Wed]), "Asia/Tokyo")).toEqual([Weekday.Wed]);
-    });
-
-    it("moves them back a day where the slot falls on the evening before", () => {
-      expect(daysIn(tokyo([Weekday.Mon, Weekday.Wed]), "America/New_York")).toEqual([Weekday.Tue, Weekday.Sun]);
-    });
-
-    it("moves them forward a day where the slot falls on the next morning", () => {
-      // Wednesday 11:00 PM in New York is Thursday 04:00 UTC and Thursday 1:00 PM in Tokyo.
-      const newYork = rawSeries({
-        rule: {
-          start_at: "2026-11-26T04:00:00",
-          duration_minutes: 60,
-          timezone: "America/New_York",
-          recurrence: { frequency: Frequency.Weekly, interval: 1, by_weekdays: [Weekday.Wed, Weekday.Sun], count: 8, until: null },
-        },
-      });
-      expect(daysIn(newYork, "Asia/Tokyo")).toEqual([Weekday.Mon, Weekday.Thu]);
-    });
-
-    it("reads a rule without a zone as UTC, as the backend does", () => {
-      const utc = tokyo([Weekday.Wed]);
-      delete (utc.rule as { timezone?: string }).timezone;
-      expect(daysIn(utc, "America/New_York")).toEqual([Weekday.Tue]);
-      expect(daysIn(utc, "UTC")).toEqual([Weekday.Wed]);
-    });
+  it("keeps the rule's own weekdays and zone, reading a missing zone as UTC", () => {
+    const tokyo = rawSeries();
+    tokyo.rule.timezone = "Asia/Tokyo";
+    expect(parseCoachingSessionSeries(tokyo, TZ).rule.timezone).toBe("Asia/Tokyo");
+    expect(parseCoachingSessionSeries(rawSeries(), TZ).rule.timezone).toBe("UTC");
   });
 
   it("lifts a present count to Some and a null until to None", () => {
@@ -344,3 +309,46 @@ describe("seriesRecurrenceToEnd", () => {
     ).toEqual({ kind: "count", count: 4 });
   });
 });
+
+describe("ruleIn", () => {
+  // Wednesdays at 1:00 PM in Tokyo, which is 04:00 UTC.
+  const tokyo = (by_weekdays: Weekday[], timezone = "Asia/Tokyo"): SeriesRule => ({
+    start_at: "2026-11-25T04:00:00",
+    duration_minutes: 60,
+    timezone,
+    recurrence: { frequency: Frequency.Weekly, interval: 1, by_weekdays, count: Some(8), until: None },
+  });
+  const at = (iso: string) => DateTime.fromISO(iso, { zone: "utc" });
+  const daysIn = (rule: SeriesRule, slot: string, zone: string) => ruleIn(rule, at(slot), zone).recurrence.by_weekdays;
+
+  it("keeps them for a viewer in the series' own zone", () => {
+    expect(daysIn(tokyo([Weekday.Wed]), "2026-11-25T04:00:00", "Asia/Tokyo")).toEqual([Weekday.Wed]);
+  });
+
+  it("moves them back a day where the slot falls on the evening before", () => {
+    // 04:00 UTC in November is 11:00 PM the day before in New York (EST).
+    expect(daysIn(tokyo([Weekday.Mon, Weekday.Wed]), "2026-11-25T04:00:00", "America/New_York")).toEqual([
+      Weekday.Tue,
+      Weekday.Sun,
+    ]);
+  });
+
+  it("moves them forward a day where the slot falls on the next morning", () => {
+    // Wednesday 11:00 PM in New York is Thursday 04:00 UTC and Thursday 1:00 PM in Tokyo.
+    const newYork = { ...tokyo([Weekday.Wed, Weekday.Sun]), timezone: "America/New_York" };
+    expect(daysIn(newYork, "2026-11-26T04:00:00", "Asia/Tokyo")).toEqual([Weekday.Mon, Weekday.Thu]);
+  });
+
+  it("measures at the slot given, so daylight saving can keep the day", () => {
+    // 04:00 UTC in July is midnight in New York (EDT): still Wednesday.
+    expect(daysIn(tokyo([Weekday.Wed]), "2026-07-15T04:00:00", "America/New_York")).toEqual([Weekday.Wed]);
+  });
+
+  it("keeps the rule's days when either zone is unknown", () => {
+    expect(daysIn(tokyo([Weekday.Wed], "Not/AZone"), "2026-11-25T04:00:00", "America/New_York")).toEqual([
+      Weekday.Wed,
+    ]);
+    expect(daysIn(tokyo([Weekday.Wed]), "2026-11-25T04:00:00", "Not/AZone")).toEqual([Weekday.Wed]);
+  });
+});
+

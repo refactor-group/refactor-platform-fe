@@ -12,7 +12,7 @@ import {
   isPairOf,
   RelationshipKind,
 } from "@/types/coaching-relationship";
-import type { Id } from "@/types/general";
+import { type Id, countOf } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
 import { RelationshipRole, relationshipRoleLabel } from "@/types/relationship-role";
 
@@ -149,14 +149,13 @@ export function stepTitle(step: ChangeRelationshipStep, member: Member, partner:
   }
 }
 
-const plural = (count: number, noun: string): string => `${count} ${noun}${count === 1 ? "" : "s"}`;
 
 /** What confirming changes, one sentence per person and effect. */
 export function consequenceLines(consequences: KindSwitchConsequences, nameOf: (userId: Id) => string): string[] {
   const actions = consequences.actionsBecomingVisible.flatMap(({ userId, byAssignee }) =>
     byAssignee.map(
       ({ assigneeId, count }) =>
-        `${nameOf(userId)} will see ${plural(count, "action")} assigned to ${nameOf(assigneeId)}`
+        `${nameOf(userId)} will see ${countOf(count, "action")} assigned to ${nameOf(assigneeId)}`
     )
   );
   const gained = consequences.schedulingGained.map((id) => `${nameOf(id)} will be able to schedule sessions`);
@@ -217,7 +216,7 @@ export function leadOf({ step, hasPartner, changed, preview, submitting, onConfi
       return {
         kind: "confirm",
         label: "Change relationship",
-        disabled: preview.kind !== "ready",
+        disabled: preview.kind !== "ready" || !changed,
         pending: submitting,
         onConfirm,
       };

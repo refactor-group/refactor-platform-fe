@@ -3,7 +3,7 @@ import { sessionStartIn } from "@/lib/session-window";
 import { calculateSessionUrgency, getSessionParticipantInfo } from "@/lib/utils/session";
 import { nowLineProgress } from "@/lib/week-grid/week";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
-import type { Id } from "@/types/general";
+import { type Id, countOf } from "@/types/general";
 import { None, type Option } from "@/types/option";
 import { SessionUrgency } from "@/types/session-display";
 
@@ -175,5 +175,5 @@ function relativeStartText(minutes: number): string {
 
 function topicCountText(count: number): string {
   if (count === 0) return "No topics";
-  return `${count} topic${count === 1 ? "" : "s"}`;
+  return countOf(count, "topic");
 }

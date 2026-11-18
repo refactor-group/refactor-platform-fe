@@ -60,7 +60,7 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import type { NewSessionRequest } from "@/lib/stores/new-session-dialog-store";
 import { canScheduleNowIn } from "@/types/coaching-relationship";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
-import type { CoachingSessionSeriesWithSessions } from "@/types/coaching-session-series";
+import { type CoachingSessionSeriesWithSessions, ruleIn } from "@/types/coaching-session-series";
 import type { Id } from "@/types/general";
 import { type Option, None, Some, unwrapOr } from "@/types/option";
 import { validateRecurrence, weekdayFromLuxon } from "@/types/recurrence";
@@ -78,7 +78,8 @@ function repeatPrefill(
 ): Option<RepeatPrefill> {
   if (moving.none || series.none) return None;
   const slot = seriesSlotStart(moving.val, timezone);
-  return Some({ repeat: seriesRepeatFrom(series.val, moving.val), weekday: weekdayFromLuxon(slot.weekday) });
+  const here = { ...series.val, rule: ruleIn(series.val.rule, slot, timezone) };
+  return Some({ repeat: seriesRepeatFrom(here, moving.val), weekday: weekdayFromLuxon(slot.weekday) });
 }
 
 const SERIES_FAILED_LINE = "Couldn't load the series, so only this session can change.";
@@ -98,8 +99,12 @@ export function useNewSessionDialog(
   const [personId, setPersonId] = useState<Option<Id>>(None);
   const { currentOrganizationId } = useCurrentOrganization();
   const [chosenOrganizationId, setChosenOrganizationId] = useState<Option<Id>>(None);
-  const organizationId = chosenOrganizationId.some ? chosenOrganizationId.val : currentOrganizationId;
   const { organizations } = useOrganizationList(useAuthStore((state) => state.userId));
+  const options = organizationOptions(organizations);
+  // The header's org may be archived, so not offered; start on one that is.
+  const startingOrganizationId =
+    options.length === 0 || options.some((o) => o.id === currentOrganizationId) ? currentOrganizationId : options[0].id;
+  const organizationId = chosenOrganizationId.some ? chosenOrganizationId.val : startingOrganizationId;
   const [day, setDay] = useState(initial.day);
   const [month, setMonth] = useState(initial.month);
   const [time, setTime] = useState(initial.time);
@@ -231,7 +236,6 @@ export function useNewSessionDialog(
     submit(planFor(entry.val, start.val));
   };
 
-  const options = organizationOptions(organizations);
   const organizationChoice =
     options.length > 1
       ? Some({
@@ -295,8 +299,13 @@ export function useNewSessionDialog(
       scope: effectiveScope,
       subline: seriesFailed
         ? Some(SERIES_FAILED_LINE)
-        : series.some && personName.some
-          ? Some(seriesRuleLine(personName.val, series.val.rule.recurrence))
+        : series.some && personName.some && moving.some
+          ? Some(
+              seriesRuleLine(
+                personName.val,
+                ruleIn(series.val.rule, seriesSlotStart(moving.val, zone), zone).recurrence
+              )
+            )
           : None,
       followingAvailable: !seriesFailed,
       onScopeChange: setScope,

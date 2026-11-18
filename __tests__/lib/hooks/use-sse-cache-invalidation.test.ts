@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  escapeRegExp,
   matchesEndpoint,
   upsertAgreementInList,
   removeAgreementFromList,
@@ -26,6 +27,13 @@ const makeAgreement = (id: string, body: string): Agreement => ({
 const BASE = "http://localhost:4000/api";
 
 describe("matchesEndpoint", () => {
+  it("matches an escaped id literally, so its pattern characters match nothing else", () => {
+    const path = (id: string) => `/organizations/${escapeRegExp(id)}/users`;
+    expect(matchesEndpoint(`${BASE}/organizations/org-1/users`, BASE, path("org-1"))).toBe(true);
+    expect(matchesEndpoint(`${BASE}/organizations/orgX1/users`, BASE, path("org.1"))).toBe(false);
+    expect(matchesEndpoint(`${BASE}/organizations/a/users`, BASE, path("(a|b)"))).toBe(false);
+  });
+
   it("matches the top-level endpoint path", () => {
     expect(matchesEndpoint(`${BASE}/actions`, BASE, "/actions")).toBe(true);
   });

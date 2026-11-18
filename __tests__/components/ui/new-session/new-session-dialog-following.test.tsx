@@ -134,6 +134,7 @@ const SERIES = {
   rule: {
     start_at: E_04.date,
     duration_minutes: 50,
+    timezone: "America/Chicago",
     recurrence: { frequency: Frequency.Weekly, interval: 1, by_weekdays: [Weekday.Tue], count: Some(5), until: None },
   },
   created_by_user_id: "me",
@@ -177,6 +178,22 @@ describe("NewSessionDialog: a series session", () => {
     expect(screen.getByText("Ehab's series repeats weekly on Tuesdays.")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: /This session only/ })).toBeChecked();
     expect(screen.getByRole("radio", { name: /This and following sessions/ })).not.toBeChecked();
+  });
+
+  it("shows a series made in another zone in the viewer's weekdays", () => {
+    // Tuesdays at 2:30 PM in Chicago are Wednesdays at 4:30 AM in Tokyo, where it was made.
+    vi.mocked(useCoachingSessionSeries).mockReturnValue({
+      series: { ...SERIES, rule: { ...SERIES.rule, timezone: "Asia/Tokyo", recurrence: { ...SERIES.rule.recurrence, by_weekdays: [Weekday.Wed] } } },
+      isLoading: false,
+      isError: undefined,
+      refresh: vi.fn(),
+    } as unknown as ReturnType<typeof useCoachingSessionSeries>);
+    renderMove(MoveScope.Following);
+    next();
+    expect(screen.getByText("Ehab's series repeats weekly on Tuesdays.")).toBeInTheDocument();
+    next();
+    expect(screen.getByRole("button", { name: "Tuesday", pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Wednesday", pressed: false })).toBeInTheDocument();
   });
 
   it("moves just this session with a single update", async () => {

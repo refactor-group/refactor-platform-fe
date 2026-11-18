@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react";
 import type { SWRConfiguration } from "swr";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import {
@@ -134,10 +135,22 @@ export function useActionsFetch(
     options
   );
 
+  // Stable across renders, so the board's memos downstream keep their inputs.
+  const actions = useMemo(
+    () => (mineAndUnassigned ? [...main.actions, ...unassigned.actions] : main.actions),
+    [mineAndUnassigned, main.actions, unassigned.actions]
+  );
+  const { refresh: refreshMain } = main;
+  const { refresh: refreshUnassigned } = unassigned;
+  const refresh = useCallback(
+    () => Promise.all([refreshMain(), mineAndUnassigned ? refreshUnassigned() : undefined]),
+    [refreshMain, refreshUnassigned, mineAndUnassigned]
+  );
+
   return {
-    actions: mineAndUnassigned ? [...main.actions, ...unassigned.actions] : main.actions,
+    actions,
     isLoading: relationshipsLoading || main.isLoading || (mineAndUnassigned && unassigned.isLoading),
     isError: !!relationshipsError || main.isError || (mineAndUnassigned && unassigned.isError),
-    refresh: () => Promise.all([main.refresh(), mineAndUnassigned ? unassigned.refresh() : undefined]),
+    refresh,
   };
 }
