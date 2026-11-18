@@ -90,7 +90,7 @@ export function JoinMeetingButton({
       // Synchronous window.open avoids pop-up blockers; SWR optimistic
       // mutate transitions the button to the active view.
       openMeeting();
-      void startRecording(meetingUrl).catch((err) => {
+      void startRecording(meetingUrl).mapErr((err) => {
         console.error("Failed to start recording:", err);
         toast.error("Couldn't start transcription");
       });

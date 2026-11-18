@@ -1,4 +1,5 @@
 import type { Id } from "@/types/general";
+import { type Option, None, Some } from "@/types/option";
 
 // Must always reflect the Rust entity on the backend.
 // See refactor-platform-rs PR #254: entity/src/meeting_recording.rs.
@@ -48,8 +49,11 @@ export function isMeetingRecordingStatus(
 export interface MeetingRecording {
   id: Id;
   coaching_session_id: Id;
-  /** Recall.ai's bot id — exposed so the frontend can correlate webhook events if needed. */
-  bot_id: string;
+  /**
+   * Recall.ai's bot id, for correlating webhook events. None between the backend claiming the
+   * session's recording and dispatching its bot.
+   */
+  bot_id: Option<string>;
   status: MeetingRecordingStatus;
   video_url?: string;
   duration_seconds?: number;
@@ -73,13 +77,14 @@ export function parseMeetingRecording(value: unknown): MeetingRecording {
   if (typeof value !== "object" || value === null) {
     throw new Error("MeetingRecording payload is not an object");
   }
-  const record = value as { status?: unknown };
+  const record = value as { status?: unknown; bot_id?: unknown };
   if (!isMeetingRecordingStatus(record.status)) {
     throw new Error(
       `Unknown meeting recording status: ${String(record.status)}`
     );
   }
-  return value as MeetingRecording;
+  const botId = typeof record.bot_id === "string" ? Some(record.bot_id) : None;
+  return { ...(value as Omit<MeetingRecording, "bot_id">), bot_id: botId };
 }
 
 /**

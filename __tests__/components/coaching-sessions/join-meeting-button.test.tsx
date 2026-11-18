@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { errAsync, okAsync } from "neverthrow";
 
 import { JoinMeetingButton } from "@/components/ui/coaching-sessions/join-meeting-button";
 import { MeetingRecordingStatus } from "@/types/meeting-recording";
@@ -14,7 +15,7 @@ const transcriptionHookState: {
   transcription: { id: string; status: TranscriptionStatus } | null;
 } = { transcription: null };
 
-const startRecording = vi.fn(() => Promise.resolve({}));
+const startRecording = vi.fn((_meetingUrl: string) => okAsync<unknown, unknown>({ kind: "started", recording: {} }));
 const stopRecording = vi.fn(() => Promise.resolve({}));
 
 vi.mock("@/lib/api/meeting-recordings", () => ({
@@ -120,9 +121,41 @@ describe("JoinMeetingButton — coach idle dropdown", () => {
     expect(startRecording).not.toHaveBeenCalled();
   });
 
+  it("just joins, with no error, when the other participant already started transcription", async () => {
+    const user = userEvent.setup();
+    startRecording.mockReturnValueOnce(okAsync({ kind: "already_active" }));
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+    const item = await screen.findByRole("menuitem", { name: /join with transcription/i });
+    await act(async () => {
+      await user.click(item);
+    });
+
+    expect(openSpy).toHaveBeenCalledWith(MEETING_URL, "_blank", "noopener,noreferrer");
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    MeetingRecordingStatus.Pending,
+    MeetingRecordingStatus.Joining,
+    MeetingRecordingStatus.WaitingRoom,
+    MeetingRecordingStatus.InMeeting,
+    MeetingRecordingStatus.Recording,
+    MeetingRecordingStatus.Processing,
+  ])("offers no second transcription while a recording is %s", async (status) => {
+    const user = userEvent.setup();
+    recordingHookState.recording = { status };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting|open meeting|meeting/i }));
+    expect(screen.queryByRole("menuitem", { name: /join with transcription/i })).not.toBeInTheDocument();
+    expect(startRecording).not.toHaveBeenCalled();
+  });
+
   it("surfaces an error toast if startRecording rejects", async () => {
     const user = userEvent.setup();
-    startRecording.mockRejectedValueOnce(new Error("Recall.ai unavailable"));
+    startRecording.mockReturnValueOnce(errAsync(new Error("Recall.ai unavailable")));
 
     render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting/i }));
