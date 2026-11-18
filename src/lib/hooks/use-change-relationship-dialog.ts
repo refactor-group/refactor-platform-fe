@@ -110,11 +110,13 @@ export function useChangeRelationshipDialog({
       toast.error("This relationship no longer exists");
       onRelationshipsChanged();
     } else {
-      toast.error(
-        organizationArchivedMessage(error) ??
-          (isForbiddenError(error) ? PERMISSION_DENIED_MESSAGE : "Couldn't change the relationship")
-      );
-      return;
+      const archived = organizationArchivedMessage(error);
+      if (archived === null) {
+        // Worth another try, so the dialog stays open.
+        toast.error(isForbiddenError(error) ? PERMISSION_DENIED_MESSAGE : "Couldn't change the relationship");
+        return;
+      }
+      toast.error(archived);
     }
     onClose();
   };

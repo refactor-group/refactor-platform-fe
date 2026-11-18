@@ -147,11 +147,32 @@ describe("ChangeRelationshipDialog", () => {
         })
       )
     );
-    renderDialog();
+    const { onClose } = renderDialog();
     makeCaraPatsColleague();
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith("This organization is archived · It can't be changed")
     );
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("closes when the organization is archived between review and confirm", async () => {
+    changeKind.mockRejectedValueOnce(NEEDS_CONFIRMATION).mockRejectedValueOnce(
+      new EntityApiError(
+        "PUT",
+        "/organizations/org-1/coaching_relationships/rel-1/kind",
+        Object.assign(new Error("Request failed"), {
+          isAxiosError: true,
+          response: { status: 409, data: { error: "organization_archived" } },
+        })
+      )
+    );
+    const { onClose } = renderDialog();
+    makeCaraPatsColleague();
+    await screen.findByText("Cara Test will see 3 actions assigned to Pat Coach");
+
+    fireEvent.click(screen.getByRole("button", { name: "Change relationship" }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(toast.error).toHaveBeenCalledWith("This organization is archived · It can't be changed");
   });
 });
