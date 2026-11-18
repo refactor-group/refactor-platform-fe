@@ -8,6 +8,8 @@ import {
   RelationshipKindChange,
   defaultCoachingRelationshipWithUserNames,
 } from "@/types/coaching-relationship";
+import { ResultAsync } from "neverthrow";
+import { EntityApiError } from "@/types/entity-api-error";
 import { EntityApi } from "./entity-api";
 
 const ORGANIZATIONS_BASEURL: string = `${siteConfig.env.backendServiceURL}/organizations`;
@@ -84,15 +86,17 @@ export const CoachingRelationshipApi = {
    * Switches a relationship's kind or who coaches. Unconfirmed, a real switch is refused
    * with a 409 listing its consequences; nothing changes until it's re-sent confirmed.
    */
-  changeKind: async (
+  changeKind: (
     organizationId: Id,
     relationshipId: Id,
     change: RelationshipKindChange
-  ): Promise<CoachingRelationshipWithUserNames> =>
-    EntityApi.updateFn<RelationshipKindChange, CoachingRelationshipWithUserNames>(
-      `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}/${relationshipId}/kind`,
-      change
-    ),
+  ): ResultAsync<CoachingRelationshipWithUserNames, EntityApiError> => {
+    const url = `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}/${relationshipId}/kind`;
+    return ResultAsync.fromPromise(
+      EntityApi.updateFn<RelationshipKindChange, CoachingRelationshipWithUserNames>(url, change),
+      (e) => EntityApiError.from("PUT", url, e)
+    );
+  },
 
   /**
    * Unimplemented

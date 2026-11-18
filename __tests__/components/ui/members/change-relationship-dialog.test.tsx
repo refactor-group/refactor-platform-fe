@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ResultAsync } from "neverthrow";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ChangeRelationshipDialog } from "@/components/ui/members/change-relationship-dialog";
 import { toast } from "@/lib/toast";
@@ -9,7 +10,9 @@ import type { User } from "@/types/user";
 const changeKind = vi.fn();
 vi.mock("@/lib/api/coaching-relationships", () => ({
   CoachingRelationshipApi: {
-    changeKind: (...args: unknown[]) => changeKind(...args),
+    // The tests script answers as promises; the API hands them back as a ResultAsync.
+    changeKind: (...args: unknown[]) =>
+      ResultAsync.fromPromise(Promise.resolve().then(() => changeKind(...args)), (e) => e),
     list: vi.fn(async () => []),
   },
 }));
@@ -180,6 +183,20 @@ describe("ChangeRelationshipDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Change relationship" }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(toast.error).toHaveBeenCalledWith("This organization is archived · It can't be changed");
+  });
+
+  it("holds Previous while the change saves, so its answer is never dropped", async () => {
+    let answer: (value: unknown) => void = () => {};
+    changeKind.mockRejectedValueOnce(NEEDS_CONFIRMATION).mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+    const { onClose } = renderDialog();
+    makeCaraPatsColleague();
+    await screen.findByText("Cara Test will see 3 actions assigned to Pat Coach");
+
+    fireEvent.click(screen.getByRole("button", { name: "Change relationship" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Previous step" })).toBeDisabled());
+    answer(PAT_COACHES_CARA);
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(toast.success).toHaveBeenCalledWith("Cara Test and Pat Coach are now colleagues");
   });
 
   it("goes back to the role when the relationship changes during the review", async () => {

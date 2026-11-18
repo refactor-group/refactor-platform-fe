@@ -138,47 +138,45 @@ export function useChangeRelationshipDialog({
     if (relationship.none || partner.none || role.none) return;
     const isCurrent = requests.start();
     setPreview({ kind: "loading" });
-    try {
-      await CoachingRelationshipApi.changeKind(
-        organizationId,
-        relationship.val.id,
-        kindChange(member.userId, partner.val.userId, role.val, false)
-      );
-      if (!isCurrent()) return;
+    const result = await CoachingRelationshipApi.changeKind(
+      organizationId,
+      relationship.val.id,
+      kindChange(member.userId, partner.val.userId, role.val, false)
+    );
+    if (!isCurrent()) return;
+    if (result.isOk()) {
       // Already that way: nothing was changed or needs confirming.
       onRelationshipsChanged();
       onClose();
-    } catch (error) {
-      if (!isCurrent()) return;
-      const consequences = kindSwitchConsequencesOf(error);
-      if (consequences.some) {
-        setPreview({ kind: "ready", consequences: consequences.val });
-        return;
-      }
-      setPreview({ kind: "failed" });
-      await refuse(error, partner.val.fullName);
+      return;
     }
+    const consequences = kindSwitchConsequencesOf(result.error);
+    if (consequences.some) {
+      setPreview({ kind: "ready", consequences: consequences.val });
+      return;
+    }
+    setPreview({ kind: "failed" });
+    await refuse(result.error, partner.val.fullName);
   };
 
   const confirm = async () => {
     if (relationship.none || partner.none || role.none) return;
     const isCurrent = requests.start();
     setSubmitting(true);
-    try {
-      await CoachingRelationshipApi.changeKind(
-        organizationId,
-        relationship.val.id,
-        kindChange(member.userId, partner.val.userId, role.val, true)
-      );
-      if (!isCurrent()) return;
+    const result = await CoachingRelationshipApi.changeKind(
+      organizationId,
+      relationship.val.id,
+      kindChange(member.userId, partner.val.userId, role.val, true)
+    );
+    setSubmitting(false);
+    if (!isCurrent()) return;
+    if (result.isOk()) {
       toast.success(addedMessage(member, partner.val, role.val));
       onRelationshipsChanged();
       onClose();
-    } catch (error) {
-      if (isCurrent()) await refuse(error, partner.val.fullName);
-    } finally {
-      setSubmitting(false);
+      return;
     }
+    await refuse(result.error, partner.val.fullName);
   };
 
   const goTo = (next: ChangeRelationshipStep) => {
@@ -210,8 +208,9 @@ export function useChangeRelationshipDialog({
     review: reviewOf(preview, member, partner, role, nameOf),
     lead: leadOf({ step, hasPartner: relationship.some, changed, preview, submitting, onConfirm: confirm }),
     position: { index: index + 1, total: STEP_ORDER.length },
-    // Held while the preview loads, so a stale answer can't land on another step.
-    onPrev: index > 0 && preview.kind !== "loading" ? Some(() => goTo(STEP_ORDER[index - 1])) : None,
+    // Held while the preview loads or the change saves, so their answers always land here.
+    onPrev:
+      index > 0 && preview.kind !== "loading" && !submitting ? Some(() => goTo(STEP_ORDER[index - 1])) : None,
     onNext: index < STEP_ORDER.length - 1 && canAdvance ? Some(() => goTo(STEP_ORDER[index + 1])) : None,
   };
 }
