@@ -24,6 +24,7 @@ describe("movePerson", () => {
       firstName: "Priya",
       fullName: "Priya Raman",
       initials: "PR",
+      email: "priya@example.com",
     });
   });
 

@@ -121,7 +121,8 @@ export function partnerChoices(
         userId: other.userId,
         fullName: other.fullName,
         initials: other.initials,
-        subline: existing.some ? pairedLine(member, existing.val) : other.email,
+        email: other.email,
+        subline: existing.some ? Some(pairedLine(member, existing.val)) : None,
         inactive: false,
         selectable: existing.none,
       };

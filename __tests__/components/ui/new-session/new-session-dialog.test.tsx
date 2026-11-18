@@ -148,9 +148,9 @@ describe("NewSessionDialog: Who", () => {
     expect(screen.getByText("1 of 3")).toBeInTheDocument();
     const cards = screen.getAllByRole("button", { name: /(Ehab Badawi|Priya Raman|Sara Lin|Dana Fox|Boss Person)/ });
     expect(cards).toHaveLength(3);
-    expect(cards[0]).toHaveTextContent("Ehab BadawiUsually Tuesdays, 2:30 PM");
-    expect(cards[1]).toHaveTextContent("Priya RamanLast session Aug 10");
-    expect(cards[2]).toHaveTextContent("Sara LinUsually Thursdays, 9:00 AM");
+    expect(cards[0]).toHaveTextContent("Ehab Badawiehab@example.comUsually Tuesdays, 2:30 PM");
+    expect(cards[1]).toHaveTextContent("Priya Ramanpriya@example.comLast session Aug 10");
+    expect(cards[2]).toHaveTextContent("Sara Linsara@example.comUsually Thursdays, 9:00 AM");
     expect(screen.getByRole("button", { name: "Show everyone (+1 inactive)" })).toBeInTheDocument();
     expect(railRow("Who")).toHaveTextContent("Choose a person");
   });

@@ -10,6 +10,7 @@ import {
   roleIn,
 } from "@/lib/change-relationship-dialog-model";
 import { type CoachingRelationshipWithUserNames, RelationshipKind } from "@/types/coaching-relationship";
+import { Some } from "@/types/option";
 import { RelationshipRole } from "@/types/relationship-role";
 
 const CARA: Member = { userId: "cara", firstName: "Cara", fullName: "Cara Test", initials: "CT", email: "cara@example.com" };
@@ -42,21 +43,21 @@ describe("relationshipChoices", () => {
   it("lists each partner once, saying what they are to the member", () => {
     const choices = relationshipChoices(CARA, [PAT_COACHES_CARA, ANA_COLLEAGUE]);
     expect(choices.map((c) => [c.fullName, c.subline, c.selectable])).toEqual([
-      ["Ana X", "Cara's colleague", true],
-      ["Pat X", "Cara's coach", true],
+      ["Ana X", Some("Cara's colleague"), true],
+      ["Pat X", Some("Cara's coach"), true],
     ]);
   });
 
   it("can't pick someone who left the organization", () => {
     const [ben] = relationshipChoices(CARA, [LEFT_BEN]);
-    expect(ben.subline).toBe("Ben is no longer in this organization");
+    expect(ben.subline).toEqual(Some("Ben is no longer in this organization"));
     expect(ben.selectable).toBe(false);
   });
 
   it("can't pick a pair who coach each other", () => {
     const choices = relationshipChoices(CARA, [PAT_COACHES_CARA, CARA_COACHES_PAT]);
     expect(choices).toHaveLength(1);
-    expect(choices[0].subline).toBe("Cara's coach and coachee");
+    expect(choices[0].subline).toEqual(Some("Cara's coach and coachee"));
     expect(choices[0].selectable).toBe(false);
   });
 });

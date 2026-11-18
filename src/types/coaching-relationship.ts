@@ -91,6 +91,8 @@ export type CoachingRelationshipWithUserNames = CoachingRelationship & {
   coach_last_name: string;
   coachee_first_name: string;
   coachee_last_name: string;
+  coach_email: string;
+  coachee_email: string;
 };
 
 /**
@@ -181,6 +183,8 @@ export function defaultCoachingRelationshipWithUserNames(): CoachingRelationship
     kind: RelationshipKind.Coaching,
     coachee_first_name: "",
     coachee_last_name: "",
+    coach_email: "",
+    coachee_email: "",
     created_at: now,
     updated_at: now,
     coach_is_member: true,

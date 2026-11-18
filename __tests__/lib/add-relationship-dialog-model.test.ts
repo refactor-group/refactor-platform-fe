@@ -85,19 +85,20 @@ describe("partnerChoices", () => {
     const people = partnerChoices(CARA, MEMBERS, None, RELATIONSHIPS);
     expect(people.map((p) => p.fullName)).toEqual(["Ana Bell", "Pat Coach"]);
     expect(people.every((p) => p.selectable)).toBe(true);
-    expect(people[0].subline).toBe("ana@example.com");
+    expect(people[0].email).toBe("ana@example.com");
+    expect(people[0].subline).toEqual(None);
   });
 
   it("keeps an existing coach visible but unpickable when adding a coach", () => {
     const pat = partnerChoices(CARA, MEMBERS, Some(RelationshipRole.Coachee), RELATIONSHIPS).find((p) => p.userId === "pat");
-    expect(pat).toMatchObject({ selectable: false, subline: "Already Cara's coach" });
+    expect(pat).toMatchObject({ selectable: false, subline: Some("Already Cara's coach") });
   });
 
   it("says why a pair is ruled out by what they already are", () => {
     const pat = partnerChoices(CARA, MEMBERS, Some(RelationshipRole.Colleague), RELATIONSHIPS).find((p) => p.userId === "pat");
-    expect(pat?.subline).toBe("Already Cara's coach");
+    expect(pat?.subline).toEqual(Some("Already Cara's coach"));
     const ana = partnerChoices(CARA, MEMBERS, Some(RelationshipRole.Coach), ANA_CARA_COLLEAGUES).find((p) => p.userId === "ana");
-    expect(ana).toMatchObject({ selectable: false, subline: "Already Cara's colleague" });
+    expect(ana).toMatchObject({ selectable: false, subline: Some("Already Cara's colleague") });
   });
 
   it("lets the same pair be added the other way round", () => {

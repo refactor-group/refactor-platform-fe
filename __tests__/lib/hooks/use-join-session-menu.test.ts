@@ -41,6 +41,7 @@ const rel = (id: string, coacheeId: string, first: string, last: string) =>
     coachee_id: coacheeId,
     coachee_first_name: first,
     coachee_last_name: last,
+    coachee_email: `${coacheeId}@example.com`,
   });
 
 const RELATIONSHIPS = [
@@ -148,6 +149,7 @@ describe("useJoinSessionMenu", () => {
       firstName: "Ehab",
       fullName: "Ehab Badawi",
       initials: "EB",
+      email: "ehab@example.com",
     });
   });
 

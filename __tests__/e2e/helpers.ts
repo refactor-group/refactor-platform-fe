@@ -17,6 +17,8 @@ interface MockCoachingRelationship {
   coach_last_name: string
   coachee_first_name: string
   coachee_last_name: string
+  coach_email: string
+  coachee_email: string
   created_at: string
   updated_at: string
   kind: string
@@ -140,6 +142,8 @@ export function mockRelationship(
     coach_last_name: 'Doe',
     coachee_first_name: 'Jane',
     coachee_last_name: 'Smith',
+    coach_email: 'john@example.com',
+    coachee_email: 'jane@example.com',
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
     kind: 'coaching',
@@ -163,6 +167,8 @@ export const MULTIPLE_RELATIONSHIPS = [
     coach_last_name: 'Johnson',
     coachee_first_name: 'Alice',
     coachee_last_name: 'Brown',
+    coach_email: 'bob@example.com',
+    coachee_email: 'alice@example.com',
   }),
 ]
 

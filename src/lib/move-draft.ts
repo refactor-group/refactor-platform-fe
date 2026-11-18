@@ -28,7 +28,7 @@ export function movePerson(session: EnrichedCoachingSession, userId: Id, entries
   const other = session.relationship?.coach_id === userId ? session.coachee : session.coach;
   if (!other) return None;
   return Some({
-    person: menuPerson(other.id, other.first_name, other.last_name),
+    person: menuPerson(other.id, other.first_name, other.last_name, other.email),
     relationshipIds: [session.coaching_relationship_id],
   });
 }

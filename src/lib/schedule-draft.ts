@@ -195,8 +195,11 @@ export function pickerPeople(input: PickerPeopleInput): PickerPerson[] {
       placed.map((p) => ({ start: p.start, over: p.over, relationshipId: p.session.coaching_relationship_id })),
       now
     );
-    const { userId, fullName: name, initials } = entry.person;
-    return { person: { userId, fullName: name, initials, subline, inactive: false, selectable: true }, activity };
+    const { userId, fullName: name, initials, email } = entry.person;
+    return {
+      person: { userId, fullName: name, initials, email, subline: Some(subline), inactive: false, selectable: true },
+      activity,
+    };
   });
   if (nearest.none) return entries.map((e) => e.person);
   return byActivity(entries, (e) => e.activity).map((e) => ({ ...e.person, inactive: isInactive(e.activity) }));

@@ -103,7 +103,8 @@ function partnerChoices(members: readonly Member[]): PickerPerson[] {
       userId: m.userId,
       fullName: m.fullName,
       initials: m.initials,
-      subline: m.email,
+      email: m.email,
+      subline: None,
       inactive: false,
       selectable: true,
     }));

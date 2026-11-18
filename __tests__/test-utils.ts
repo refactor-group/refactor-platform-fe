@@ -76,6 +76,8 @@ export function createMockRelationship(
     coach_last_name: "Hodapp",
     coachee_first_name: "Caleb",
     coachee_last_name: "Bourg",
+    coach_email: "jim@example.com",
+    coachee_email: "caleb@example.com",
     created_at: now, // CoachingRelationship expects DateTime object
     updated_at: now,
     kind: RelationshipKind.Coaching,

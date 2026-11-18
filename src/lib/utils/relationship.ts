@@ -130,6 +130,8 @@ export function buildRelationshipWithUserNames(
     coach_last_name: coach?.last_name ?? "",
     coachee_first_name: coachee?.first_name ?? "Unknown",
     coachee_last_name: coachee?.last_name ?? "",
+    coach_email: coach?.email ?? "",
+    coachee_email: coachee?.email ?? "",
   };
 }
 

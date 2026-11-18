@@ -128,7 +128,7 @@ export function toMenuSession(session: EnrichedCoachingSession, timezone: string
 }
 
 function personFromUser(user: User): MenuPerson {
-  return menuPerson(user.id, user.first_name, user.last_name);
+  return menuPerson(user.id, user.first_name, user.last_name, user.email);
 }
 
 function todayPerson(

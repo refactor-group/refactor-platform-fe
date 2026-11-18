@@ -83,7 +83,8 @@ export function relationshipChoices(
       userId: partner.userId,
       fullName: partner.fullName,
       initials: partner.initials,
-      subline: choiceSubline(member, partner, pairRelationships(member.userId, partner.userId, relationships)),
+      email: partner.email,
+      subline: Some(choiceSubline(member, partner, pairRelationships(member.userId, partner.userId, relationships))),
       inactive: false,
       selectable: changeableRelationship(member.userId, partner.userId, relationships).some,
     }));
