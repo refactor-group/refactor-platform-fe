@@ -135,4 +135,23 @@ describe("ChangeRelationshipDialog", () => {
     expect(refusal.userId).toEqual({ some: true, none: false, val: "pat" });
     expect(nameOf(refusal.userId)).toMatchObject({ some: true, val: "Pat Coach" });
   });
+
+  it("says the organization is archived", async () => {
+    changeKind.mockRejectedValueOnce(
+      new EntityApiError(
+        "PUT",
+        "/organizations/org-1/coaching_relationships/rel-1/kind",
+        Object.assign(new Error("Request failed"), {
+          isAxiosError: true,
+          response: { status: 409, data: { error: "organization_archived" } },
+        })
+      )
+    );
+    renderDialog();
+    makeCaraPatsColleague();
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("This organization is archived · It can't be changed")
+    );
+  });
 });
