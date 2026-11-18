@@ -74,6 +74,14 @@ export function coachesAnyone(relationships: readonly CoachingRelationship[]): b
   });
 }
 
+/** Runs sessions in at least one: a coach or a colleague there, not only ever coached. */
+export function runsSessionsInAny(relationships: readonly CoachingRelationship[]): boolean {
+  return relationships.some((r) => {
+    const viewer = viewerOf(r);
+    return viewer.some && viewer.val.role !== RelationshipRole.Coachee;
+  });
+}
+
 /** May schedule in at least one of the relationships: shows the scheduling entry points. */
 export function canScheduleInAny(relationships: readonly CoachingRelationship[]): boolean {
   return relationships.some(canScheduleSessionsIn);
@@ -91,6 +99,8 @@ export type CoachingRelationshipWithUserNames = CoachingRelationship & {
   coach_last_name: string;
   coachee_first_name: string;
   coachee_last_name: string;
+  coach_email: string;
+  coachee_email: string;
 };
 
 /**
@@ -114,6 +124,11 @@ export interface NewCoachingRelationship {
   coachee_id: Id;
   kind: RelationshipKind;
 }
+
+/** Body of a kind switch: coaching names its coach; colleagues have none. */
+export type RelationshipKindChange =
+  | { kind: RelationshipKind.Coaching; coach_id: Id; confirmed: boolean }
+  | { kind: RelationshipKind.Colleague; confirmed: boolean };
 
 /** Whether two people already share a relationship of any kind, either way round. */
 export function isPairOf(relationship: CoachingRelationshipWithUserNames, a: Id, b: Id): boolean {
@@ -176,6 +191,8 @@ export function defaultCoachingRelationshipWithUserNames(): CoachingRelationship
     kind: RelationshipKind.Coaching,
     coachee_first_name: "",
     coachee_last_name: "",
+    coach_email: "",
+    coachee_email: "",
     created_at: now,
     updated_at: now,
     coach_is_member: true,

@@ -18,7 +18,18 @@ vi.mock("@/lib/toast", () => ({ toast: { error: vi.fn(), success: vi.fn(), warni
 vi.mock("@/lib/hooks/use-current-organization", () => ({
   useCurrentOrganization: () => ({ currentOrganizationId: "org-1", currentOrganization: { name: "Acme" } }),
 }));
-vi.mock("@/lib/timezone-utils", () => ({ getBrowserTimezone: () => "UTC" }));
+vi.mock("@/lib/timezone-utils", () => ({
+  getBrowserTimezone: () => "UTC",
+  getTimezones: () => [
+    { value: "UTC", label: "UTC" },
+    { value: "America/New_York", label: "New York" },
+    { value: "Europe/London", label: "London" },
+  ],
+}));
+// The admin's profile zone differs from the browser's, which is UTC above.
+vi.mock("@/lib/providers/auth-store-provider", () => ({
+  useAuthStore: (select: (s: unknown) => unknown) => select({ userSession: { timezone: "America/New_York" } }),
+}));
 
 const ADA = { id: "user-9", first_name: "Ada", last_name: "Lovelace", email: "ada@example.com" };
 const GRACE = { id: "user-2", first_name: "Grace", last_name: "Hopper", email: "grace@example.com" } as User;
@@ -146,7 +157,7 @@ describe("AddMemberDialog – creating a member", () => {
     const user = userEvent.setup();
     renderDialog();
     expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
-    expect(screen.getByText("Fill in their details")).toBeInTheDocument();
+    expect(screen.getByText("Fill in their account details")).toBeInTheDocument();
     await fillNewPerson(user);
     expect(screen.getByRole("button", { name: "Next" })).toBeInTheDocument();
   });
@@ -166,13 +177,33 @@ describe("AddMemberDialog – creating a member", () => {
     expect(created[0]).toMatchObject({
       first_name: "Ada",
       email: "new@example.com",
-      timezone: "UTC",
+      timezone: "America/New_York",
       relationship: { with_user_id: GRACE.id, kind: "coaching" },
     });
     expect(created[0]).not.toHaveProperty("coach_id");
     expect(relationships).toHaveLength(0);
     expect(onMemberAdded).toHaveBeenCalled();
     expect(toast.success).toHaveBeenCalledWith("Ada Lovelace added");
+  });
+
+  it("starts on the admin's profile time zone and sends the one picked instead", async () => {
+    const { created } = captureAdds();
+    const user = userEvent.setup();
+    renderDialog();
+
+    const zone = screen.getByRole("combobox", { name: "Time zone" });
+    expect(zone).toHaveTextContent("New York");
+    await user.click(screen.getByRole("button", { name: "About Time zone" }));
+    expect(await screen.findByText("Yours unless you pick another. They can change it later.")).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await fillNewPerson(user);
+    await user.click(zone);
+    await user.click(await screen.findByRole("option", { name: "London" }));
+    await next(user);
+    await user.click(addButton());
+
+    await waitFor(() => expect(created).toHaveLength(1));
+    expect(created[0]).toMatchObject({ timezone: "Europe/London" });
   });
 
   it("makes the new member a colleague in the same request", async () => {

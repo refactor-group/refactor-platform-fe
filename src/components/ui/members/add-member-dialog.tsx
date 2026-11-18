@@ -2,11 +2,13 @@
 
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
+import { InfoButton, InfoButtonSize } from "@/components/ui/info-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PersonPicker } from "@/components/ui/person-picker";
 import { RadioCardItem, RadioGroup } from "@/components/ui/radio-group";
 import { StepDialog, StepDialogHeight, StepDialogVariant } from "@/components/ui/step-dialog";
+import { TimezoneSelector } from "@/components/ui/timezone-selector";
 import {
   ACCESS_ROLES,
   AddMemberMode,
@@ -25,7 +27,7 @@ import { type AddMemberDialogModel, useAddMemberDialog } from "@/lib/hooks/use-a
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { User } from "@/types/user";
 
-const FIELDS: readonly { name: keyof NewPersonFields; label: string; type: string }[] = [
+const FIELDS: readonly { name: Exclude<keyof NewPersonFields, "timezone">; label: string; type: string }[] = [
   { name: "firstName", label: "First name", type: "text" },
   { name: "lastName", label: "Last name", type: "text" },
   { name: "displayName", label: "Display name", type: "text" },
@@ -65,6 +67,21 @@ function NewPersonForm({ fields, onFieldChange }: Pick<AddMemberDialogModel, "fi
           />
         </div>
       ))}
+      <div className="space-y-2">
+        <div className="flex items-center gap-1">
+          <Label htmlFor="timezone">Time zone</Label>
+          <InfoButton
+            title="Time zone"
+            info="Yours unless you pick another. They can change it later."
+            size={InfoButtonSize.Label}
+          />
+        </div>
+        <TimezoneSelector
+          id="timezone"
+          value={fields.timezone}
+          onValueChange={(value) => onFieldChange("timezone", value)}
+        />
+      </div>
     </div>
   );
 }

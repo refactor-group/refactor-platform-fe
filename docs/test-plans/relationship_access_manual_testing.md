@@ -148,7 +148,7 @@ Each of these has produced a false result before:
 | ACTS-03 | Assignment set to All | COACHEE | A2, A3 and A5. **Not A1 or A4** (see INT-01) | ACT-02 |
 | ACTS-04 | Relationship filter | COACHEE | Lists only R1 and R2. Picking R1 shows A2 and A3 | ACT-08 |
 | ACTS-05 | Kanban drag, edit, delete on a listed card | COACH, COACHEE | Usable on every card shown | ACT-29 to ACT-31 |
-| ACTS-06 | `/actions?view=coachee_actions` typed by hand | COACHEE who coaches no one | "Actions Access Denied" page, no crash | ACT-06 |
+| ACTS-06 | `/actions?view=coachee_actions` typed by hand | COACHEE who coaches no one | Only their own actions, no crash and no denial page: in their relationships the coachee is themselves, so `assignee=coachee` answers 200 (since rs#314) | ACT-06 |
 
 ### 3.8 Members and admin (`ADM`)
 
@@ -159,7 +159,7 @@ Each of these has produced a false result before:
 | ADM-03 | User menu **Settings** | all | Shown to COACH and OTHER_COACH only | |
 | ADM-04 | `/organizations/O1/members` | COACH, COACHEE, MEMBER | 404 page | REL-07 |
 | ADM-05 | Members page: each card's "Roles:" line shows Coach / Coachee from R1–R3 | ADMIN, SUPER | Lists every relationship pairing | REL-05, REL-06 |
-| ADM-06 | Member card **⋯**: Assign Coach / Coachee, Grant/Revoke admin, Remove, Delete | ADMIN | Shown on others, hidden on own card | REL-15, ORG-03 to ORG-07 |
+| ADM-06 | Member card **⋯**: Pair with…, Change relationship…, Grant/Revoke admin, Remove, Delete | ADMIN | All shown on others. On their own card only Pair with… and Change relationship… | REL-15, ORG-03 to ORG-07 |
 | ADM-07 | `/admin/organizations` | anyone but SUPER | 404 page | |
 | ADM-08 | `/members/{other id}/profile` | any | "You can only update your own profile." | |
 

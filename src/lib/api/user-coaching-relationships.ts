@@ -10,7 +10,6 @@ import {
   CoachingRelationshipWithUserNames,
   getRelationshipsAsCoach,
   getRelationshipsAsCoachee,
-  getRelationshipsForUser,
 } from "@/types/coaching-relationship";
 import { useCoachingRelationshipList } from "./coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
@@ -23,8 +22,6 @@ export interface UserCoachingRolesSummary {
   isCoachee: boolean;
   coachRelationshipCount: number;
   coacheeRelationshipCount: number;
-  /** Distinct relationships the user participates in, in either role. */
-  participantRelationshipCount: number;
 }
 
 /**
@@ -46,7 +43,6 @@ export function deriveRolesSummary(
     isCoachee: coacheeRelationships.length > 0,
     coachRelationshipCount: coachRelationships.length,
     coacheeRelationshipCount: coacheeRelationships.length,
-    participantRelationshipCount: getRelationshipsForUser(userId, relationships).length,
   };
 }
 
@@ -72,7 +68,6 @@ export const useUserCoachingRoles = (userId: Id | null) => {
           isCoachee: false,
           coachRelationshipCount: 0,
           coacheeRelationshipCount: 0,
-          participantRelationshipCount: 0,
         };
 
   return {

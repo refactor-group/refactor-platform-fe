@@ -7,7 +7,8 @@ const person = (userId: string, fullName: string, inactive = false): PickerPerso
   userId,
   fullName,
   initials: fullName.split(" ").map((p) => p[0]).join(""),
-  subline: inactive ? "Last session Jun 12" : "Usually Tuesdays, 2:30 PM",
+  email: `${userId.slice(2)}@example.com`,
+  subline: Some(inactive ? "Last session Jun 12" : "Usually Tuesdays, 2:30 PM"),
   inactive,
   selectable: true,
 });
@@ -75,13 +76,24 @@ describe("PersonPicker", () => {
 
   it("shows an unselectable person without letting them be picked", () => {
     const onSelect = vi.fn();
-    const taken = { ...person("u-ehab", "Ehab Badawi"), subline: "Already Cara's coach", selectable: false };
+    const taken = { ...person("u-ehab", "Ehab Badawi"), subline: Some("Already Cara's coach"), selectable: false };
     render(<PersonPicker people={[taken]} selectedId={None} onSelect={onSelect} />);
     const button = card("Ehab Badawi");
     expect(button).toBeDisabled();
     expect(button).toHaveTextContent("Already Cara's coach");
     fireEvent.click(button!);
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("tells two people with the same name apart by email, and finds them by it", () => {
+    const work = { ...person("u-jim", "Jim Hodapp"), email: "jim@work.example" };
+    const home = { ...person("u-jim2", "Jim Hodapp"), email: "jim@home.example" };
+    render(<PersonPicker people={[work, home]} selectedId={None} onSelect={vi.fn()} />);
+    expect(screen.getByText("jim@work.example")).toBeInTheDocument();
+    expect(screen.getByText("jim@home.example")).toBeInTheDocument();
+    fireEvent.change(search(), { target: { value: "home" } });
+    expect(screen.queryByText("jim@work.example")).not.toBeInTheDocument();
+    expect(screen.getByText("jim@home.example")).toBeInTheDocument();
   });
 
   it("has no link when everyone is active", () => {

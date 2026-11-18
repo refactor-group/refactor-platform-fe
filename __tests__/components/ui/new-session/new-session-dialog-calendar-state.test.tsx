@@ -25,6 +25,9 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
 }));
 vi.mock("@/lib/api/coaching-relationships", () => ({ useCoachingRelationshipList: vi.fn() }));
 vi.mock("@/lib/api/oauth-connection", () => ({ useOAuthConnections: vi.fn() }));
+vi.mock("@/lib/api/organizations", () => ({
+  useOrganizationList: () => ({ organizations: [], isLoading: false, isError: undefined, refresh: vi.fn() }),
+}));
 vi.mock("@/lib/api/users", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/users")>()),
   useUser: () => ({

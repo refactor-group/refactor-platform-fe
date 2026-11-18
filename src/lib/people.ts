@@ -23,24 +23,30 @@ export function initialsOf(first: string, last: string): string {
   return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
 }
 
-export function menuPerson(userId: Id, first: string, last: string): MenuPerson {
+export function menuPerson(userId: Id, first: string, last: string, email: string): MenuPerson {
   return {
     userId,
     firstName: first,
     fullName: `${first} ${last}`.trim(),
     initials: initialsOf(first, last),
+    email,
   };
 }
 
 export function otherParticipant(rel: CoachingRelationshipWithUserNames, userId: Id): MenuPerson {
   return rel.coach_id === userId
-    ? menuPerson(rel.coachee_id, rel.coachee_first_name, rel.coachee_last_name)
-    : menuPerson(rel.coach_id, rel.coach_first_name, rel.coach_last_name);
+    ? menuPerson(rel.coachee_id, rel.coachee_first_name, rel.coachee_last_name, rel.coachee_email)
+    : menuPerson(rel.coach_id, rel.coach_first_name, rel.coach_last_name, rel.coach_email);
 }
 
 /** Case-insensitive substring match on the trimmed query; a blank query matches everyone. */
 export function matchesPersonName(fullName: string, query: string): boolean {
   return fullName.toLowerCase().includes(query.trim().toLowerCase());
+}
+
+/** Matches on name or email, since two people can share a name. */
+export function matchesPerson(person: { fullName: string; email: string }, query: string): boolean {
+  return matchesPersonName(person.fullName, query) || matchesPersonName(person.email, query);
 }
 
 /** One entry per other person, holding each relationship the user has with them. */

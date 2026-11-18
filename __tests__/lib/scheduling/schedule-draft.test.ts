@@ -96,10 +96,10 @@ describe("pickerPeople", () => {
   it("orders by activity, with sub-lines and inactive people flagged", () => {
     const picked = pickerPeople({ people: people(), nearest: Some(NEAREST), history: ALL, now: NOW, timezone: ZONE });
     expect(picked.map((p) => [p.fullName, p.subline, p.inactive])).toEqual([
-      ["Ehab Badawi", "Usually Tuesdays, 2:30 PM", false],
-      ["Priya Raman", "Last session Aug 10", false],
-      ["Sara Lin", "Usually Thursdays, 9:00 AM", false],
-      ["Dana Fox", "Last session Jun 1", true],
+      ["Ehab Badawi", Some("Usually Tuesdays, 2:30 PM"), false],
+      ["Priya Raman", Some("Last session Aug 10"), false],
+      ["Sara Lin", Some("Usually Thursdays, 9:00 AM"), false],
+      ["Dana Fox", Some("Last session Jun 1"), true],
     ]);
     expect(picked[0]).toMatchObject({ userId: "ehab", initials: "EB" });
   });
@@ -113,8 +113,8 @@ describe("pickerPeople", () => {
     });
     const picked = pickerPeople({ people: people(), nearest: Some([first]), history: [first], now: NOW, timezone: ZONE });
     const sublines = Object.fromEntries(picked.map((p) => [p.fullName, p.subline]));
-    expect(sublines["Dana Fox"]).toBe("First session Thursday");
-    expect(sublines["Sara Lin"]).toBe("No sessions yet");
+    expect(sublines["Dana Fox"]).toEqual(Some("First session Thursday"));
+    expect(sublines["Sara Lin"]).toEqual(Some("No sessions yet"));
   });
 
   it("keeps name order and hides no one until activity loads", () => {

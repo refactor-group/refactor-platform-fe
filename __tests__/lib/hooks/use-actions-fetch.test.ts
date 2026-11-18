@@ -11,7 +11,7 @@ import {
   UserActionsAssigneeFilter,
 } from "@/types/assigned-actions";
 import { Some, None } from "@/types/option";
-import { COACHEE_VIEWER, createMockRelationship } from "../../test-utils";
+import { COACHEE_VIEWER, COLLEAGUE_VIEWER, createMockRelationship } from "../../test-utils";
 import { RelationshipKind } from "@/types/coaching-relationship";
 
 const h = vi.hoisted(() => ({
@@ -175,6 +175,85 @@ describe("useActionsFetch", () => {
       expect.not.objectContaining({ assignee: expect.anything() }),
       undefined
     );
+  });
+
+  it("asks a colleague with no coachees for only their own actions", () => {
+    h.relationships.relationships = [
+      createMockRelationship({ kind: RelationshipKind.Colleague, coach_id: "user-1", viewer: COLLEAGUE_VIEWER }),
+    ];
+    myActions();
+    expect(h.fetch).toHaveBeenCalledWith("org-1", expect.objectContaining({ assignee: "user-1" }), undefined);
+  });
+
+  describe("All in my own actions", () => {
+    const action = (id: string) => ({ id });
+    const serve = (orgId: unknown, params: { assignee_filter?: string }) => ({
+      actions: orgId === null ? [] : params.assignee_filter === UserActionsAssigneeFilter.Unassigned ? [action("free")] : [action("mine")],
+      isLoading: false,
+      isError: false,
+      refresh: vi.fn(),
+    });
+
+    it.each([
+      ["a coach", [coaching]],
+      ["a colleague-only member", [createMockRelationship({ kind: RelationshipKind.Colleague, viewer: COLLEAGUE_VIEWER })]],
+    ])("shows %s their own actions plus unassigned ones", (_who, relationships) => {
+      h.relationships.relationships = relationships;
+      h.fetch.mockImplementation(serve);
+      const { result } = renderHook(() => useActionsFetch(CoachViewMode.MyActions, undefined, AssignmentFilter.All));
+
+      expect(h.fetch).toHaveBeenCalledWith(
+        "org-1",
+        { assignee: "user-1", assignee_filter: UserActionsAssigneeFilter.Assigned, coaching_relationship_id: undefined },
+        undefined
+      );
+      expect(h.fetch).toHaveBeenCalledWith(
+        "org-1",
+        { assignee_filter: UserActionsAssigneeFilter.Unassigned, coaching_relationship_id: undefined },
+        undefined
+      );
+      expect(result.current.actions.map((a) => a.id)).toEqual(["mine", "free"]);
+    });
+
+    it("keeps the merged list and refresh stable across renders", () => {
+      const mine = { actions: [action("mine")], isLoading: false, isError: false, refresh: vi.fn() };
+      const free = { actions: [action("free")], isLoading: false, isError: false, refresh: vi.fn() };
+      const none = { actions: [], isLoading: false, isError: false, refresh: vi.fn() };
+      h.fetch.mockImplementation((orgId: unknown, params: { assignee_filter?: string }) =>
+        orgId === null ? none : params.assignee_filter === UserActionsAssigneeFilter.Unassigned ? free : mine
+      );
+      const { result, rerender } = renderHook(() =>
+        useActionsFetch(CoachViewMode.MyActions, undefined, AssignmentFilter.All)
+      );
+      const first = result.current;
+      rerender();
+      expect(result.current.actions).toBe(first.actions);
+      expect(result.current.refresh).toBe(first.refresh);
+    });
+
+    it("fetches only once for Assigned", () => {
+      h.fetch.mockImplementation(serve);
+      const { result } = myActions();
+      expect(h.fetch.mock.calls.filter(([orgId]) => orgId !== null)).toHaveLength(1);
+      expect(result.current.actions.map((a) => a.id)).toEqual(["mine"]);
+    });
+
+    it("leaves Coachee Actions' All as one request", () => {
+      h.fetch.mockImplementation(serve);
+      renderHook(() => useActionsFetch(CoachViewMode.CoacheeActions, undefined, AssignmentFilter.All));
+      expect(h.fetch.mock.calls.filter(([orgId]) => orgId !== null)).toEqual([
+        ["org-1", { assignee: AssigneeScope.Coachee, assignee_filter: undefined, coaching_relationship_id: undefined }, undefined],
+      ]);
+    });
+
+    it("is loading until both lists arrive", () => {
+      h.fetch.mockImplementation((orgId: unknown, params: { assignee_filter?: string }) => ({
+        ...serve(orgId, params),
+        isLoading: params.assignee_filter === UserActionsAssigneeFilter.Unassigned && orgId !== null,
+      }));
+      const { result } = renderHook(() => useActionsFetch(CoachViewMode.MyActions, undefined, AssignmentFilter.All));
+      expect(result.current.isLoading).toBe(true);
+    });
   });
 
   it("leaves the scope to the backend when the user is only coached", () => {

@@ -35,6 +35,7 @@ const COACHED = PEOPLE.map(([id, coacheeId, first, last]) => ({
   coach_last_name: COACH.last_name,
   coachee_first_name: first,
   coachee_last_name: last,
+  coachee_email: `${coacheeId}@example.com`,
 }))
 
 /** The user is the coachee here, so a clash with this session can't be moved. */
@@ -45,6 +46,7 @@ const MY_COACH_RELATIONSHIP = {
   coachee_id: MOCK_USER_ID,
   coach_first_name: 'Constantine',
   coach_last_name: 'Abernathy-Whitfield',
+  coach_email: 'constantine.abernathy-whitfield@example.com',
   coachee_first_name: COACH.first_name,
   coachee_last_name: COACH.last_name,
   viewer: COACHEE_VIEWER,

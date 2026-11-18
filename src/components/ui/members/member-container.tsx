@@ -22,6 +22,7 @@ interface MemberContainerProps {
   onRefresh: () => void;
   isLoading: boolean;
   openAddMemberDialog: Option<AddMemberMode>;
+  onAddMemberDialogClose: () => void;
 }
 
 export function MemberContainer({
@@ -32,6 +33,7 @@ export function MemberContainer({
   isLoading,
   /// Opens the AddMemberDialog in this mode
   openAddMemberDialog,
+  onAddMemberDialogClose,
 }: MemberContainerProps) {
   const { setIsACoach, isACoach } = useAuthStore((state) => state);
   const currentUserRoleState = useCurrentUserRole();
@@ -66,6 +68,7 @@ export function MemberContainer({
           <AddMemberButton
             onMemberAdded={onRefresh}
             openAddMemberDialog={openAddMemberDialog}
+            onDialogClose={onAddMemberDialogClose}
             currentUserRoleState={currentUserRoleState}
             organizationMembers={displayUsers}
             relationships={relationships}

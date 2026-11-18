@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { User, UserRoleState } from "@/types/user";
 import { MemberCard } from "./member-card";
@@ -19,18 +20,17 @@ export function MemberList({
   currentUserId,
   currentUserRoleState,
 }: MemberListProps) {
-  // Create a mapping of user IDs to their associated relationships
-  const userRelationshipsMap = users.reduce<Record<Id, CoachingRelationshipWithUserNames[]>>(
-  (accumulator_map, user) => {
-    const userRelationships = relationships.filter(
-      (relationship) =>
-        relationship.coach_id === user.id || relationship.coachee_id === user.id
-    );
-    accumulator_map[user.id] = userRelationships;
-    return accumulator_map;
-  },
-  {}
-);
+  // Each user's relationships; kept between renders so each card's own memos hold.
+  const userRelationshipsMap = useMemo(
+    () =>
+      users.reduce<Record<Id, CoachingRelationshipWithUserNames[]>>((accumulator_map, user) => {
+        accumulator_map[user.id] = relationships.filter(
+          (relationship) => relationship.coach_id === user.id || relationship.coachee_id === user.id
+        );
+        return accumulator_map;
+      }, {}),
+    [users, relationships]
+  );
 
   return (
     <Card className="w-full">

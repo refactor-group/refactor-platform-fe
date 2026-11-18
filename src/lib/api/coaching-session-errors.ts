@@ -37,11 +37,15 @@ function invalidTarget(write: SessionWrite): string {
   return write === SessionWrite.CreateSeries ? "the recurring sessions" : "the session";
 }
 
-function toastMessage(error: EntityApiError, write: SessionWrite): string {
+function toastMessage(error: EntityApiError, write: SessionWrite, withMeetLink: boolean): string {
   if (error.isNetworkError()) {
     return `Couldn't ${verb(write)} the session · Check your connection and try again`;
   }
-  if (error.status === 502) return "Couldn't create the Google Meet link · Try again";
+  // A 502 is any service the backend calls, so only blame Meet when a link was asked for.
+  if (error.status === 502 && withMeetLink) return "Couldn't create the Google Meet link · Try again";
+  if (error.status !== undefined && error.status >= 500) {
+    return `Couldn't ${verb(write)} the session · Something went wrong on our end. Try again in a few minutes`;
+  }
   if (error.status === 422) {
     return `Couldn't ${verb(write)} ${invalidTarget(write)} · Check the details and try again`;
   }
@@ -59,7 +63,8 @@ function hasContentConflict(error: EntityApiError, write: SessionWrite): boolean
   return write === SessionWrite.RescheduleSeries && hasSessionContent(error);
 }
 
-export function sessionWriteFailure(error: unknown, write: SessionWrite): SessionWriteFailure {
+/** `withMeetLink`: the write asked for a Google Meet link. */
+export function sessionWriteFailure(error: unknown, write: SessionWrite, withMeetLink: boolean): SessionWriteFailure {
   if (!(error instanceof EntityApiError)) return { kind: "unexpected" };
   if (hasContentConflict(error, write)) {
     return { kind: "toast", message: "Some later sessions have notes or actions · Keep enough sessions to cover them" };
@@ -69,5 +74,5 @@ export function sessionWriteFailure(error: unknown, write: SessionWrite): Sessio
   }
   const archivedMessage = organizationArchivedMessage(error);
   if (archivedMessage !== null) return { kind: "toast", message: archivedMessage };
-  return { kind: "toast", message: toastMessage(error, write) };
+  return { kind: "toast", message: toastMessage(error, write, withMeetLink) };
 }

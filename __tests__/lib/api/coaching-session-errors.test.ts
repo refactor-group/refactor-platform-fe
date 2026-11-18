@@ -18,58 +18,70 @@ const toast = (message: string) => ({ kind: "toast", message });
 
 describe("sessionWriteFailure", () => {
   it("leaves errors that aren't API errors to the caller", () => {
-    expect(sessionWriteFailure(new Error("boom"), SessionWrite.Create)).toEqual({ kind: "unexpected" });
+    expect(sessionWriteFailure(new Error("boom"), SessionWrite.Create, false)).toEqual({ kind: "unexpected" });
   });
 
   it("sends a revoked Google connection to Settings", () => {
-    expect(sessionWriteFailure(apiError(409, { error: "oauth_token_revoked" }), SessionWrite.Create)).toEqual({
+    expect(sessionWriteFailure(apiError(409, { error: "oauth_token_revoked" }), SessionWrite.Create, false)).toEqual({
       kind: "reconnect",
       message: "Google Meet is disconnected · Reconnect it in Settings",
     });
   });
 
   it("explains an archived organization", () => {
-    expect(sessionWriteFailure(apiError(409, { error: "organization_archived" }), SessionWrite.Update)).toEqual(
+    expect(sessionWriteFailure(apiError(409, { error: "organization_archived" }), SessionWrite.Update, false)).toEqual(
       toast("This organization is archived · It can't be changed")
     );
   });
 
   it("asks to check the connection when offline", () => {
-    expect(sessionWriteFailure(networkError(), SessionWrite.Create)).toEqual(
+    expect(sessionWriteFailure(networkError(), SessionWrite.Create, false)).toEqual(
       toast("Couldn't create the session · Check your connection and try again")
     );
-    expect(sessionWriteFailure(networkError(), SessionWrite.Update)).toEqual(
+    expect(sessionWriteFailure(networkError(), SessionWrite.Update, false)).toEqual(
       toast("Couldn't update the session · Check your connection and try again")
     );
   });
 
-  it("names a failed meeting link", () => {
-    expect(sessionWriteFailure(apiError(502), SessionWrite.Create)).toEqual(
+  it("names a failed meeting link only when one was asked for", () => {
+    expect(sessionWriteFailure(apiError(502), SessionWrite.Create, true)).toEqual(
       toast("Couldn't create the Google Meet link · Try again")
+    );
+    expect(sessionWriteFailure(apiError(502), SessionWrite.Create, false)).toEqual(
+      toast("Couldn't create the session · Something went wrong on our end. Try again in a few minutes")
     );
   });
 
   it("asks to check the details on a validation error", () => {
-    expect(sessionWriteFailure(apiError(422), SessionWrite.Create)).toEqual(
+    expect(sessionWriteFailure(apiError(422), SessionWrite.Create, false)).toEqual(
       toast("Couldn't create the session · Check the details and try again")
     );
-    expect(sessionWriteFailure(apiError(422), SessionWrite.CreateSeries)).toEqual(
+    expect(sessionWriteFailure(apiError(422), SessionWrite.CreateSeries, false)).toEqual(
       toast("Couldn't create the recurring sessions · Check the details and try again")
     );
-    expect(sessionWriteFailure(apiError(422), SessionWrite.Update)).toEqual(
+    expect(sessionWriteFailure(apiError(422), SessionWrite.Update, false)).toEqual(
       toast("Couldn't update the session · Check the details and try again")
     );
   });
 
   it("says when permission is missing", () => {
-    expect(sessionWriteFailure(apiError(403), SessionWrite.Create)).toEqual(toast(PERMISSION_DENIED_MESSAGE));
+    expect(sessionWriteFailure(apiError(403), SessionWrite.Create, false)).toEqual(toast(PERMISSION_DENIED_MESSAGE));
+  });
+
+  it("asks to try again later when the server fails", () => {
+    expect(sessionWriteFailure(apiError(500), SessionWrite.CreateSeries, false)).toEqual(
+      toast("Couldn't create the session · Something went wrong on our end. Try again in a few minutes")
+    );
+    expect(sessionWriteFailure(apiError(503), SessionWrite.Update, true)).toEqual(
+      toast("Couldn't update the session · Something went wrong on our end. Try again in a few minutes")
+    );
   });
 
   it("falls back to a retry message", () => {
-    expect(sessionWriteFailure(apiError(500), SessionWrite.CreateSeries)).toEqual(
+    expect(sessionWriteFailure(apiError(400), SessionWrite.CreateSeries, false)).toEqual(
       toast("Couldn't create the session · Try again")
     );
-    expect(sessionWriteFailure(apiError(500), SessionWrite.Update)).toEqual(
+    expect(sessionWriteFailure(apiError(400), SessionWrite.Update, false)).toEqual(
       toast("Couldn't update the session · Try again")
     );
   });

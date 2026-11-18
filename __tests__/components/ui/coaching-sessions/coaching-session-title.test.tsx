@@ -14,6 +14,7 @@ vi.mock("@/lib/toast", () => ({
 let sessionTitle: Option<string> = None;
 let goalTitle = "";
 let topicBodies: string[] = [];
+let presenceUsers = new Map<string, unknown>();
 
 vi.mock("@/lib/hooks/use-current-coaching-session", () => ({
   useCurrentCoachingSession: vi.fn(() => ({
@@ -77,7 +78,7 @@ vi.mock("@/lib/api/coaching-sessions", () => ({
 
 vi.mock("@/components/ui/coaching-sessions/editor-cache-context", () => ({
   useEditorCache: vi.fn(() => ({
-    presenceState: { users: new Map(), currentUser: null, isLoading: false },
+    presenceState: { users: presenceUsers, currentUser: null, isLoading: false },
   })),
 }));
 
@@ -200,5 +201,57 @@ describe("CoachingSessionTitle — save wiring", () => {
     );
     // The save attempt still resolves (rejection is caught, not propagated).
     expect(mockUpdateTitle).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("CoachingSessionTitle — presence", () => {
+  type Status = "connected" | "disconnected";
+  const presence = (userId: string, relationshipRole: string, status: Status) => ({
+    userId,
+    name: userId,
+    relationshipRole,
+    color: "#000",
+    lastSeen: new Date(),
+    status,
+    isConnected: status === "connected",
+  });
+  const dot = (name: string) => screen.getByText(name).querySelector('[role="status"]');
+
+  beforeEach(() => {
+    presenceUsers = new Map();
+  });
+
+  // Each kind's roles as its participants announce them; a stale client may still
+  // announce the kind the relationship had before a switch.
+  const KINDS = [
+    { kind: "coaching", coachRole: "coach", coacheeRole: "coachee" },
+    { kind: "colleague", coachRole: "colleague", coacheeRole: "colleague" },
+    { kind: "switched to colleague, stale coaching roles", coachRole: "coach", coacheeRole: "coachee" },
+    { kind: "reversed, stale roles", coachRole: "coachee", coacheeRole: "coach" },
+  ];
+  const PRESENT: { here: Record<"coach" | "coachee", Status | "absent"> }[] = [
+    { here: { coach: "absent", coachee: "absent" } },
+    { here: { coach: "connected", coachee: "absent" } },
+    { here: { coach: "absent", coachee: "connected" } },
+    { here: { coach: "connected", coachee: "connected" } },
+    { here: { coach: "disconnected", coachee: "connected" } },
+    { here: { coach: "connected", coachee: "disconnected" } },
+  ];
+
+  describe.each(KINDS)("$kind", ({ coachRole, coacheeRole }) => {
+    it.each(PRESENT)("coach $here.coach, coachee $here.coachee", ({ here }) => {
+      if (here.coach !== "absent") presenceUsers.set("coach-1", presence("coach-1", coachRole, here.coach));
+      if (here.coachee !== "absent") presenceUsers.set("coachee-1", presence("coachee-1", coacheeRole, here.coachee));
+      render(<CoachingSessionTitle locale="en-US" />);
+      expect(dot("Jordan Smith")).toHaveAccessibleName(here.coach === "connected" ? "Online" : "Offline");
+      expect(dot("Alex Chen")).toHaveAccessibleName(here.coachee === "connected" ? "Online" : "Offline");
+    });
+  });
+
+  it("ignores someone who isn't a participant", () => {
+    presenceUsers.set("admin-1", presence("admin-1", "coach", "connected"));
+    render(<CoachingSessionTitle locale="en-US" />);
+    expect(dot("Jordan Smith")).toHaveAccessibleName("Offline");
+    expect(dot("Alex Chen")).toHaveAccessibleName("Offline");
   });
 });

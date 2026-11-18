@@ -4,6 +4,8 @@ import { useShowSessionSwitcher } from "@/lib/hooks/use-show-session-switcher";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { defaultInitState, type AuthStore } from "@/lib/stores/auth-store";
 import { useUserCoachingRoles } from "@/lib/api/user-coaching-relationships";
+import type { RelationshipViewer } from "@/types/coaching-relationship";
+import { COACHEE_VIEWER, COACH_VIEWER, COLLEAGUE_VIEWER, createMockRelationship } from "../test-utils";
 
 vi.mock("@/lib/providers/auth-store-provider");
 vi.mock("@/lib/api/user-coaching-relationships");
@@ -31,7 +33,6 @@ describe("useShowSessionSwitcher", () => {
       isCoachee: false,
       coachRelationshipCount: 0,
       coacheeRelationshipCount: 0,
-      participantRelationshipCount: 0,
       relationships: [],
       isLoading: false,
       isError: false,
@@ -47,79 +48,36 @@ describe("useShowSessionSwitcher", () => {
     );
   });
 
-  it("shows the switcher for a coach with more than one coachee", () => {
-    mockRoles({
-      isCoach: true,
-      coachRelationshipCount: 3,
-      participantRelationshipCount: 3,
-    });
+  const as = (viewer: RelationshipViewer | null) => createMockRelationship({ viewer });
+  const coach = () => as(COACH_VIEWER);
+  const coachee = () => as(COACHEE_VIEWER);
+  const colleague = () => as(COLLEAGUE_VIEWER);
 
+  it.each([
+    ["a coach of one person", true, [coach()]],
+    ["a coach of several people", true, [coach(), coach(), coach()]],
+    ["a colleague of one person", true, [colleague()]],
+    ["a coach who is also coached", true, [coach(), coachee()]],
+    ["a colleague who is also coached", true, [colleague(), coachee()]],
+    ["a coachee with one coach", false, [coachee()]],
+    ["a coachee with two coaches", false, [coachee(), coachee()]],
+    ["an admin in no relationship", false, [as(null)]],
+    ["someone with no relationships", false, []],
+  ])("for %s, shown: %s", (_who, shown, relationships) => {
+    mockRoles({ relationships });
     const { result } = renderHook(() => useShowSessionSwitcher());
-
-    expect(result.current).toBe(true);
-  });
-
-  it("hides the switcher for a coach with a single coachee", () => {
-    mockRoles({
-      isCoach: true,
-      coachRelationshipCount: 1,
-      participantRelationshipCount: 1,
-    });
-
-    const { result } = renderHook(() => useShowSessionSwitcher());
-
-    expect(result.current).toBe(false);
-  });
-
-  it("hides the switcher for a coachee with a single coach", () => {
-    mockRoles({
-      isCoachee: true,
-      coacheeRelationshipCount: 1,
-      participantRelationshipCount: 1,
-    });
-
-    const { result } = renderHook(() => useShowSessionSwitcher());
-
-    expect(result.current).toBe(false);
-  });
-
-  it("shows the switcher for a single-coachee coach who is also coached", () => {
-    mockRoles({
-      isCoach: true,
-      isCoachee: true,
-      coachRelationshipCount: 1,
-      coacheeRelationshipCount: 1,
-      participantRelationshipCount: 2,
-    });
-
-    const { result } = renderHook(() => useShowSessionSwitcher());
-
-    expect(result.current).toBe(true);
+    expect(result.current).toBe(shown);
   });
 
   it("hides the switcher while relationships are loading", () => {
-    mockRoles({
-      isCoach: true,
-      coachRelationshipCount: 3,
-      participantRelationshipCount: 3,
-      isLoading: true,
-    });
-
+    mockRoles({ relationships: [coach()], isLoading: true });
     const { result } = renderHook(() => useShowSessionSwitcher());
-
     expect(result.current).toBe(false);
   });
 
   it("hides the switcher when the relationship fetch fails", () => {
-    mockRoles({
-      isCoach: true,
-      coachRelationshipCount: 3,
-      participantRelationshipCount: 3,
-      isError: true,
-    });
-
+    mockRoles({ relationships: [coach()], isError: true });
     const { result } = renderHook(() => useShowSessionSwitcher());
-
     expect(result.current).toBe(false);
   });
 });

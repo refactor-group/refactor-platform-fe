@@ -1,9 +1,11 @@
 import React from 'react';
 import { cn } from '@/components/lib/utils';
 import { UserPresence } from '@/types/presence';
+import type { Option } from '@/types/option';
 
 interface PresenceIndicatorProps {
-  presence: UserPresence | undefined;
+  /** None while that person isn't in the session. */
+  presence: Option<UserPresence>;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
@@ -19,8 +21,7 @@ export const PresenceIndicator: React.FC<PresenceIndicatorProps> = React.memo(({
     lg: 'w-4 h-4'
   };
   
-  // Automatic type narrowing with discriminated unions (no manual checks needed)
-  const isConnected = presence?.status === 'connected';
+  const isConnected = presence.some && presence.val.status === 'connected';
   
   return (
     <span

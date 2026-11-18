@@ -13,10 +13,11 @@ import { StepDialog, StepDialogHeight, StepDialogVariant } from "@/components/ui
 import type { MenuPerson } from "@/components/ui/join-session/types";
 import { useCoachingSessionSeries } from "@/lib/api/coaching-session-series";
 import { relativeDayText } from "@/lib/scheduling-copy";
-import { sessionStartIn } from "@/lib/session-window";
+import { seriesSlotStart, sessionStartIn } from "@/lib/session-window";
 import { type CoachingSession, isPastSession } from "@/types/coaching-session";
 import {
   type CoachingSessionSeries,
+  ruleIn,
   seriesEndText,
   seriesRepeatsText,
 } from "@/types/coaching-session-series";
@@ -84,9 +85,18 @@ function sessionsLoad(
   return { kind: "loaded", rows: sessionRows(sessions) };
 }
 
-function seriesFacts(series: CoachingSessionSeries, load: SessionsLoad): Fact[] {
+/** The slot its weekdays are read at: the next session, else the first, else the rule's start. */
+function referenceSlot(series: CoachingSessionSeries, load: SessionsLoad, timezone: string): DateTime {
+  if (load.kind === "loaded" && load.rows.length > 0) {
+    const row = load.rows.find((r) => r.status === SessionRowStatus.Soonest) ?? load.rows[0];
+    return seriesSlotStart(row.session, timezone);
+  }
+  return DateTime.fromISO(series.rule.start_at, { zone: "utc" });
+}
+
+function seriesFacts(series: CoachingSessionSeries, load: SessionsLoad, timezone: string): Fact[] {
   const facts = [
-    { label: "Repeats", value: seriesRepeatsText(series.rule) },
+    { label: "Repeats", value: seriesRepeatsText(ruleIn(series.rule, referenceSlot(series, load, timezone), timezone)) },
     { label: "Ends", value: seriesEndText(series.rule) },
   ];
   return load.kind === "loaded" && load.rows.length > 0
@@ -228,7 +238,7 @@ function SeriesDetailView({
       title="Recurring series"
       height={StepDialogHeight.Standard}
       variant={StepDialogVariant.Single}
-      railHeader={<SeriesRailHeader person={person} facts={seriesFacts(series, load)} />}
+      railHeader={<SeriesRailHeader person={person} facts={seriesFacts(series, load, userTimezone)} />}
       steps={[]}
       stepTitle="Sessions"
       lead={{ kind: "none" }}

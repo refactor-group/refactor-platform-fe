@@ -27,8 +27,7 @@ import { useEditorCache } from "./editor-cache-context";
 import { EditableSessionTitle } from "./editable-session-title";
 import { PresenceIndicator } from "@/components/ui/presence-indicator";
 import { UserPresence } from "@/types/presence";
-import { RelationshipRole } from "@/types/relationship-role";
-import { isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
+import { type Id, isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 
 const CoachingSessionTitle: FC = () => {
   const { userSession } = useAuthStore((state) => state);
@@ -79,14 +78,10 @@ const CoachingSessionTitle: FC = () => {
     }
   };
 
-  const getPresenceByRole = (
-    role: RelationshipRole
-  ): UserPresence | undefined => {
-    if (!presenceState) return undefined;
-    for (const user of presenceState.users.values()) {
-      if (user.relationshipRole === role) return user;
-    }
-    return undefined;
+  // By account, not announced role: colleagues both announce "colleague".
+  const presenceOf = (userId: Id): Option<UserPresence> => {
+    const presence = presenceState?.users.get(userId);
+    return presence ? Some(presence) : None;
   };
 
   if (!session || !relationship) return null;
@@ -104,14 +99,12 @@ const CoachingSessionTitle: FC = () => {
       />
       <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
-          <PresenceIndicator presence={getPresenceByRole(RelationshipRole.Coach)} />
+          <PresenceIndicator presence={presenceOf(relationship.coach_id)} />
           {coachName}
         </span>
         <span className="text-muted-foreground/40">/</span>
         <span className="inline-flex items-center gap-1.5">
-          <PresenceIndicator
-            presence={getPresenceByRole(RelationshipRole.Coachee)}
-          />
+          <PresenceIndicator presence={presenceOf(relationship.coachee_id)} />
           {coacheeName}
         </span>
         <span className="text-muted-foreground/40">·</span>

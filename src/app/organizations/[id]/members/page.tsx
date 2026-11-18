@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useWasEverTrue } from "@/lib/hooks/use-was-ever-true";
-import { useSearchParams, notFound } from "next/navigation";
+import { useSearchParams, usePathname, useRouter, notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
@@ -30,7 +30,21 @@ export default function MembersPage({
   params: Promise<{ id: Id }>;
 }) {
   const searchParams = useSearchParams();
-  const [openAddMemberDialog] = useState(() => addMemberModeOf(searchParams.get("addMember")));
+  const router = useRouter();
+  const pathname = usePathname();
+  const addMemberParam = searchParams.get("addMember");
+  const [openAddMemberDialog, setOpenAddMemberDialog] = useState(() => addMemberModeOf(addMemberParam));
+  // A link here while the page is open (a toast's Add back) changes only the query.
+  const [seenAddMemberParam, setSeenAddMemberParam] = useState(addMemberParam);
+  if (addMemberParam !== seenAddMemberParam) {
+    setSeenAddMemberParam(addMemberParam);
+    const mode = addMemberModeOf(addMemberParam);
+    if (mode.some) setOpenAddMemberDialog(mode);
+  }
+  // Drop the query once the dialog closes, so the same link opens it again.
+  const handleAddMemberDialogClose = () => {
+    if (addMemberParam) router.replace(pathname, { scroll: false });
+  };
 
   const organizationId = use(params).id;
   const { currentOrganizationId, setCurrentOrganizationId } = useCurrentOrganization();
@@ -127,6 +141,7 @@ export default function MembersPage({
         onRefresh={handleRefresh}
         isLoading={isRelationshipsLoading || isUsersLoading}
         openAddMemberDialog={openAddMemberDialog}
+        onAddMemberDialogClose={handleAddMemberDialogClose}
       />
     </PageContainer>
   );
