@@ -11,7 +11,9 @@ import { useCurrentUserRole } from '@/lib/hooks/use-current-user-role';
 import { useCoachingRelationshipList } from '@/lib/api/coaching-relationships';
 import { useUserList } from '@/lib/api/organizations/users';
 import { useAuthStore } from '@/lib/providers/auth-store-provider';
-import { notFound } from 'next/navigation';
+import { notFound, usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { AddMemberMode } from '@/lib/add-member-dialog-model';
+import { None, Some } from '@/types/option';
 
 vi.mock('next/navigation', async (importOriginal) => {
   const actual = await importOriginal<typeof import('next/navigation')>();
@@ -53,8 +55,12 @@ vi.mock('@/lib/providers/auth-store-provider', () => ({
 }));
 // The success path renders MemberContainer; stub it so these tests stay focused
 // on the page-level error branches (it is never reached in the 403/error cases).
+const containerProps = vi.hoisted(() => ({ last: undefined as Record<string, unknown> | undefined }));
 vi.mock('@/components/ui/members/member-container', () => ({
-  MemberContainer: () => <div data-testid="member-container" />,
+  MemberContainer: (props: Record<string, unknown>) => {
+    containerProps.last = props;
+    return <div data-testid="member-container" />;
+  },
 }));
 
 /**
@@ -326,6 +332,23 @@ describe('MembersPage - page-level error rendering', () => {
       setCurrentOrganizationId: vi.fn(),
     } as never);
     vi.mocked(useCurrentUserRole).mockReturnValue(adminRoleState);
+  });
+
+  it('opens Add member when a link adds ?addMember while the page is open, and drops it on close', () => {
+    mockLists(false, false);
+    const replace = vi.fn();
+    vi.mocked(useRouter).mockReturnValue({ replace } as never);
+    vi.mocked(usePathname).mockReturnValue('/organizations/org-1/members');
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as never);
+    const view = render(<MembersPage params={resolvedParams('org-1')} />);
+    expect(containerProps.last?.openAddMemberDialog).toEqual(None);
+
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams('addMember=existing') as never);
+    view.rerender(<MembersPage params={resolvedParams('org-1')} />);
+    expect(containerProps.last?.openAddMemberDialog).toEqual(Some(AddMemberMode.Existing));
+
+    (containerProps.last?.onAddMemberDialogClose as () => void)();
+    expect(replace).toHaveBeenCalledWith('/organizations/org-1/members', { scroll: false });
   });
 
   it('renders ForbiddenError when the users fetch returns 403', () => {
