@@ -16,6 +16,7 @@ import {
 } from "@/lib/api/coaching-sessions";
 import { CoachingSessionSeriesApi } from "@/lib/api/coaching-session-series";
 import { useOAuthConnections } from "@/lib/api/oauth-connection";
+import { useOrganizationList } from "@/lib/api/organizations";
 import { toast } from "@/lib/toast";
 import { EntityApiError } from "@/types/entity-api-error";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
@@ -31,6 +32,7 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
   useCurrentOrganization: () => ({ currentOrganizationId: "org-1" }),
 }));
 vi.mock("@/lib/api/coaching-relationships", () => ({ useCoachingRelationshipList: vi.fn() }));
+vi.mock("@/lib/api/organizations", () => ({ useOrganizationList: vi.fn() }));
 vi.mock("@/lib/api/oauth-connection", () => ({ useOAuthConnections: vi.fn() }));
 vi.mock("@/lib/api/users", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api/users")>()),
@@ -77,6 +79,15 @@ function serveRelationships(relationships: CoachingRelationshipWithUserNames[]) 
   } as unknown as ReturnType<typeof useCoachingRelationshipList>);
 }
 
+function serveOrganizations(organizations: { id: string; name: string; archived_at?: string }[]) {
+  vi.mocked(useOrganizationList).mockReturnValue({
+    organizations,
+    isLoading: false,
+    isError: undefined,
+    refresh: vi.fn(),
+  } as unknown as ReturnType<typeof useOrganizationList>);
+}
+
 function apiError(status?: number, data?: unknown): EntityApiError {
   const axiosLike = Object.assign(new Error("Request failed"), {
     isAxiosError: true,
@@ -93,6 +104,7 @@ beforeEach(() => {
   viewport(true);
   vi.mocked(useRouter).mockReturnValue({ push } as unknown as ReturnType<typeof useRouter>);
   serveRelationships(RELATIONSHIPS);
+  serveOrganizations([{ id: "org-1", name: "Acme Corp" }]);
   vi.mocked(useNearestEachCoachingSessions).mockReturnValue({ sessions: NEAREST, isLoading: false, isError: undefined });
   vi.mocked(useEnrichedCoachingSessionsForUser).mockReturnValue({
     enrichedSessions: ALL,
@@ -188,6 +200,53 @@ describe("NewSessionDialog: Who", () => {
     serveRelationships(RELATIONSHIPS.filter((r) => r.coach_id !== "me"));
     renderDialog();
     expect(screen.getByText("You have nobody to schedule with in this organization yet.")).toBeInTheDocument();
+  });
+});
+
+describe("NewSessionDialog: organization", () => {
+  const SARA_ONLY = RELATIONSHIPS.filter((r) => r.id === "rel-s");
+
+  beforeEach(() => {
+    serveOrganizations([
+      { id: "org-2", name: "Refactor Group" },
+      { id: "org-1", name: "Acme Corp" },
+      { id: "org-3", name: "Old Co", archived_at: "2026-01-01T00:00:00Z" },
+    ]);
+    vi.mocked(useCoachingRelationshipList).mockImplementation(
+      (organizationId) =>
+        ({
+          relationships: organizationId === "org-2" ? SARA_ONLY : RELATIONSHIPS,
+          isLoading: false,
+          isError: undefined,
+          refresh: vi.fn(),
+        }) as unknown as ReturnType<typeof useCoachingRelationshipList>
+    );
+  });
+
+  const organization = () => screen.getByRole("combobox", { name: "Organization" });
+
+  it("has no organization choice for someone in one organization", () => {
+    serveOrganizations([{ id: "org-1", name: "Acme Corp" }]);
+    renderDialog();
+    expect(screen.queryByRole("combobox", { name: "Organization" })).not.toBeInTheDocument();
+  });
+
+  it("starts on the current organization and lists only active ones", () => {
+    renderDialog();
+    expect(organization()).toHaveTextContent("Acme Corp");
+    fireEvent.keyDown(organization(), { key: "Enter" });
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Acme Corp", "Refactor Group"]);
+  });
+
+  it("lists the chosen organization's people and drops the pick", () => {
+    renderDialog();
+    fireEvent.click(person("Ehab Badawi"));
+    fireEvent.keyDown(organization(), { key: "Enter" });
+    fireEvent.click(screen.getByRole("option", { name: "Refactor Group" }));
+    expect(organization()).toHaveTextContent("Refactor Group");
+    expect(screen.queryByRole("button", { name: /Ehab Badawi/ })).not.toBeInTheDocument();
+    expect(person("Sara Lin")).toHaveAttribute("aria-pressed", "false");
+    expect(railRow("Who")).toHaveTextContent("Choose a person");
   });
 });
 

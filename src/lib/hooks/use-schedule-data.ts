@@ -12,7 +12,6 @@ import {
 import { useCoachingSessionSeries } from "@/lib/api/coaching-session-series";
 import { useOAuthConnections } from "@/lib/api/oauth-connection";
 import { useUser } from "@/lib/api/users";
-import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { type PersonEntry, schedulablePeople } from "@/lib/people";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { type Availability, busySessions, busyWindow, knownSessions, pickerPeople } from "@/lib/schedule-draft";
@@ -77,14 +76,14 @@ export function useScheduleTimezone(): string {
   return timezone || getBrowserTimezone();
 }
 
-export function useScheduleData(range: BusyRange): ScheduleData {
+/** `organizationId` picks whose relationships the Who list shows; busy times span every org. */
+export function useScheduleData(range: BusyRange, organizationId: Id): ScheduleData {
   const userId = useAuthStore((state) => state.userId);
   const timezone = useScheduleTimezone();
   const now = DateTime.now().setZone(timezone);
   const [openedAt] = useState(() => DateTime.now().setZone(timezone));
 
-  const { currentOrganizationId } = useCurrentOrganization();
-  const relationships = useCoachingRelationshipList(currentOrganizationId);
+  const relationships = useCoachingRelationshipList(organizationId);
   const relationshipList = relationships.relationships;
   const entries = useMemo(
     () => schedulablePeople(userId, relationshipList),
