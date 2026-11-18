@@ -216,7 +216,7 @@ From the dashboard, schedule a one-off session with a coachee from the New sessi
 
 At 1280px wide, log in as the coach and open the dashboard.
 
-**Pass:** a 56px header with no sidebar anywhere. Left to right: the organization tile and name, a short divider, Dashboard and Actions pills, search, Join session (when you have more than one coaching relationship), and your avatar. Dashboard has a grey fill. Open Actions and the fill moves to Actions.
+**Pass:** a 56px header with no sidebar anywhere. Left to right: the organization tile and name, a short divider, Dashboard and Actions pills, search, Join session (when you coach or are a colleague in this organization), and your avatar. Dashboard has a grey fill. Open Actions and the fill moves to Actions.
 
 ### Case F2: no sidebar on any page
 

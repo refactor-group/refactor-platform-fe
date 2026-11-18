@@ -20,7 +20,7 @@ them into this file.
 
 ## 1. Prerequisites
 
-- Section 3.10 (and COL-28, COL-41, COL-47) need fe#565 and the rs#517 backend.
+- Section 3.10 (and COL-28, COL-29, COL-41, COL-47) need fe#565 and the rs#517 backend.
 - Frontend on `http://localhost:3000` with fe#559 and fe#561; backend on `http://localhost:4000` on
   the phase 4 branch, including handoff 4-6 (contract `ColleagueRelationshipsPhase4` v5:
   `viewer`, `scheduling_blocked_by`, `suggests_actions` on every relationship). Without them the FE
@@ -117,6 +117,7 @@ open it for R1 as COACH and COACHEE and check the coaching words are unchanged.
 | COL-26 | Cancel and remove toasts, Pair with… and Add member toasts | Name the other person; no coach or coachee word | |
 | COL-27 | Open an RC session URL as ADMIN (not a participant) | Denial copy names no role ("Only the people meeting in it can view this session.") | SES-05 |
 | COL-28 | Session page header presence dots, with the other colleague in a second browser context | Each dot follows its own person: yours turns green when you open the page, the other's only while they're on it, and grey again within a few seconds of them leaving. Run it as COACH and as MEMBER, then the same on an R1 session (coach and coachee dots) | |
+| COL-29 | Header **Join session** switcher, per organization | Shown to anyone who coaches or is a colleague there, even with one relationship: MEMBER (colleague of one), COACH. Never to someone only ever coached there (COACHEE), however many coaches they have, nor to ADMIN with no relationship | |
 
 ### 3.4 Scheduling between colleagues (`COL-3x`)
 

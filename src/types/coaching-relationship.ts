@@ -74,6 +74,14 @@ export function coachesAnyone(relationships: readonly CoachingRelationship[]): b
   });
 }
 
+/** Runs sessions in at least one: a coach or a colleague there, not only ever coached. */
+export function runsSessionsInAny(relationships: readonly CoachingRelationship[]): boolean {
+  return relationships.some((r) => {
+    const viewer = viewerOf(r);
+    return viewer.some && viewer.val.role !== RelationshipRole.Coachee;
+  });
+}
+
 /** May schedule in at least one of the relationships: shows the scheduling entry points. */
 export function canScheduleInAny(relationships: readonly CoachingRelationship[]): boolean {
   return relationships.some(canScheduleSessionsIn);
