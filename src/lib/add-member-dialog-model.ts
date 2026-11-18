@@ -191,7 +191,7 @@ function railItem(step: AddMemberStep, input: RailInput): StepRailItem {
           ? input.joiner.val.fullName
           : input.mode === AddMemberMode.Existing
             ? "Find their account"
-            : "Enter their details",
+            : "Enter their account details",
         done: input.joiner.some,
         current,
       };
@@ -289,7 +289,7 @@ export function leadOf({ step, order, mode, joiner, complete, submitting, onConf
     return { kind: "confirm", label: "Add member", disabled: !complete, pending: submitting, onConfirm };
   }
   if (step === AddMemberStep.Person && joiner.none) {
-    return { kind: "hint", text: mode === AddMemberMode.Existing ? "Find their account first" : "Fill in their details" };
+    return { kind: "hint", text: mode === AddMemberMode.Existing ? "Find their account first" : "Fill in their account details" };
   }
   return { kind: "none" };
 }

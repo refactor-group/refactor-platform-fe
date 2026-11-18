@@ -152,7 +152,7 @@ describe("AddMemberDialog – creating a member", () => {
     const user = userEvent.setup();
     renderDialog();
     expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
-    expect(screen.getByText("Fill in their details")).toBeInTheDocument();
+    expect(screen.getByText("Fill in their account details")).toBeInTheDocument();
     await fillNewPerson(user);
     expect(screen.getByRole("button", { name: "Next" })).toBeInTheDocument();
   });

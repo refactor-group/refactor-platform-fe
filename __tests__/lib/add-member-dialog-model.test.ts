@@ -148,6 +148,8 @@ describe("railOf", () => {
       ["Access", "Member", false],
       ["Relationship", "None", false],
     ]);
+    const created = { ...existing, mode: AddMemberMode.Create, order: [AddMemberStep.Person, AddMemberStep.Relationship] };
+    expect(doneOf({ ...created, step: AddMemberStep.Person })[0]).toEqual(["Person", "Enter their account details", false]);
   });
 
   it("marks a default done once passed", () => {
@@ -176,7 +178,7 @@ describe("leadOf", () => {
   it("hints at what the first step needs", () => {
     expect(
       leadOf({ step: AddMemberStep.Person, order, mode: AddMemberMode.Create, joiner: None, complete: false, submitting: false, onConfirm })
-    ).toEqual({ kind: "hint", text: "Fill in their details" });
+    ).toEqual({ kind: "hint", text: "Fill in their account details" });
   });
 
   it("confirms on the last step, disabled until complete", () => {
