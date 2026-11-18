@@ -100,6 +100,7 @@ Members page **Add Member**: the **New person** and **Has an account** chips. CO
 | COL-16 | **Has an account** lookups: OUTSIDER (only in O2), REMOVED (a former member), MEMBER (a current one) | ADMIN | OUTSIDER: "No user found with that email." (an admin can't see accounts outside their organizations). REMOVED: found, shown as a card with **Clear**. MEMBER: "They're already a member of this organization", and **Next** stays disabled | ORG-01 |
 | COL-17 | Step 1, the rail and the summary | ADMIN | Step 1 reads "New member details" in both chips. On step 1, Access and Relationship are not ticked; each ticks once passed or once something other than its default is chosen. The rail's **Adding** block reads "{Name} to {O1} as a member", then ", coached by {Coach}" or ", {Coach}'s colleague" | — |
 | COL-18 | The **(i)** on the Access and Relationship cards | ADMIN | Member: "Can be paired with people in this organization and work with them. Can't add or pair members." Admin: "Everything a member can do, plus adding, removing and pairing members in this organization." Coachee and Colleague as in COL-07; None has no (i) | — |
+| COL-19 | New person's **Time zone**, and its (i) | ADMIN | Starts on the admin's own zone; the (i) reads "Yours unless you pick another. They can change it later." Picking another zone sends it as `timezone` in the create body, and the new account has it (their profile shows it) | ORG-01 |
 
 ### 3.3 Labels (`COL-2x`)
 

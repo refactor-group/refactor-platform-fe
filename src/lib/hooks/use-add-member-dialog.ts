@@ -6,7 +6,7 @@ import type { StepDialogLead, StepRailItem } from "@/components/ui/step-dialog";
 import {
   AddMemberMode,
   AddMemberStep,
-  EMPTY_NEW_PERSON,
+  emptyNewPerson,
   JoinRelationship,
   type Joiner,
   type NewPersonFields,
@@ -193,7 +193,7 @@ export function useAddMemberDialog({
   const { lookup, onLookupEmailChange, onFind, onClearFound } = useEmailLookup(organizationMembers);
 
   const [mode, setMode] = useState(canAddExisting ? initialMode : AddMemberMode.Create);
-  const [fields, setFields] = useState(EMPTY_NEW_PERSON);
+  const [fields, setFields] = useState(() => emptyNewPerson(getBrowserTimezone()));
   const [chosenRole, setRole] = useState(Role.User);
   const [relationship, setRelationship] = useState(JoinRelationship.None);
   const [pickedPartnerId, setPickedPartnerId] = useState<Option<Id>>(None);
@@ -224,7 +224,7 @@ export function useAddMemberDialog({
         await attachExisting(currentOrganizationId, lookup.found.val.id, role, invite);
         toast.success(`${joiner.val.fullName} added to this organization`);
       } else {
-        await createNested(currentOrganizationId, newUserOf(fields, getBrowserTimezone(), invite));
+        await createNested(currentOrganizationId, newUserOf(fields, invite));
         toast.success(`${joiner.val.fullName} added`);
       }
       onMemberAdded();

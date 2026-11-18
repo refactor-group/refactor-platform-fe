@@ -47,9 +47,13 @@ export interface NewPersonFields {
   lastName: string;
   displayName: string;
   email: string;
+  /** Defaults to the admin's own zone; the new member can change it in their profile. */
+  timezone: string;
 }
 
-export const EMPTY_NEW_PERSON: NewPersonFields = { firstName: "", lastName: "", displayName: "", email: "" };
+export function emptyNewPerson(timezone: string): NewPersonFields {
+  return { firstName: "", lastName: "", displayName: "", email: "", timezone };
+}
 
 /** The person being added, once there's enough to name them. */
 export interface Joiner {
@@ -259,13 +263,13 @@ export function inviteRelationshipOf(relationship: JoinRelationship, partner: Op
   });
 }
 
-export function newUserOf(fields: NewPersonFields, timezone: string, relationship: Option<InviteRelationship>): NewUser {
+export function newUserOf(fields: NewPersonFields, relationship: Option<InviteRelationship>): NewUser {
   return {
     first_name: fields.firstName.trim(),
     last_name: fields.lastName.trim(),
     display_name: fields.displayName.trim(),
     email: fields.email.trim(),
-    timezone,
+    timezone: fields.timezone,
     ...(relationship.some ? { relationship: relationship.val } : {}),
   };
 }

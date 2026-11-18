@@ -1,12 +1,15 @@
 "use client";
 
+import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PersonPicker } from "@/components/ui/person-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioCardItem, RadioGroup } from "@/components/ui/radio-group";
 import { StepDialog, StepDialogHeight, StepDialogVariant } from "@/components/ui/step-dialog";
+import { TimezoneSelector } from "@/components/ui/timezone-selector";
 import {
   ACCESS_ROLES,
   AddMemberMode,
@@ -25,7 +28,7 @@ import { type AddMemberDialogModel, useAddMemberDialog } from "@/lib/hooks/use-a
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { User } from "@/types/user";
 
-const FIELDS: readonly { name: keyof NewPersonFields; label: string; type: string }[] = [
+const FIELDS: readonly { name: Exclude<keyof NewPersonFields, "timezone">; label: string; type: string }[] = [
   { name: "firstName", label: "First name", type: "text" },
   { name: "lastName", label: "Last name", type: "text" },
   { name: "displayName", label: "Display name", type: "text" },
@@ -65,6 +68,31 @@ function NewPersonForm({ fields, onFieldChange }: Pick<AddMemberDialogModel, "fi
           />
         </div>
       ))}
+      <div className="space-y-2">
+        <div className="flex items-center gap-1">
+          <Label htmlFor="timezone">Time zone</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="About Time zone"
+                className="-my-2 flex h-8 w-8 items-center justify-center rounded-full text-ink-2 transition-colors duration-150 hover:bg-fill hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Info className="h-4 w-4" aria-hidden />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-64 p-3 text-sm">
+              <p className="font-medium text-foreground">Time zone</p>
+              <p className="mt-1 text-muted-foreground">Yours unless you pick another. They can change it later.</p>
+            </PopoverContent>
+          </Popover>
+        </div>
+        <TimezoneSelector
+          id="timezone"
+          value={fields.timezone}
+          onValueChange={(value) => onFieldChange("timezone", value)}
+        />
+      </div>
     </div>
   );
 }
