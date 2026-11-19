@@ -13,7 +13,7 @@ vi.mock("@/site.config", () => ({
   siteConfig: { env: { backendServiceURL: "http://localhost:4000", backendApiVersion: "1.0.0-test" } },
 }));
 
-const URL = "http://localhost:4000/coaching_sessions/s-1/meeting_recording";
+const RECORDING_URL = "http://localhost:4000/coaching_sessions/s-1/meeting_recording";
 const MEETING = "https://meet.google.com/abc-defg-hij";
 
 const recording = (overrides: Record<string, unknown> = {}) => ({
@@ -44,8 +44,8 @@ describe("parseMeetingRecording", () => {
 describe("useMeetingRecording: startRecording", () => {
   it("returns the recording it started", async () => {
     server.use(
-      http.get(URL, () => ok(null)),
-      http.post(URL, () => ok(recording(), 201))
+      http.get(RECORDING_URL, () => ok(null)),
+      http.post(RECORDING_URL, () => ok(recording(), 201))
     );
     const { result } = render();
     const started = await result.current.startRecording(MEETING);
@@ -55,11 +55,11 @@ describe("useMeetingRecording: startRecording", () => {
   it("treats the other participant's running recording as success, and reads it", async () => {
     let reads = 0;
     server.use(
-      http.get(URL, () => {
+      http.get(RECORDING_URL, () => {
         reads += 1;
         return ok(reads === 1 ? null : recording({ bot_id: null }));
       }),
-      http.post(URL, () =>
+      http.post(RECORDING_URL, () =>
         HttpResponse.json(
           { status_code: 409, error: "conflict", details: { reason: "recording_already_active" } },
           { status: 409 }
@@ -76,8 +76,8 @@ describe("useMeetingRecording: startRecording", () => {
 
   it("keeps any other refusal an error", async () => {
     server.use(
-      http.get(URL, () => ok(null)),
-      http.post(URL, () =>
+      http.get(RECORDING_URL, () => ok(null)),
+      http.post(RECORDING_URL, () =>
         HttpResponse.json({ status_code: 409, error: "organization_archived" }, { status: 409 })
       )
     );

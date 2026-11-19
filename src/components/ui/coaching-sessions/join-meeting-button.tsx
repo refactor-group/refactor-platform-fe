@@ -87,8 +87,8 @@ export function JoinMeetingButton({
 
   if (isIdle) {
     const handleJoinWithTranscription = () => {
-      // Synchronous window.open avoids pop-up blockers; SWR optimistic
-      // mutate transitions the button to the active view.
+      // Synchronous window.open avoids pop-up blockers; the recording
+      // cache updates once the start resolves.
       openMeeting();
       void startRecording(meetingUrl).mapErr((err) => {
         console.error("Failed to start recording:", err);
@@ -109,8 +109,10 @@ export function JoinMeetingButton({
       onOpenMeeting={openMeeting}
       showRecordingDot={isLive}
       startedAt={liveStartedAt}
+      // Stoppable until the bot leaves, so a recording stuck before the
+      // meeting can still be cleared.
       onStop={
-        isLive
+        status !== MeetingRecordingStatus.Processing
           ? () =>
               stopRecording().catch((err) => {
                 console.error("Failed to stop recording:", err);

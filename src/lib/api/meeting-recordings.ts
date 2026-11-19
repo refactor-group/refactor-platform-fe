@@ -3,7 +3,7 @@ import { type KeyedMutator } from "swr";
 import { siteConfig } from "@/site.config";
 import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { EntityApi } from "@/lib/api/entity-api";
-import { EntityApiError, conflictReasonOf } from "@/types/entity-api-error";
+import { EntityApiError, hasConflictReason } from "@/types/entity-api-error";
 import type { Id } from "@/types/general";
 import {
   parseMeetingRecording,
@@ -47,17 +47,12 @@ export type RecordingStart =
   | { kind: "started"; recording: MeetingRecording }
   | { kind: "already_active" };
 
-const isAlreadyActive = (error: EntityApiError): boolean => {
-  const reason = conflictReasonOf(error);
-  return reason.some && reason.val === "recording_already_active";
-};
-
 export interface UseMeetingRecording {
   recording: MeetingRecording | null;
   isLoading: boolean;
   isError: Error | undefined;
   refresh: KeyedMutator<MeetingRecording | null>;
-  /** A recording already running counts as success: the button just joins it. */
+  /** A recording already active counts as success, as `already_active`. */
   startRecording: (meetingUrl: string) => ResultAsync<RecordingStart, EntityApiError>;
   stopRecording: () => Promise<MeetingRecording>;
 }
@@ -80,8 +75,7 @@ export function useMeetingRecording(sessionId: Id | null): UseMeetingRecording {
         return { kind: "started", recording };
       })
       .orElse((error) => {
-        if (!isAlreadyActive(error)) return errAsync(error);
-        // Read the recording the other participant started, so this button shows it.
+        if (!hasConflictReason(error, "recording_already_active")) return errAsync(error);
         void mutate();
         return okAsync<RecordingStart, EntityApiError>({ kind: "already_active" });
       });

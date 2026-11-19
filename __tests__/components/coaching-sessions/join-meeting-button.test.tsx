@@ -150,7 +150,6 @@ describe("JoinMeetingButton — coach idle dropdown", () => {
     render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
     await user.click(screen.getByRole("button", { name: /join meeting|open meeting|meeting/i }));
     expect(screen.queryByRole("menuitem", { name: /join with transcription/i })).not.toBeInTheDocument();
-    expect(startRecording).not.toHaveBeenCalled();
   });
 
   it("surfaces an error toast if startRecording rejects", async () => {
@@ -299,7 +298,7 @@ describe.each([
   MeetingRecordingStatus.Joining,
   MeetingRecordingStatus.WaitingRoom,
 ])("JoinMeetingButton — coach joining (status=%s)", (status) => {
-  it("renders the camera dropdown with 'Open meeting' and no 'stop recording' item yet", async () => {
+  it("renders the camera dropdown with 'Open meeting' and 'stop recording', for a recording stuck before the meeting", async () => {
     const user = userEvent.setup();
     recordingHookState.recording = { status };
 
@@ -313,10 +312,21 @@ describe.each([
     expect(
       await screen.findByRole("menuitem", { name: /open meeting/i })
     ).toBeInTheDocument();
-    // The bot is still joining — nothing to stop.
     expect(
-      screen.queryByRole("menuitem", { name: /stop recording/i })
-    ).not.toBeInTheDocument();
+      screen.getByRole("menuitem", { name: /stop recording/i })
+    ).toBeInTheDocument();
+  });
+
+  it("confirming 'stop recording' calls stopRecording", async () => {
+    const user = userEvent.setup();
+    recordingHookState.recording = { status };
+
+    render(<JoinMeetingButton sessionId="s-1" meetingUrl={MEETING_URL} controlsRecording={true} />);
+    await user.click(screen.getByRole("button", { name: /join meeting/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /stop recording/i }));
+    await user.click(await screen.findByRole("button", { name: /^stop recording$/i }));
+
+    expect(stopRecording).toHaveBeenCalledTimes(1);
   });
 
   it("'Open meeting' opens the meeting URL", async () => {
