@@ -172,21 +172,21 @@ export function mockRelationship(
     ...base,
     participants: [
       {
-        id: base.coach_id,
         first_name: 'John',
         last_name: 'Doe',
         email: 'john@example.com',
         is_member: true,
         ...seats.coach,
+        id: base.coach_id,
         role: colleague ? 'colleague' : 'coach',
       },
       {
-        id: base.coachee_id,
         first_name: 'Jane',
         last_name: 'Smith',
         email: 'jane@example.com',
         is_member: true,
         ...seats.coachee,
+        id: base.coachee_id,
         role: colleague ? 'colleague' : 'coachee',
       },
     ],
