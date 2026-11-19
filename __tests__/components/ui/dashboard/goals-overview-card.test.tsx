@@ -160,19 +160,21 @@ describe("GoalsOverviewCard", () => {
     expect(screen.queryByText(/coachee['’]s/i)).not.toBeInTheDocument();
   });
 
-  it("renders an inline error message when goal_progress fails", () => {
+  it("renders an inline error message when goal_progress fails", async () => {
     setupDefault();
+    const refresh = vi.fn();
     mockUseGoalProgressList.mockReturnValue({
       goalsWithProgress: [],
       isLoading: false,
       isError: new Error("fetch failed"),
-      refresh: vi.fn(),
+      refresh,
     });
 
     render(<GoalsOverviewCard />);
-    expect(
-      screen.getByText(/couldn[’']t load active goals\. please refresh/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText("Couldn't load your goals")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/please refresh/i)).not.toBeInTheDocument();
   });
 
   it("renders the permission-denied message when goal_progress returns 403", () => {
@@ -191,6 +193,21 @@ describe("GoalsOverviewCard", () => {
     // The generic fetch-failure copy must not also appear.
     expect(
       screen.queryByText(/couldn[’']t load active goals/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers no Try again when goal_progress returns 403", () => {
+    setupDefault();
+    mockUseGoalProgressList.mockReturnValue({
+      goalsWithProgress: [],
+      isLoading: false,
+      isError: apiError(403),
+      refresh: vi.fn(),
+    });
+
+    render(<GoalsOverviewCard />);
+    expect(
+      screen.queryByRole("button", { name: "Try again" })
     ).not.toBeInTheDocument();
   });
 

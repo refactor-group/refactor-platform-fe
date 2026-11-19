@@ -31,6 +31,7 @@ import { type Id, isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/ge
 import { ProgressRing } from "@/components/ui/dashboard/progress-ring";
 import { GoalRow } from "@/components/ui/dashboard/goal-row";
 import { GoalsOverviewCardEmpty } from "@/components/ui/dashboard/goals-overview-card-empty";
+import { CardError } from "@/components/ui/errors/card-error";
 
 // Feature flag: flip to true once the global Goals page lands so the
 // "View all goals" CTA in the card body can render. Until then the link
@@ -128,16 +129,16 @@ function GoalsOverviewCardSkeleton() {
 }
 
 function GoalsOverviewCardError({
-  message = "Couldn't load active goals. Please refresh.",
+  title,
+  retry,
 }: {
-  message?: string;
+  title: string;
+  retry: Option<() => void>;
 }) {
   return (
     <Card className="border shadow-none h-full flex flex-col">
       <CardContent className="p-4 sm:p-6 flex flex-col flex-1">
-        <div className="flex flex-col items-center justify-center flex-1 text-center py-4">
-          <p className="text-sm text-destructive">{message}</p>
-        </div>
+        <CardError title={title} retry={retry} />
       </CardContent>
     </Card>
   );
@@ -170,6 +171,7 @@ export function GoalsOverviewCard() {
     goalsWithProgress,
     isLoading: isGoalsLoading,
     isError,
+    refresh,
   } = useGoalProgressList(organizationId, relationshipId, {
     coaching_session_id: sessionId,
     // Colleagues have no coachee side, and the backend refuses the filter there.
@@ -188,13 +190,14 @@ export function GoalsOverviewCard() {
     return <GoalsOverviewCardEmpty />;
   }
 
-  // Inline error state — matches the UpcomingSessionCard pattern so the
-  // dashboard layout stays intact when the backend request fails (network,
-  // 404 from a relationship the caller isn't in, 5xx, etc.).
+  // Retrying can't fix a 403, so it gets no Try again.
   if (isError)
-    return (
+    return isForbiddenError(isError) ? (
+      <GoalsOverviewCardError title={PERMISSION_DENIED_MESSAGE} retry={None} />
+    ) : (
       <GoalsOverviewCardError
-        message={isForbiddenError(isError) ? PERMISSION_DENIED_MESSAGE : undefined}
+        title="Couldn't load your goals"
+        retry={Some(refresh)}
       />
     );
 
