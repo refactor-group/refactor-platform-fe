@@ -42,6 +42,7 @@ vi.mock("@/lib/hooks/use-user-timezone", () => ({
 }));
 
 import { NextSessionCard } from "@/components/ui/dashboard/next-session-card";
+import { GLANCE_HEADER_CLASS, GLANCE_ROW_CLASS } from "@/components/ui/dashboard/next-session-glance";
 
 const ZONE = "America/Chicago";
 const NOW = DateTime.fromISO("2026-11-19T14:20:00", { zone: ZONE });
@@ -125,10 +126,26 @@ describe("NextSessionCard states", () => {
     setNext({ isLoading: true });
     const { container } = renderCard();
 
-    expect(screen.queryByText("Next session")).not.toBeInTheDocument();
+    expect(screen.getByText("Next session")).toBeInTheDocument();
     expect(screen.getByText("Loading your next session")).toHaveClass("sr-only");
     const shell = container.firstElementChild;
     expect(shell).toHaveClass("min-h-[420px]", "bg-hero-wash");
+    expect(container.querySelector(".animate-pulse")).toBeNull();
+  });
+
+  it("shapes the loading placeholder like the glance, with nothing interactive", () => {
+    setNext({ isLoading: true });
+    const { container } = renderCard();
+
+    const rows = screen.getAllByTestId("glance-placeholder-row");
+    expect(rows).toHaveLength(4);
+    rows.forEach((r) => expect(r).toHaveClass(...GLANCE_ROW_CLASS.split(" ")));
+    expect(screen.getByTestId("glance-placeholder-header")).toHaveClass(
+      ...GLANCE_HEADER_CLASS.split(" ")
+    );
+    const card = screen.getByTestId("next-session-card");
+    expect(within(card).queryAllByRole("button")).toHaveLength(0);
+    expect(card.querySelector("button, a")).toBeNull();
     expect(container.querySelector(".animate-pulse")).toBeNull();
   });
 

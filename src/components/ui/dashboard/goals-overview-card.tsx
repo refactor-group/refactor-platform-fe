@@ -114,7 +114,7 @@ function aggregateProgress(goals: GoalWithProgress[]): GoalProgress {
 
 function GoalsOverviewCardSkeleton() {
   return (
-    <Card className="border shadow-none h-full">
+    <Card data-testid="goals-overview-card" className="border shadow-none h-full">
       <CardContent className="p-6">
         <div className="flex items-center gap-4 animate-pulse">
           <div className="h-12 w-12 rounded-full bg-muted" />
@@ -136,7 +136,7 @@ function GoalsOverviewCardError({
   retry: Option<() => void>;
 }) {
   return (
-    <Card className="border shadow-none h-full flex flex-col">
+    <Card data-testid="goals-overview-card" className="border shadow-none h-full flex flex-col">
       <CardContent className="p-4 sm:p-6 flex flex-col flex-1">
         <CardError title={title} retry={retry} />
       </CardContent>
@@ -150,8 +150,12 @@ export function GoalsOverviewCard() {
   // doesn't re-subscribe every render (would happen if the selector returned
   // a fresh object).
   const userId = useAuthStore((state) => state.userId);
-  const { session: nextSession, isLoading: isSessionsLoading } =
-    useNextSession();
+  const {
+    session: nextSession,
+    isLoading: isSessionsLoading,
+    isError: isSessionsError,
+    refresh: refreshSessions,
+  } = useNextSession();
   const upcomingSession = nextSession.some ? nextSession.val : undefined;
   const { currentOrganizationId } = useCurrentOrganization();
 
@@ -183,6 +187,15 @@ export function GoalsOverviewCard() {
   // Show loading chrome while any required fetch is in flight.
   if (isSessionsLoading || (organizationId.some && isGoalsLoading)) {
     return <GoalsOverviewCardSkeleton />;
+  }
+
+  if (isSessionsError) {
+    return (
+      <GoalsOverviewCardError
+        title="Couldn't load your goals"
+        retry={Some(refreshSessions)}
+      />
+    );
   }
 
   // No upcoming session → nothing to show goals for.
@@ -225,7 +238,7 @@ export function GoalsOverviewCard() {
   const overallProgress = aggregateProgress(activeGoals);
 
   return (
-    <Card className="border shadow-none h-full">
+    <Card data-testid="goals-overview-card" className="border shadow-none h-full">
       <Collapsible
         open={expanded}
         onOpenChange={setExpanded}

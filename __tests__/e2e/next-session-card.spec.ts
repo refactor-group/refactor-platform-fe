@@ -167,9 +167,8 @@ async function open(page: Page, context: BrowserContext, scenario: Scenario) {
 }
 
 const briefing = (page: Page) => page.getByRole('region', { name: "Today's Briefing" })
-// Neither card has a test id or landmark, so take them by position in the briefing's grid.
-const nextCard = (page: Page) => briefing(page).locator(':scope > div > *').nth(0)
-const goalsCard = (page: Page) => briefing(page).locator(':scope > div > *').nth(1)
+const nextCard = (page: Page) => page.getByTestId('next-session-card')
+const goalsCard = (page: Page) => page.getByTestId('goals-overview-card')
 const headline = (page: Page) => nextCard(page).getByRole('heading', { level: 3 })
 const glanceButton = (page: Page) => nextCard(page).getByRole('button', { name: 'At a glance' })
 const row = (page: Page, label: string) => nextCard(page).getByRole('link', { name: new RegExp(`^${label}`) })

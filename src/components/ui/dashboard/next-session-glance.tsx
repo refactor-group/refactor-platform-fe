@@ -18,6 +18,11 @@ export type GlanceValue =
   | { kind: GlanceValueKind.Overdue; text: string }
   | { kind: GlanceValueKind.None };
 
+export const GLANCE_HEADER_CLASS =
+  "mt-6 flex w-full items-center justify-between border-t py-3 text-item font-semibold min-h-11 sm:min-h-0";
+export const GLANCE_ROW_CLASS =
+  "flex items-center gap-2.5 border-t py-2.5 text-[13px] text-foreground min-h-11 sm:min-h-0";
+
 export interface GlanceRow {
   label: string;
   value: GlanceValue;
@@ -44,10 +49,7 @@ function GlanceRowLink({ row, last }: { row: GlanceRow; last: boolean }) {
     <li>
       <Link
         href={row.href}
-        className={cn(
-          "flex items-center gap-2.5 border-t py-2.5 text-[13px] text-foreground min-h-11 sm:min-h-0",
-          last && "border-b"
-        )}
+        className={cn(GLANCE_ROW_CLASS, last && "border-b")}
       >
         {row.label}
         <GlanceRowValue value={row.value} />
@@ -72,7 +74,7 @@ export function NextSessionGlance({ rows }: { rows: GlanceRow[] }) {
         aria-expanded={open}
         aria-controls={listId}
         onClick={() => setOpen((o) => !o)}
-        className="mt-6 flex w-full items-center justify-between border-t py-3 text-item font-semibold min-h-11 sm:min-h-0"
+        className={GLANCE_HEADER_CLASS}
       >
         At a glance
         <ChevronUp className={cn("h-3.5 w-3.5 text-faint", !open && "rotate-180")} aria-hidden />

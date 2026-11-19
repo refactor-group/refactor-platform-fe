@@ -160,6 +160,24 @@ describe("GoalsOverviewCard", () => {
     expect(screen.queryByText(/coachee['’]s/i)).not.toBeInTheDocument();
   });
 
+  it("shows an error with Try again when the week request fails", async () => {
+    const refresh = vi.fn();
+    mockAuthStore.mockReturnValue({ userId: "user-1" });
+    mockUseNextSession.mockReturnValue({ ...nextSession(undefined), isError: true, refresh });
+    mockUseGoalProgressList.mockReturnValue({
+      goalsWithProgress: [],
+      isLoading: false,
+      isError: undefined,
+      refresh: vi.fn(),
+    });
+
+    render(<GoalsOverviewCard />);
+    expect(screen.getByText("Couldn't load your goals")).toBeInTheDocument();
+    expect(screen.queryByText("No active goals to show")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
   it("renders an inline error message when goal_progress fails", async () => {
     setupDefault();
     const refresh = vi.fn();

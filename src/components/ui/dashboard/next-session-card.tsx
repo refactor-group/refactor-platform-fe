@@ -15,6 +15,8 @@ import { NextSessionCardEmpty } from "@/components/ui/dashboard/next-session-car
 import {
   NextSessionGlance,
   GlanceValueKind,
+  GLANCE_HEADER_CLASS,
+  GLANCE_ROW_CLASS,
   type GlanceRow,
   type GlanceValue,
 } from "@/components/ui/dashboard/next-session-glance";
@@ -59,7 +61,10 @@ function shellToneClass(tone: ShellTone): string {
 
 function NextSessionShell({ tone, children }: { tone: ShellTone; children: ReactNode }) {
   return (
-    <Card className={cn("flex min-h-[420px] flex-col p-[22px]", shellToneClass(tone))}>
+    <Card
+      data-testid="next-session-card"
+      className={cn("flex min-h-[420px] flex-col p-[22px]", shellToneClass(tone))}
+    >
       {children}
     </Card>
   );
@@ -69,19 +74,45 @@ function NextSessionLabel() {
   return <p className="text-label font-medium text-ink-2">Next session</p>;
 }
 
+function PlaceholderBar({ className }: { className: string }) {
+  return <span aria-hidden className={cn("block rounded-md bg-fill", className)} />;
+}
+
+// Mirrors NextSessionBody's layout and line heights so the card keeps its height when data lands.
 function NextSessionCardLoading() {
   return (
     <NextSessionShell tone={ShellTone.Hero}>
       <div aria-busy="true" className="flex flex-1 flex-col">
         <span className="sr-only">Loading your next session</span>
-        <div className="h-3 w-24 rounded-md bg-fill" />
-        <div className="mt-3 h-7 w-4/5 rounded-md bg-fill" />
-        <div className="mt-1.5 h-7 w-3/5 rounded-md bg-fill" />
-        <div className="mt-4 h-3 w-20 rounded-md bg-fill" />
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <NextSessionLabel />
+            <div className="mt-2.5 text-headline leading-[1.12]">
+              <PlaceholderBar className="h-[1.12em] w-4/5" />
+              <PlaceholderBar className="h-[1.12em] w-3/5" />
+            </div>
+          </div>
+          <PlaceholderBar className="h-10 w-10 shrink-0 rounded-full" />
+        </div>
+        <p className="mt-3 flex items-center gap-2 text-label tabular-nums">
+          <PlaceholderBar className="h-[1.4em] w-20" />
+        </p>
+        <div data-testid="glance-placeholder-header" className={GLANCE_HEADER_CLASS}>
+          <PlaceholderBar className="h-[1.4em] w-20" />
+        </div>
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="mt-6 h-3.5 w-full rounded-md bg-fill" />
+          <div
+            key={i}
+            data-testid="glance-placeholder-row"
+            className={cn(GLANCE_ROW_CLASS, i === 3 && "border-b")}
+          >
+            <PlaceholderBar className="h-[1.5em] w-28" />
+            <PlaceholderBar className="ml-auto h-[1.5em] w-10" />
+          </div>
         ))}
-        <div className="mt-auto h-10 rounded-full bg-fill" />
+        <div className="mt-auto pt-4">
+          <PlaceholderBar className="h-10 min-h-11 rounded-full sm:min-h-10" />
+        </div>
       </div>
     </NextSessionShell>
   );
