@@ -23,7 +23,8 @@ One phase is one commit. A fresh implementer builds each phase, and the overseer
 | 3 | Error tokens; `ui/errors/card-error.tsx`; goals card error on `CardError` | pending |
 | 4 | `lib/next-session-copy.ts` (headline, when line) | pending |
 | 5 | `TodaysBriefingPanel`, `NextSessionCard` and its parts; swap them into the container; delete the old files; update existing test plans that name Add New, the Upcoming session card or "Schedule a coaching session" | pending |
-| 6 | `.claude/file-organization.md`, the CLAUDE.md row, the coding-standards pointer | pending |
+| 6 | Automated coverage of the manual plan: `__tests__/e2e/next-session-card.spec.ts`, a `?actions=due` case in `action-deep-link.spec.ts`, and the Due-tab parity integration test | pending |
+| 7 | `.claude/file-organization.md`, the CLAUDE.md row, the coding-standards pointer | pending |
 | — | Overseer: real-backend check, light/dark/phone screenshots, draft PR | pending |
 
 Acceptance: `docs/test-plans/next_session_card_manual_testing.md`, written before the UI phases and kept static. The overseer runs it against the real backend before the draft PR.
@@ -34,6 +35,11 @@ Existing plans that phase 5 must update, because they name removed UI:
 - `design_system_manual_testing.md`: the "Add New" and "Schedule a coaching session" checks.
 - `colleague_relationships_manual_testing.md`: COL-30, COL-30a.
 - `week_grid_manual_testing.md`: Case 1.1 and the Part 9 regression line.
+
+E2E specs phase 5 must update, because they use removed UI:
+- `new-session-dialog-layout.spec.ts`: it opens the dialog through Add New; switch it to the week panel's Schedule session.
+- `multi-org-live.spec.ts`: Add New.
+- `multi-org-scoping-live.spec.ts`: the empty-state copy "No sessions scheduled for today". Live specs only run with `LIVE_E2E`, but they must still match the UI.
 
 Baseline on main `b60f695` (Node 24): tsc clean, lint 0 errors / 85 warnings, unit tests 337 files / 3374 tests.
 
@@ -69,6 +75,44 @@ Baseline on main `b60f695` (Node 24): tsc clean, lint 0 errors / 85 warnings, un
 - "Open session".
 - "No more sessions this week." and "Check back on Monday." The "Schedule a session" pill shows for schedulers only.
 - Errors: "Couldn't load your next session", "Couldn't load your goals", "Try again".
+
+## Test coverage map
+
+Each manual case and the automated test that also covers it.
+
+- **Unit** means pure functions, in Vitest.
+- **Component** means React Testing Library with mocked hooks.
+- **Integration** means real SWR hooks against MSW.
+- **E2E** means Playwright with `page.route` mocks and a fixed clock, so it never needs a running backend.
+
+Manual cases marked "manual only" need the real backend, real data, or human judgement.
+
+| Manual case | Automated by | Phase |
+|---|---|---|
+| 2.1 header: title, date in profile zone, no Welcome or Add New | Component: `todays-briefing-panel.test.tsx` (fake clock across midnight, profile zone ≠ machine); E2E: no Add New, no "Welcome" | 5, 6 |
+| 2.2 layout: side by side, stacks at `md`, card first | E2E: bounding boxes at 1280 and 760 wide | 6 |
+| 2.3 entry points still reachable | E2E: the week panel's Schedule session opens the dialog (`new-session-dialog-layout.spec.ts`, updated) | 5 |
+| 3.1 to 3.4 which session: today first, past skipped, tomorrow, weekday, next Monday excluded | Hook: `use-next-session.test.ts` (week bounds); Component: card picks; E2E: `page.clock` fixtures per case, and advancing the clock past a session's end moves the card on without a reload | 2, 5, 6 |
+| 3.5 goals card follows; one week request, no today request | E2E: both cards name the same person; assert one `coaching_sessions` request with `include=relationship,series,topics,goal` and none with `organization` | 6 |
+| 4.1 to 4.4 headline and when line, countdown | Unit: `next-session-copy.test.ts` (every wording, 1 min, whole hours, Yesterday, DST week); E2E: `page.clock.runFor` ticks "Starts in 30 mins" to "Starts in 29 mins" | 4, 6 |
+| 4.5 no title, duration, Reschedule; "Open session" | Component | 5 |
+| 5.1 At a glance open by default, header-only toggle, `aria-expanded` | Component; E2E: clicking a row's whitespace doesn't fold it | 5, 6 |
+| 5.2, 5.3 row values, Agreements row hidden with no previous session | Unit: `summarizeActionsDue`; Component: rows from fixtures | 1, 5 |
+| 5.4 Actions due equals the Due tab, same-day previous | Unit: `previousSessionOf` same-day (done); Integration: `useActionsDue` and `usePanelActions` on one MSW fixture return the same ids; E2E: `?panel=actions&actions=due` selects Due (`action-deep-link.spec.ts`) | 1, 6 |
+| 5.5 row links | Component: every href; E2E: Agreements opens the previous session's URL | 5, 6 |
+| 6.1, 6.2 overdue on the Actions page and cards | Unit: `isOverdue`, `addContextToAction` (done), `statusMeta` (frozen, done) | 1 |
+| 7.1, 7.2 empty as a coach and as a coachee | Component; E2E: empty week fixture | 5, 6 |
+| 7.3 loading: shaped placeholders, no spinner or pulse, no height jump | Component: no `animate-pulse`, same min-height; E2E: delayed route, card height equal before and after | 5, 6 |
+| 7.4, 7.5 errors and Try again | Component: `card-error.test.tsx`, goals card error (phase 3); E2E: a route answers 500 then 200, and clicking Try again loads the card | 3, 6 |
+| 8.1 Dark | E2E: `emulateMedia({ colorScheme: 'dark' })`; compute contrast of the error title, the icon and the overdue value against the card background, and require at least 4.5:1 | 6 |
+| 8.2 phone: no horizontal scroll, 44px targets, stacking | E2E (Mobile Chrome project): `scrollWidth <= clientWidth`; every row, the header and the pill at least 44px tall | 6 |
+| 8.3 keyboard order and toggling | E2E: Tab order header → rows → Open session; Space folds | 6 |
+| 9.1 week panel regression | Existing `week-grid-*.spec.ts` stay green | all |
+| 9.2 Join menu | Existing `join-session-menu.spec.ts` stays green | all |
+| 9.3 warm cache on Open session | Manual only (timing on a real network) | |
+| Real data correctness, visual match to screenshots 01 and 04, screen reader, real phone | Manual only | |
+
+E2E runs in Docker on Chromium and Mobile Chrome only, per the repo's local-e2e rule: `npm run test:e2e:docker -- next-session-card --project=chromium --project="Mobile Chrome"`. CI covers the rest.
 
 ## Follow-ups (not in this PR)
 

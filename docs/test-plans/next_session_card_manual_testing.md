@@ -4,6 +4,8 @@ This plan checks the dashboard's Today's Briefing panel, the Next session card b
 
 Results go in the PR, not in this plan.
 
+Most cases are also automated: see the Test coverage map in `docs/implementation-plans/next-session-card.md`. This plan is the real-backend pass on top of them. Cases the automated tests can't cover are real data, the visual match, a screen reader, a real phone, and 9.3.
+
 ## 1. Prerequisites
 
 1. **Backend:** run `main` on `:4000` with email off: `RESEND_API_KEY=` and `SESSION_REMINDER_EMAIL_TEMPLATE_ID=` both blank. No backend branch is needed.
