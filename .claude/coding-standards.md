@@ -225,9 +225,7 @@ enum connectionState {
 ```
 
 ### File Organization
-- Keep React components in `src/components/`
-- Place tests in `__tests__/` directories mirroring the source structure
-- Group related components in feature-specific subdirectories
+See `.claude/file-organization.md` for where components, logic, hooks and tests go.
 
 ### UI Component Libraries
 
