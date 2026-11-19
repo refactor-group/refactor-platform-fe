@@ -1,6 +1,7 @@
 import type { DateTime } from "ts-luxon";
 import type { Id } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
+import type { Provider } from "@/types/provider";
 import type { Frequency, RecurrenceEnd } from "@/types/recurrence";
 
 export interface BusySession {
@@ -41,6 +42,16 @@ export interface Cadence {
 }
 
 export type RepeatChoice = { kind: "none" } | ({ kind: "repeat"; end: RecurrenceEnd } & Cadence);
+
+/** Whether new sessions get a meeting link; unknown until connections load. */
+export type MeetingLink =
+  | { kind: "unknown" }
+  | { kind: "included"; provider: Provider }
+  | { kind: "missing" };
+
+export function meetingProvider(meeting: MeetingLink): Option<Provider> {
+  return meeting.kind === "included" ? Some(meeting.provider) : None;
+}
 
 export const SLOT_STEP_MINUTES = 30;
 const MAX_SUGGESTIONS = 5;

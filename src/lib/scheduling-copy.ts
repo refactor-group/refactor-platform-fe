@@ -2,7 +2,7 @@ import { DateTime, Info } from "ts-luxon";
 import { type BusySession, type Cadence, MoveScope, type RepeatChoice, type UsualSlot } from "@/lib/scheduling";
 import { shortDate, timeOfDay } from "@/lib/session-window";
 import { formatWeekdayDate } from "@/lib/utils/date";
-import { type Option, None, Some } from "@/types/option";
+import type { Option } from "@/types/option";
 import { Provider } from "@/types/provider";
 import type { SeriesRecurrence } from "@/types/coaching-session-series";
 import { Frequency, type RecurrenceEnd, WEEKDAYS_ORDERED, type Weekday, frequencySupportsWeekdays } from "@/types/recurrence";
@@ -221,8 +221,15 @@ function providerName(provider: Provider): string {
   }
 }
 
-export function meetingLine(provider: Option<Provider>): Option<string> {
-  return provider.some ? Some(`${providerName(provider.val)} link included`) : None;
+export function meetingLine(provider: Provider): string {
+  return `${providerName(provider)} link included`;
+}
+
+/** Leads into the Settings link: "No meeting link. Connect Google Meet or Zoom in". */
+export function noMeetingLead(): string {
+  const names = Object.values(Provider).map(providerName);
+  const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names.join("");
+  return `No meeting link. Connect ${list} in`;
 }
 
 /** "Today", "Tomorrow", "In 3 days" or "In 2 weeks", counted in calendar days in start's zone. */
