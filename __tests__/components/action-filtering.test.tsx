@@ -11,7 +11,7 @@
  *
  * CRITICAL: The isOverdue calculation uses date-only comparison (startOf("day"))
  * to avoid marking items due later today as overdue. This is different from the
- * UpcomingSessionCard's "actions due" count which uses full-datetime comparison.
+ * NextSessionCard's "actions due" count, which uses full-datetime comparison.
  */
 
 import { DateTime } from "ts-luxon";
@@ -30,7 +30,7 @@ describe("Action Filtering", () => {
    * These tests verify the isOverdue calculation logic.
    * The rule is: action is overdue if due_by.startOf("day") < today.startOf("day")
    *
-   * Key difference from UpcomingSessionCard's actions-due count: this compares
+   * Key difference from NextSessionCard's actions-due count: this compares
    * DATES only, not times. An action due at 9 AM today is NOT overdue even if
    * it's now 5 PM.
    */

@@ -19,7 +19,7 @@ Results go in the PR for the layer under test, not in this plan.
 
 Open the dashboard in Light.
 
-**Pass:** primary buttons ("Add New", "Schedule a coaching session") are indigo with white text. The page and cards are white, body text is near-black, borders are light grey, and secondary text is mid grey.
+**Pass:** primary buttons ("Open session", "Schedule session") are indigo with white text. The page and cards are white, body text is near-black, borders are light grey, and secondary text is mid grey.
 
 ### Case A2: dark palette
 
@@ -49,7 +49,7 @@ On the dashboard and a coaching session page, look at the primary, secondary and
 
 ### Case B2: button text size
 
-In DevTools, inspect "Add New" on the dashboard and check its computed `font-size`.
+In DevTools, inspect "Open session" on the dashboard and check its computed `font-size`.
 
 **Pass:** 13.5px, not 16px.
 

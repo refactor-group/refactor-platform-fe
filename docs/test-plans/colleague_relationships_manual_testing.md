@@ -127,7 +127,7 @@ dashboard open in the second context.
 
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
-| COL-30 | New session with the other colleague | COACH, MEMBER | Both have the entry points (Add New, Schedule session, Schedule on {day}); Who lists the other colleague. It saves, and the other sees it after a refresh | SES-09 |
+| COL-30 | New session with the other colleague | COACH, MEMBER | Both have the entry points (Schedule session, Schedule on {day}); Who lists the other colleague. It saves, and the other sees it after a refresh | SES-09 |
 | COL-31 | New series with the other colleague | COACH, MEMBER | Saves; the other sees the sessions after a refresh | SER-01 |
 | COL-32 | Edit title, reschedule one session (dialog and week grid drag) | COACH, MEMBER | Saves. The title reaches the other live; the move after a refresh | SES-15, SES-19 |
 | COL-33 | Reschedule this and following, from a session the other colleague created | COACH, MEMBER | Saves; the other sees the change after a refresh | SER-26 |
@@ -148,7 +148,7 @@ KID is coached by COACH and a colleague of OTHER_COACH in RC2.
 
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
-| COL-30a | Add New, Schedule session; the New session **Who** list | KID | Entry points shown; Who lists OTHER_COACH only, never COACH | SES-09 |
+| COL-30a | Schedule session; the New session **Who** list | KID | Entry points shown; Who lists OTHER_COACH only, never COACH | SES-09 |
 | COL-31a | KID's coaching session: card menu, upcoming card, week grid drag | KID | Open session only; no Reschedule or drag, as before phase 4 | SES-16 |
 | COL-32a | A past coaching session of KID's | KID | The after-session lock still applies | |
 | COL-33a | RC2 session | KID | Reschedule, cancel, resend, recording controls; no lock | SES-15 |

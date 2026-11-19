@@ -1,11 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { DateTime, Settings } from "ts-luxon";
+import { describe, it, expect } from "vitest";
 import {
   calculateSessionUrgency,
-  getUrgencyMessage,
   selectNextUpcomingSession,
   getSessionParticipantInfo,
-  formatSessionTime,
   IMMINENT_SESSION_THRESHOLD_MINUTES,
   SOON_SESSION_THRESHOLD_MINUTES,
 } from "@/lib/utils/session";
@@ -13,7 +10,6 @@ import { SessionUrgency } from "@/types/session-display";
 import { RelationshipRole } from "@/types/relationship-role";
 import { None } from "@/types/option";
 import {
-  createMockSession,
   createSessionAt,
   COACHEE_VIEWER,
   COLLEAGUE_VIEWER,
@@ -73,113 +69,6 @@ describe("calculateSessionUrgency", () => {
     const session = createSessionAt(SOON_SESSION_THRESHOLD_MINUTES); // boundary case
     const urgency = calculateSessionUrgency(session);
     expect(urgency).toBe(SessionUrgency.Soon);
-  });
-});
-
-describe("getUrgencyMessage", () => {
-  it("returns past message for past sessions", () => {
-    const session = createSessionAt(-120); // 2 hours ago, well past 60-min duration
-    const urgency = calculateSessionUrgency(session);
-    const message = getUrgencyMessage(session, urgency);
-    expect(message).toContain("Ended");
-  });
-
-  it("returns 'Under way' for sessions that started 5+ minutes ago", () => {
-    const session = createSessionAt(-30); // 30 minutes ago, still within duration
-    const urgency = calculateSessionUrgency(session);
-    const message = getUrgencyMessage(session, urgency);
-    expect(message).toBe("Under way");
-  });
-
-  it(`returns imminent message with exact minutes for sessions < ${IMMINENT_SESSION_THRESHOLD_MINUTES} min`, () => {
-    const session = createSessionAt(15);
-    const urgency = calculateSessionUrgency(session);
-    const message = getUrgencyMessage(session, urgency);
-    expect(message).toContain("Starting in 15 minutes");
-  });
-
-  it("returns 'Starting now!' for sessions starting right now", () => {
-    const session = createSessionAt(0);
-    const urgency = calculateSessionUrgency(session);
-    const message = getUrgencyMessage(session, urgency);
-    expect(message).toBe("Starting now!");
-  });
-
-  it(`returns soon message with hours for sessions < ${SOON_SESSION_THRESHOLD_MINUTES} minutes`, () => {
-    const session = createSessionAt(90);
-    const urgency = calculateSessionUrgency(session);
-    const message = getUrgencyMessage(session, urgency);
-    expect(message).toContain("Next session in");
-    expect(message).toContain("hour");
-  });
-
-  it(`returns later message for sessions > ${SOON_SESSION_THRESHOLD_MINUTES} minutes away`, () => {
-    const session = createSessionAt(SOON_SESSION_THRESHOLD_MINUTES + 60);
-    const urgency = calculateSessionUrgency(session);
-    const message = getUrgencyMessage(session, urgency);
-    expect(message).toContain("Scheduled for");
-  });
-
-  it("formats time correctly in later message", () => {
-    const session = createSessionAt(SOON_SESSION_THRESHOLD_MINUTES + 60);
-    const urgency = calculateSessionUrgency(session);
-    const message = getUrgencyMessage(session, urgency);
-
-    // Should contain formatted time like "this afternoon" or specific time
-    expect(message.length).toBeGreaterThan(0);
-    expect(message).toContain("Scheduled for");
-  });
-
-  // The "today / tomorrow / yesterday" branches of getUrgencyMessage compare
-  // calendar days using DateTime.now(), so they're sensitive to where the
-  // wall clock sits relative to midnight. Pin "now" to noon UTC for the
-  // remainder of this describe block so the day-prefix assertions are stable
-  // regardless of when CI happens to run.
-  describe("day-relative prefixes", () => {
-    const originalNow = Settings.now;
-    const fakeNow = DateTime.fromISO("2026-03-26T12:00:00.000Z", { zone: "utc" });
-
-    beforeEach(() => {
-      Settings.now = () => fakeNow.toMillis();
-    });
-
-    afterEach(() => {
-      Settings.now = originalNow;
-    });
-
-    it("returns 'tomorrow' prefix for sessions scheduled tomorrow", () => {
-      // Create a session 24 hours from now
-      const session = createSessionAt(24 * 60);
-      const urgency = calculateSessionUrgency(session);
-      const message = getUrgencyMessage(session, urgency);
-
-      expect(message).toContain("Scheduled for tomorrow");
-    });
-
-    it("returns 'yesterday' prefix for past sessions from yesterday", () => {
-      // Create a session 24 hours ago
-      const session = createSessionAt(-24 * 60);
-      const urgency = calculateSessionUrgency(session);
-      const message = getUrgencyMessage(session, urgency);
-
-      expect(message).toContain("Ended");
-    });
-
-    it("returns 'this morning/afternoon/evening' for sessions today", () => {
-      // Session at 6 PM UTC; "now" is pinned at noon UTC, so the session is
-      // safely later today (> 2 hour threshold) → Later urgency.
-      const todayAt6PM = fakeNow.set({ hour: 18 });
-
-      const session = createMockSession({
-        date: todayAt6PM.toUTC().toISO(),
-      });
-
-      const urgency = calculateSessionUrgency(session);
-      const message = getUrgencyMessage(session, urgency);
-
-      expect(urgency).toBe(SessionUrgency.Later);
-      expect(message).toContain("Scheduled for this");
-    });
   });
 });
 
@@ -273,12 +162,3 @@ describe("getSessionParticipantInfo", () => {
   });
 });
 
-describe("formatSessionTime", () => {
-  it("formats a naive UTC date in the given timezone", () => {
-    expect(formatSessionTime("2026-08-25T19:30:00", "America/Chicago")).toBe("2:30 PM CDT");
-  });
-
-  it("follows the timezone's offset across DST", () => {
-    expect(formatSessionTime("2026-12-01T19:30:00", "America/Chicago")).toBe("1:30 PM CST");
-  });
-});

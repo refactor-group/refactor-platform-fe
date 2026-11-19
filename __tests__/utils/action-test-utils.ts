@@ -3,7 +3,7 @@
  *
  * This module provides reusable factories and utilities for testing
  * action filtering, counting, and display logic across multiple components:
- * - UpcomingSessionCard (actions due by session)
+ * - NextSessionCard (actions due by session)
  * - useAssignedActions hook
  *
  * Centralizing these utilities ensures consistency and reduces duplication.

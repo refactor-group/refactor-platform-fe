@@ -42,7 +42,7 @@ Results go in the PR for the layer under test, not in this plan.
 Open the dashboard as the coach.
 
 **Pass:**
-- Below the Upcoming Session and Goals cards, a white panel titled **This week** shows the range with its year, for example "Aug 17 – 23, 2026".
+- Below the Today's Briefing panel, a white panel titled **This week** shows the range with its year, for example "Aug 17 – 23, 2026".
 - The old Coaching Sessions card is gone: no Upcoming or Previous tabs, no buckets, no hover preview.
 
 ### Case 1.2: days and today
@@ -517,6 +517,6 @@ Run on `main` with every PR merged, on desktop and then on a real phone, in Ligh
 5. **Emails** (email on, Jim→Jim only): repeat 8.1 and 8.2 through drags in the grid.
 6. **Phone:** repeat steps 1, 3.1 and 4.1 with the day strip, Move sheet and long-press (6.1–6.5).
 7. **Roles:** run 7.1 and 7.2.
-8. **Regression:** the Upcoming Session card, the Goals card, the Join session menu, the New session dialog and Settings still behave as before. Nothing on the dashboard scrolls sideways at any width.
+8. **Regression:** the Next session card, the Goals card, the Join session menu, the New session dialog and Settings still behave as before. Nothing on the dashboard scrolls sideways at any width.
 
 **Pass:** every step passes. Record any failure in the PR or issue that fixes it, with its case number.

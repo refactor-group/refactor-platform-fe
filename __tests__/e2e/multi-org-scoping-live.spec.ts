@@ -12,8 +12,6 @@ import { test, expect, type Page } from "@playwright/test";
 
 const PASSWORD = "password";
 const EHAB = "ehab.bandar@gmail.com";
-// The seed names Jim "James" or "Jim" depending on its age; only the surname is stable.
-const SESSION_WITH_JIM = /^Session with (James|Jim) Hodapp$/;
 
 /**
  * Browser time is pinned for every test in this file. The seeded BigTable
@@ -136,20 +134,20 @@ test("the week panel is empty in the organization that has no sessions", async (
   await expect(cards).toHaveCount(1);
 });
 
-test("the Upcoming Session card is empty in the organization that has no sessions", async ({
+test("the Next session card is empty in the organization that has no sessions", async ({
   page,
 }) => {
-  // The card shows only today's sessions, so open on the morning of the Aug 7 one.
+  // The card shows this week's sessions, so open on the morning of the Aug 7 one.
   await login(page, EHAB, new Date("2026-08-07T12:00:00.000Z"));
 
   await selectOrganization(page, "Refactor Group");
-  await expect(page.getByText("No sessions scheduled for today")).toBeVisible({
+  await expect(page.getByText("No more sessions this week.")).toBeVisible({
     timeout: 15000,
   });
-  await expect(page.getByText(SESSION_WITH_JIM)).toHaveCount(0);
 
   await selectOrganization(page, "BigTable");
-  await expect(page.getByText(SESSION_WITH_JIM).first()).toBeVisible({
+  // The seed names Jim "James" or "Jim" depending on its age.
+  await expect(page.getByRole("heading", { name: / with (James|Jim) at / })).toBeVisible({
     timeout: 15000,
   });
 });

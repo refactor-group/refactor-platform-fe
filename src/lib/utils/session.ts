@@ -4,7 +4,6 @@ import { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-sessi
 import { Id } from "@/types/general";
 import { schedulingBlockedBy, viewerOf } from "@/types/coaching-relationship";
 import { SessionUrgency } from "@/types/session-display";
-import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { RelationshipRole } from "@/types/relationship-role";
 
 /**
@@ -23,12 +22,6 @@ export const UNDERWAY_THRESHOLD_MINUTES = 5;
 
 /** Threshold in minutes for sessions starting soon */
 export const SOON_SESSION_THRESHOLD_MINUTES = 120;
-
-/** Hour when afternoon begins (12:00 PM) */
-export const AFTERNOON_START_HOUR = 12;
-
-/** Hour when evening begins (5:00 PM) */
-export const EVENING_START_HOUR = 17;
 
 /**
  * Calculate urgency level based on session timing
@@ -63,115 +56,6 @@ export function calculateSessionUrgency(
   }
 
   return SessionUrgency.Later;
-}
-
-/**
- * Generate human-friendly urgency message
- * Story: "Tell users when their session is happening in natural language"
- */
-export function getUrgencyMessage(
-  session: CoachingSession,
-  urgency: SessionUrgency,
-  userTimezone?: string
-): string {
-  const now = DateTime.now();
-  // Parse session date as UTC (backend stores in UTC)
-  const sessionTimeUTC = DateTime.fromISO(session.date, { zone: 'utc' });
-  // Convert to user's timezone for display
-  const timezone = userTimezone || getBrowserTimezone();
-  const sessionTime = sessionTimeUTC.setZone(timezone);
-
-  switch (urgency) {
-    case SessionUrgency.Past: {
-      const sessionEndTimeUTC = sessionTimeUTC.plus({ minutes: session.duration_minutes });
-      const minutesSinceEnd = Math.abs(
-        sessionEndTimeUTC.diff(now, "minutes").minutes
-      );
-      const hoursSinceEnd = Math.floor(minutesSinceEnd / 60);
-
-      if (hoursSinceEnd >= 1) {
-        return `Ended ${hoursSinceEnd} ${hoursSinceEnd === 1 ? "hour" : "hours"} ago`;
-      }
-      return `Ended ${Math.floor(minutesSinceEnd)} minutes ago`;
-    }
-
-    case SessionUrgency.Underway:
-      return "Under way";
-
-    case SessionUrgency.Imminent: {
-      const minutesUntil = Math.round(
-        sessionTimeUTC.diff(now, "minutes").minutes
-      );
-
-      if (minutesUntil <= 0) {
-        return "Starting now!";
-      }
-
-      return `Starting in ${minutesUntil} ${minutesUntil === 1 ? "minute" : "minutes"}`;
-    }
-
-    case SessionUrgency.Soon: {
-      const minutesUntil = sessionTimeUTC.diff(now, "minutes").minutes;
-      const hoursUntil = minutesUntil / 60;
-
-      if (hoursUntil < 2) {
-        const hours = Math.floor(hoursUntil);
-        const minutes = Math.floor(minutesUntil % 60);
-
-        if (minutes === 0) {
-          return `Next session in ${hours} ${hours === 1 ? "hour" : "hours"}`;
-        }
-
-        return `Next session in ${hours} ${hours === 1 ? "hour" : "hours"} ${minutes} minutes`;
-      }
-
-      return "Next session in 2 hours";
-    }
-
-    case SessionUrgency.Later: {
-      // The absolute time is shown separately in the UI (card header, popover
-      // row); keep this message relative so it doesn't duplicate that info.
-      const period = getPeriodOfDay(sessionTime);
-      return `Scheduled for ${period}`;
-    }
-  }
-}
-
-/**
- * Get period of day for natural language
- * Story: "Describe time of day in friendly terms"
- *
- * Accounts for whether the session is today, tomorrow, or yesterday
- * to generate appropriate relative time phrases.
- */
-function getPeriodOfDay(time: DateTime): string {
-  const now = DateTime.now().setZone(time.zone);
-  const hour = time.hour;
-
-  // Determine the time period (morning, afternoon, evening)
-  let period: string;
-  if (hour < AFTERNOON_START_HOUR) {
-    period = "morning";
-  } else if (hour < EVENING_START_HOUR) {
-    period = "afternoon";
-  } else {
-    period = "evening";
-  }
-
-  // Check if it's today, tomorrow, or yesterday
-  const daysDiff = Math.round(time.startOf('day').diff(now.startOf('day'), 'days').days);
-
-  if (daysDiff === 0) {
-    return `this ${period}`;
-  } else if (daysDiff === 1) {
-    return `tomorrow ${period}`;
-  } else if (daysDiff === -1) {
-    return `yesterday ${period}`;
-  } else {
-    // For dates beyond tomorrow/yesterday, include the day name
-    const dayName = time.toFormat('EEEE'); // e.g., "Monday"
-    return `${dayName} ${period}`;
-  }
 }
 
 /**
@@ -233,21 +117,6 @@ export function findLastSessionsByRelationship<
   });
 
   return map;
-}
-
-/**
- * Format a session's time for compact display (e.g. "2:30 PM CST")
- *
- * Converts a UTC date string to the user's timezone and formats it.
- */
-export function formatSessionTime(
-  dateString: string,
-  timezone: string
-): string {
-  const sessionTime = DateTime.fromISO(dateString, { zone: "utc" }).setZone(
-    timezone
-  );
-  return sessionTime.toFormat("h:mm a ZZZZ");
 }
 
 /**
