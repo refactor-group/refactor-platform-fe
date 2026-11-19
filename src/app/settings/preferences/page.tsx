@@ -1,6 +1,6 @@
 "use client";
 
-import { CoachingPreferencesSection } from "@/components/ui/settings/coaching-preferences-section";
+import { SchedulingPreferencesSection } from "@/components/ui/settings/scheduling-preferences-section";
 
 export default function PreferencesPage() {
   return (
@@ -11,7 +11,7 @@ export default function PreferencesPage() {
           Set defaults that pre-fill when you schedule sessions.
         </p>
       </div>
-      <CoachingPreferencesSection />
+      <SchedulingPreferencesSection />
     </div>
   );
 }

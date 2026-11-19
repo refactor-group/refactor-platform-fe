@@ -136,7 +136,7 @@ const ClockSelect: FC<ClockSelectProps> = ({ id, label, value, disabled, onChang
   </div>
 );
 
-export const CoachingPreferencesSection: FC = () => {
+export const SchedulingPreferencesSection: FC = () => {
   const { canScheduleSessions, userId } = useAuthStore((state) => state);
   const { user, isLoading, refresh } = useUser(userId);
   const { update, isLoading: isSaving } = useUserPreferencesMutation();

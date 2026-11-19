@@ -98,7 +98,7 @@ describe("useSyncUserSession", () => {
 
   it("keeps its own cache entry so a focus revalidation cannot reset a form reading the same user", async () => {
     // Regression guard: the sync must not share useUser's SWR key. Components
-    // like CoachingPreferencesSection reset local state whenever that cached
+    // like SchedulingPreferencesSection reset local state whenever that cached
     // user changes, so a background revalidation there would discard edits.
     setStore({
       isLoggedIn: true,
