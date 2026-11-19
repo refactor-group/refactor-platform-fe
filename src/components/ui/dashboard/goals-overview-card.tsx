@@ -18,11 +18,9 @@ import {
 import { cn } from "@/components/lib/utils";
 import { useGoalProgressList } from "@/lib/api/goal-progress";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
-import {
-  getSessionParticipantInfo,
-  selectNextUpcomingSession,
-} from "@/lib/utils/session";
+import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
+import { useNextSession } from "@/lib/hooks/use-next-session";
+import { getSessionParticipantInfo } from "@/lib/utils/session";
 import { GoalProgress } from "@/types/goal-progress";
 import type { GoalWithProgress } from "@/types/goal-progress";
 import { AssigneeScope } from "@/types/assigned-actions";
@@ -151,12 +149,13 @@ export function GoalsOverviewCard() {
   // doesn't re-subscribe every render (would happen if the selector returned
   // a fresh object).
   const userId = useAuthStore((state) => state.userId);
-  const { sessions: todaysSessions, isLoading: isSessionsLoading } =
-    useTodaysSessions();
-  const upcomingSession = selectNextUpcomingSession(todaysSessions);
+  const { session: nextSession, isLoading: isSessionsLoading } =
+    useNextSession();
+  const upcomingSession = nextSession.some ? nextSession.val : undefined;
+  const { currentOrganizationId } = useCurrentOrganization();
 
-  const organizationId: Option<Id> = upcomingSession?.organization?.id
-    ? Some(upcomingSession.organization.id)
+  const organizationId: Option<Id> = currentOrganizationId
+    ? Some(currentOrganizationId)
     : None;
   const relationshipId: Option<Id> = upcomingSession?.coaching_relationship_id
     ? Some(upcomingSession.coaching_relationship_id)
@@ -164,10 +163,9 @@ export function GoalsOverviewCard() {
   const sessionId = upcomingSession?.id ?? undefined;
 
   // The server returns exactly the coachee-scoped progress metrics for goals
-  // linked to the upcoming session — same set the Upcoming Session card
-  // shows, already filtered + assignee-scoped. See RelationshipGoalProgress
-  // v4 + coordination questions `goal_progress_filter_by_coaching_session`
-  // and `goal_progress_assignee_filter`.
+  // linked to the upcoming session, already filtered + assignee-scoped. See
+  // RelationshipGoalProgress v4 + coordination questions
+  // `goal_progress_filter_by_coaching_session` and `goal_progress_assignee_filter`.
   const {
     goalsWithProgress,
     isLoading: isGoalsLoading,

@@ -83,6 +83,7 @@ describe("useWeekSessions", () => {
         CoachingSessionInclude.Relationship,
         CoachingSessionInclude.Series,
         CoachingSessionInclude.Topics,
+        CoachingSessionInclude.Goal,
       ])
     );
     expect([sortBy, sortOrder]).toEqual(["date", "asc"]);

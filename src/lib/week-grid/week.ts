@@ -21,6 +21,8 @@ export interface DayGroup<T> {
   items: T[];
 }
 
+export const CURRENT_WEEK = 0;
+
 const DAYS_IN_WEEK = 7;
 
 export function weekOf(offset: number, now: DateTime, timezone: string): Week {

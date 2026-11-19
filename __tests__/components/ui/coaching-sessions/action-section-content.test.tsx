@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DateTime } from "ts-luxon";
+import { useSearchParams } from "next/navigation";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import { Some } from "@/types/option";
@@ -150,6 +151,32 @@ describe("ActionSectionContent", () => {
 
       const reviewContent = screen.getByTestId("review-section-content");
       expect(reviewContent.textContent).toContain("Review action one");
+    });
+
+    it("opens on the 'Due' tab with ?actions=due", () => {
+      vi.mocked(useSearchParams).mockReturnValueOnce(
+        new URLSearchParams({ actions: "due" }) as never
+      );
+
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps()} />
+        </Wrapper>
+      );
+
+      expect(screen.getByTestId("action-tab-due")).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByTestId("action-tab-new")).toHaveAttribute("aria-selected", "false");
+    });
+
+    it("selects the 'New' tab without ?actions=due", () => {
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps()} />
+        </Wrapper>
+      );
+
+      expect(screen.getByTestId("action-tab-new")).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByTestId("action-tab-due")).toHaveAttribute("aria-selected", "false");
     });
 
     it("calls onActiveTabChange when tab switches", async () => {

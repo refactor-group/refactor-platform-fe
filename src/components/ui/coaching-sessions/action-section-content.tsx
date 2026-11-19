@@ -105,7 +105,10 @@ export function ActionSectionContent({
   readOnly = false,
   onActiveTabChange,
 }: ActionSectionContentProps) {
-  const [activeTab, setActiveTab] = useState<ActionTab>("new");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<ActionTab>(() =>
+    searchParams.get("actions") === "due" ? "due" : "new"
+  );
 
   const handleTabChange = useCallback(
     (value: string) => {
@@ -117,7 +120,6 @@ export function ActionSectionContent({
   );
 
   // ── Highlight & scroll-to for deep-linked or in-page requested actions ─
-  const searchParams = useSearchParams();
   const [highlightRequest, setHighlightRequest] = useState<Option<{ id: Id; nonce: number }>>(None);
   const highlightId = highlightRequest.some
     ? highlightRequest.val.id
