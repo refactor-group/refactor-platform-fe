@@ -21,6 +21,8 @@ import { SortOrder } from "@/types/sorting";
 import { DateTime } from "ts-luxon";
 import { filterReviewActions } from "@/lib/utils/session";
 import { selectReviewActionsForSession } from "@/lib/utils/select-review-actions-for-session";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
+import { sessionStartIn } from "@/lib/session-window";
 
 // Re-export so existing imports from use-panel-actions keep working. The
 // canonical definition lives in @/lib/utils/session.
@@ -99,9 +101,10 @@ function useReviewWindow(
   { coachingSessionId, coachingRelationshipId, sessionDate }: ReviewWindowParams,
   allRelationshipActions: Action[]
 ) {
+  const timezone = useUserTimezone();
   const currentSessionDate = useMemo(
-    () => sessionDate ? DateTime.fromISO(sessionDate) : null,
-    [sessionDate]
+    () => sessionDate ? sessionStartIn(sessionDate, timezone) : null,
+    [sessionDate, timezone]
   );
 
   // Intentionally frozen at mount time — the 5-year window is wide enough
@@ -129,19 +132,19 @@ function useReviewWindow(
     let prev: DateTime | null = null;
     for (const session of coachingSessions) {
       if (session.date < currentDateStr) {
-        prev = DateTime.fromISO(session.date);
+        prev = sessionStartIn(session.date, timezone);
       }
     }
     return prev;
-  }, [coachingSessions, currentSessionDate]);
+  }, [coachingSessions, currentSessionDate, timezone]);
 
   const sessionDateMap = useMemo(() => {
     const map = new Map<Id, DateTime>();
     for (const s of coachingSessions) {
-      map.set(s.id, DateTime.fromISO(s.date));
+      map.set(s.id, sessionStartIn(s.date, timezone));
     }
     return map;
-  }, [coachingSessions]);
+  }, [coachingSessions, timezone]);
 
   const [stickyIds, setStickyIds] = useState<Set<Id>>(() => new Set());
 
@@ -151,10 +154,11 @@ function useReviewWindow(
         allRelationshipActions,
         coachingSessions,
         coachingSessionId,
+        timezone,
         undefined, // no fallback — panel uses a 5-year session window already
         stickyIds.size > 0 ? stickyIds : undefined
       ),
-    [allRelationshipActions, coachingSessions, coachingSessionId, stickyIds]
+    [allRelationshipActions, coachingSessions, coachingSessionId, timezone, stickyIds]
   );
 
   // Accumulate sticky IDs after render so that previously-visible review

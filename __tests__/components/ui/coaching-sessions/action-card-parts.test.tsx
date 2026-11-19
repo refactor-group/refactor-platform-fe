@@ -282,7 +282,7 @@ describe("DueDatePicker", () => {
       expect(screen.getByRole("button", { name: /Feb 15, 2025/ })).toBeInTheDocument();
     });
 
-    it("picks a day in the profile zone, keeping the time", async () => {
+    it("picks the start of a day in the profile zone", async () => {
       const onChange = vi.fn();
       render(
         <Wrapper>
@@ -293,7 +293,7 @@ describe("DueDatePicker", () => {
       await userEvent.click(screen.getByRole("gridcell", { name: "20" }));
       const picked: DateTime = onChange.mock.calls[0][0];
       expect(picked.zoneName).toBe("Asia/Tokyo");
-      expect(picked.toISO()).toBe("2025-02-20T05:00:00.000+09:00");
+      expect(picked.toISO()).toBe("2025-02-20T00:00:00.000+09:00");
     });
   });
 });

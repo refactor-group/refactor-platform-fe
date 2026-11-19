@@ -10,6 +10,7 @@ import {
   type AssignedActionWithContext,
 } from "@/types/assigned-actions";
 import type { Id } from "@/types/general";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 
 /** The Actions page's filters; the page starts on DEFAULT_ACTIONS_VIEW. */
 export interface ActionsView {
@@ -38,9 +39,10 @@ export function useActionsView(view: ActionsView, options?: SWRConfiguration) {
     view.assignmentFilter,
     options
   );
+  const timezone = useUserTimezone();
   const filteredActions = useMemo(
-    () => applyTimeFilter(actionsWithContext, view.timeRange),
-    [actionsWithContext, view.timeRange]
+    () => applyTimeFilter(actionsWithContext, view.timeRange, timezone),
+    [actionsWithContext, view.timeRange, timezone]
   );
 
   return { actionsWithContext, filteredActions, isLoading, isError, refresh };

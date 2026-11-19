@@ -50,11 +50,12 @@ export function groupByStatus<T>(
  */
 export function applyTimeFilter(
   actions: AssignedActionWithContext[],
-  range: TimeRange
+  range: TimeRange,
+  timezone: string
 ): AssignedActionWithContext[] {
   if (range === TimeRange.AllTime) return actions;
 
-  const now = DateTime.now().startOf("day");
+  const now = DateTime.now().setZone(timezone).startOf("day");
   const daysBack = range === TimeRange.Last30Days ? 30 : 90;
   const cutoff = now.minus({ days: daysBack });
 

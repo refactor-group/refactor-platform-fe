@@ -246,14 +246,20 @@ export function DueDatePicker({
   const [open, setOpen] = useState(false);
   const timezone = useUserTimezone();
   const due = value.setZone(timezone);
-  // The calendar works in browser-local Dates, so carry the profile-zone day across by its parts.
+  const today = DateTime.now().setZone(timezone);
+  // The calendar works in browser-local Dates, so carry profile-zone days across by their parts.
   const dueDay = new Date(due.year, due.month - 1, due.day);
 
   const formattedDate = due.setLocale(locale).toLocaleString(DateTime.DATE_MED);
 
   const handleSelect = (date: Date | undefined) => {
     if (date) {
-      onChange(due.set({ year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() }));
+      onChange(
+        DateTime.fromObject(
+          { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() },
+          { zone: timezone }
+        )
+      );
       setOpen(false);
     }
   };
@@ -281,7 +287,7 @@ export function DueDatePicker({
             </PopoverTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            {due.hasSame(DateTime.now().setZone(timezone), "day")
+            {due.hasSame(today, "day")
               ? "This is due today"
               : `This was due on ${formattedDate}`}
           </TooltipContent>
@@ -300,6 +306,7 @@ export function DueDatePicker({
         <Calendar
           mode="single"
           selected={dueDay}
+          today={new Date(today.year, today.month - 1, today.day)}
           // Open on the due date's month, not today's.
           defaultMonth={dueDay}
           onSelect={handleSelect}

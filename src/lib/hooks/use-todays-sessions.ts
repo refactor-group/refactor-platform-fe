@@ -1,9 +1,9 @@
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import {
   useEnrichedCoachingSessionsForUser,
   CoachingSessionInclude,
 } from "@/lib/api/coaching-sessions";
-import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { useNow } from "@/lib/hooks/use-now";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 
@@ -29,7 +29,7 @@ export function useTodaysSessions(
   }));
 
   const userId = userSession?.id;
-  const timezone = userSession?.timezone || getBrowserTimezone();
+  const timezone = useUserTimezone();
   const { currentOrganizationId } = useCurrentOrganization();
 
   // Re-renders every 30 seconds to update urgency messages in real-time

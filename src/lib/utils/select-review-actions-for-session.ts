@@ -3,6 +3,7 @@ import type { Action } from "@/types/action";
 import type { CoachingSession } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
 import { filterReviewActions } from "@/lib/utils/session";
+import { sessionStartIn } from "@/lib/session-window";
 
 /**
  * Determines which actions are "due for review" at a given session — the
@@ -29,12 +30,15 @@ import { filterReviewActions } from "@/lib/utils/session";
  * after the user marks it complete in the same render. The dashboard hover
  * doesn't need stickiness (the panel disappears on un-hover) and omits it.
  *
+ * `timezone` is the user's profile zone, whose calendar days bound the window.
+ *
  * Returns `[]` when the target session is not in the list — never throws.
  */
 export function selectReviewActionsForSession(
   allActions: Action[],
   sessions: CoachingSession[],
   sessionId: Id,
+  timezone: string,
   fallbackPriorDate?: DateTime,
   stickyIds?: Set<Id>
 ): Action[] {
@@ -49,11 +53,11 @@ export function selectReviewActionsForSession(
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
   const targetIdx = sameRelationshipSessions.findIndex((s) => s.id === sessionId);
-  const currentSessionDate = DateTime.fromISO(target.date);
+  const currentSessionDate = sessionStartIn(target.date, timezone);
   const previousSessionDate =
     targetIdx > 0
-      ? DateTime.fromISO(sameRelationshipSessions[targetIdx - 1].date)
-      : (fallbackPriorDate ?? null);
+      ? sessionStartIn(sameRelationshipSessions[targetIdx - 1].date, timezone)
+      : (fallbackPriorDate?.setZone(timezone) ?? null);
 
   return filterReviewActions(
     allActions,

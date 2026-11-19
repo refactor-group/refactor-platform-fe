@@ -523,7 +523,7 @@ Open a session's Actions panel with suggested actions from a transcript, one wit
 3. Look at the card on the Actions page, in the session panel (front, back and edit faces) and on a suggested action card. Open the due date picker, then pick a different day.
 4. Have an action due late yesterday on your computer's clock that is today in the profile zone.
 
-**Pass:** every due date reads the profile zone's day ("Due Thu…"), matching the session header's dates. The picker opens on that day, and picking another day saves that day in the profile zone. The action from step 4 isn't marked overdue. With the profile and computer in the same zone, nothing changes.
+**Pass:** every due date reads the profile zone's day ("Due Thu…"), matching the session header's dates. The picker opens on that day and marks the profile zone's today. Picking another day saves the start of that day in the profile zone. The action from step 4 isn't marked overdue. A card's "From session" date, the session panel's Due tab, the dashboard's "N actions due" and the Actions page's Last 30 days filter all go by profile-zone days. With the profile and computer in the same zone, nothing changes.
 
 ### Case I8: agreement, goal and topic cards
 

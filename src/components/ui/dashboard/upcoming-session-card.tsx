@@ -11,6 +11,7 @@ import { SessionGoalList } from "@/components/ui/session-goal-list";
 import { UpcomingSessionCardEmpty } from "@/components/ui/dashboard/upcoming-session-card-empty";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
 import { useUserActionsList } from "@/lib/api/user-actions";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
@@ -23,13 +24,13 @@ import {
   selectNextUpcomingSession,
 } from "@/lib/utils/session";
 import { durationText } from "@/lib/scheduling-copy";
-import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { userSessionFirstLastLettersToString } from "@/types/user-session";
 import { type EnrichedCoachingSession } from "@/types/coaching-session";
 import { CoachingSessionTitleText } from "@/components/ui/coaching-session-title-text";
 import { enrichedTitleSource } from "@/types/coaching-session-title";
 import { SessionUrgency } from "@/types/session-display";
 import { UserActionsScope } from "@/types/assigned-actions";
+import { sessionStartIn } from "@/lib/session-window";
 
 // Width of the session-list lookup window used to find this session's
 // previous session — matches the Actions panel (use-panel-actions) so the
@@ -67,6 +68,7 @@ export function UpcomingSessionCard({
   onRefreshNeeded,
 }: UpcomingSessionCardProps) {
   const { userSession, canScheduleSessions } = useAuthStore((state) => state);
+  const timezone = useUserTimezone();
   const { sessions, isLoading, error, refresh } = useTodaysSessions();
 
   // Surface refresh to the parent so it can re-fetch after a series changes.
@@ -102,7 +104,7 @@ export function UpcomingSessionCard({
       <PopulatedBody
         session={nextSession}
         userId={userSession.id}
-        userTimezone={userSession.timezone || getBrowserTimezone()}
+        userTimezone={timezone}
         onReschedule={onReschedule}
       />
     </CardContainer>
@@ -177,8 +179,8 @@ function PopulatedBody({
   );
 
   const currentSessionDate = useMemo(
-    () => DateTime.fromISO(session.date),
-    [session.date],
+    () => sessionStartIn(session.date, userTimezone),
+    [session.date, userTimezone],
   );
 
   const previousSessionDate = useMemo(() => {
@@ -187,11 +189,11 @@ function PopulatedBody({
     let prev: DateTime | null = null;
     for (const s of coachingSessions) {
       if (s.date < currentDateStr) {
-        prev = DateTime.fromISO(s.date);
+        prev = sessionStartIn(s.date, userTimezone);
       }
     }
     return prev;
-  }, [coachingSessions, currentSessionDate]);
+  }, [coachingSessions, currentSessionDate, userTimezone]);
 
   const actionsDueCount = useMemo(
     () =>

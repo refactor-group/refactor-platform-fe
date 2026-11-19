@@ -91,7 +91,7 @@ function isDueBeforeNextSession(
   if (!nextSession) return true; // Include if no next session scheduled
 
   if (action.due_by.none) return false;
-  const nextSessionDate = DateTime.fromISO(nextSession.date);
+  const nextSessionDate = DateTime.fromISO(nextSession.date, { zone: "utc" });
   return action.due_by.val <= nextSessionDate;
 }
 
@@ -109,7 +109,7 @@ function wasCompletedSinceLastSession(
   );
   if (!lastSession) return true; // Include if no last session
 
-  const lastSessionDate = DateTime.fromISO(lastSession.date);
+  const lastSessionDate = DateTime.fromISO(lastSession.date, { zone: "utc" });
   return action.status_changed_at >= lastSessionDate;
 }
 
@@ -217,7 +217,7 @@ export function buildGoalContext(
 export function buildSessionContext(session: EnrichedCoachingSession): SessionContext {
   return {
     coachingSessionId: session.id,
-    sessionDate: DateTime.fromISO(session.date),
+    sessionDate: DateTime.fromISO(session.date, { zone: "utc" }),
   };
 }
 
