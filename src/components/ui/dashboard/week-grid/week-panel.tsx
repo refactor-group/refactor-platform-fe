@@ -13,7 +13,7 @@ import { useWeekGridStore } from "@/lib/providers/week-grid-store-provider";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { useMoveSession } from "@/lib/hooks/use-move-session";
 import { useNow } from "@/lib/hooks/use-now";
-import { useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import { useRefreshCoachingSessions } from "@/lib/hooks/use-sse-cache-invalidation";
 import { useWeekEdges } from "@/lib/hooks/use-week-edges";
 import { useWeekFilter } from "@/lib/hooks/use-week-filter";
@@ -92,7 +92,7 @@ function moveSheetModel(view: CardView, days: DayGroup<GridCard>[], context: Mov
 }
 
 export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPanelProps) {
-  const timezone = useScheduleTimezone();
+  const timezone = useUserTimezone();
   const now = useNow(30_000);
   const weekOffset = useWeekGridStore((s) => s.weekOffset);
   const week = useWeekAt(weekOffset, now, timezone);

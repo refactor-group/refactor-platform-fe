@@ -1,11 +1,12 @@
-import { describe, it, expect } from "vitest";
-import { DateTime } from "ts-luxon";
+import { describe, it, expect, afterEach } from "vitest";
+import { DateTime, Settings } from "ts-luxon";
 import { Some, None } from "@/types/option";
 import { ItemStatus } from "@/types/general";
 import type { Action } from "@/types/action";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Goal } from "@/types/goal";
 import {
+  addContextToAction,
   resolveGoalContext,
   buildGoalContext,
 } from "@/lib/utils/assigned-actions";
@@ -139,5 +140,30 @@ describe("buildGoalContext", () => {
 
     const result = buildGoalContext(action, session);
     expect(result).toEqual({ goalId: "goal-1", title: "Improve communication" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// addContextToAction: overdue
+// ---------------------------------------------------------------------------
+
+describe("addContextToAction overdue", () => {
+  const originalNow = Settings.now;
+  afterEach(() => {
+    Settings.now = originalNow;
+  });
+
+  // At 06:00 UTC it's Oct 30 everywhere here; the action was due 03:00 UTC, which is still Oct 29 in Chicago.
+  const pinned = DateTime.fromISO("2026-10-30T06:00:00Z").toMillis();
+  const overdueFor = (timezone: string) => {
+    Settings.now = () => pinned;
+    const action = makeAction({ due_by: Some(DateTime.fromISO("2026-10-30T03:00:00Z")) });
+    const sessionMap = new Map([["session-1", makeSession()]]);
+    return addContextToAction(action, sessionMap, new Map(), timezone)?.isOverdue;
+  };
+
+  it("counts calendar days in the profile zone", () => {
+    expect(overdueFor("America/Chicago")).toBe(true);
+    expect(overdueFor("UTC")).toBe(false);
   });
 });

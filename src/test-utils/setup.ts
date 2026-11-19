@@ -98,6 +98,22 @@ vi.mock('@/lib/hooks/use-not-a-member-toast', () => ({
   useNotAMemberToast: () => () => {},
 }))
 
+// Date leaves read the profile zone from the auth store, which most suites
+// don't provide; fall back to the browser's zone there.
+vi.mock('@/lib/hooks/use-user-timezone', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/lib/hooks/use-user-timezone')>()
+  const { getBrowserTimezone } = await import('@/lib/timezone-utils')
+  return {
+    useUserTimezone: () => {
+      try {
+        return real.useUserTimezone()
+      } catch {
+        return getBrowserTimezone()
+      }
+    },
+  }
+})
+
 // Setup MSW
 // `error`, not the default `warn`: an unmatched request under `warn` is passed
 // through to the real network, so unit tests silently hit whatever is running

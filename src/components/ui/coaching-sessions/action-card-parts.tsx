@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card-field";
 import { Id } from "@/types/general";
 import { useNonMemberIds } from "@/components/ui/coaching-sessions/non-member-ids-context";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import { notAMemberText } from "@/lib/api/membership-errors";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
@@ -243,14 +244,16 @@ export function DueDatePicker({
   disabled = false,
 }: DueDatePickerProps) {
   const [open, setOpen] = useState(false);
+  const timezone = useUserTimezone();
+  const due = value.setZone(timezone);
+  // The calendar works in browser-local Dates, so carry the profile-zone day across by its parts.
+  const dueDay = new Date(due.year, due.month - 1, due.day);
 
-  const formattedDate = value
-    .setLocale(locale)
-    .toLocaleString(DateTime.DATE_MED);
+  const formattedDate = due.setLocale(locale).toLocaleString(DateTime.DATE_MED);
 
   const handleSelect = (date: Date | undefined) => {
     if (date) {
-      onChange(DateTime.fromJSDate(date));
+      onChange(due.set({ year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() }));
       setOpen(false);
     }
   };
@@ -278,7 +281,7 @@ export function DueDatePicker({
             </PopoverTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            {value.hasSame(DateTime.now(), "day")
+            {due.hasSame(DateTime.now().setZone(timezone), "day")
               ? "This is due today"
               : `This was due on ${formattedDate}`}
           </TooltipContent>
@@ -296,9 +299,9 @@ export function DueDatePicker({
       <PopoverContent align="end" className={cn("w-auto p-0", PICKER_CONTENT)}>
         <Calendar
           mode="single"
-          selected={value.toJSDate()}
+          selected={dueDay}
           // Open on the due date's month, not today's.
-          defaultMonth={value.toJSDate()}
+          defaultMonth={dueDay}
           onSelect={handleSelect}
         />
       </PopoverContent>

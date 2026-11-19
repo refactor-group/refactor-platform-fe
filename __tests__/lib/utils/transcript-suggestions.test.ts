@@ -67,8 +67,16 @@ function suggestion(
 }
 
 describe("suggestionDue", () => {
+  it("dates the label in the profile zone, not the browser's", () => {
+    // 20:00 UTC on the 17th is already the 18th in Tokyo.
+    const late = DateTime.fromISO("2026-10-17T20:00:00Z");
+    const due = suggestionDue(suggestion(Some(late), None), "en-US", "Asia/Tokyo");
+    expect(due.label).toBe("Oct 18, 2026");
+    expect(due.at.zoneName).toBe("Asia/Tokyo");
+  });
+
   it("shows a spoken date with its phrase in the tooltip", () => {
-    const due = suggestionDue(suggestion(Some(noon("2026-10-17")), Some("by Friday")), "en-US");
+    const due = suggestionDue(suggestion(Some(noon("2026-10-17")), Some("by Friday")), "en-US", "UTC");
     expect(due.spoken).toBe(true);
     expect(due.at.toISODate()).toBe(noon("2026-10-17").toISODate());
     expect(due.label).toBe("Oct 17, 2026");
@@ -76,38 +84,39 @@ describe("suggestionDue", () => {
   });
 
   it("has no tooltip for a set date with no phrase", () => {
-    const due = suggestionDue(suggestion(Some(noon("2026-10-17")), None), "en-US");
+    const due = suggestionDue(suggestion(Some(noon("2026-10-17")), None), "en-US", "UTC");
     expect(due.spoken).toBe(true);
     expect(due.tooltip).toEqual(None);
   });
 
   it("falls back to the next session", () => {
-    const due = suggestionDue(suggestion(None, None, Some(DueSource.NextSession)), "en-US");
+    const due = suggestionDue(suggestion(None, None, Some(DueSource.NextSession)), "en-US", "UTC");
     expect(due.spoken).toBe(false);
     expect(due.label).toBe("Oct 18, 2026");
     expect(due.tooltip).toEqual(Some("No date mentioned. Defaults to your next session"));
   });
 
   it("falls back to a week from today", () => {
-    const due = suggestionDue(suggestion(None, None, Some(DueSource.SevenDays)), "en-US");
+    const due = suggestionDue(suggestion(None, None, Some(DueSource.SevenDays)), "en-US", "UTC");
     expect(due.spoken).toBe(false);
     expect(due.tooltip).toEqual(Some("No date mentioned. Defaults to a week from today"));
   });
 
   it("names the default date itself when its source is unknown", () => {
-    const due = suggestionDue(suggestion(None, None, None), "en-US");
+    const due = suggestionDue(suggestion(None, None, None), "en-US", "UTC");
     expect(due.tooltip).toEqual(Some("No date mentioned. Defaults to Oct 18, 2026"));
   });
 
   it("falls back to a week after a session that has not started", () => {
-    const due = suggestionDue(suggestion(None, None, Some(DueSource.WeekAfterSession)), "en-US");
+    const due = suggestionDue(suggestion(None, None, Some(DueSource.WeekAfterSession)), "en-US", "UTC");
     expect(due.tooltip).toEqual(Some("No date mentioned. Defaults to a week after this session"));
   });
 
   it("says a vague phrase is not a specific date", () => {
     const due = suggestionDue(
       suggestion(None, Some("soon"), Some(DueSource.SevenDays), Some(UndatedReason.NotADate)),
-      "en-US"
+      "en-US",
+      "UTC"
     );
     expect(due.spoken).toBe(false);
     expect(due.tooltip).toEqual(
@@ -123,7 +132,8 @@ describe("suggestionDue", () => {
         Some(DueSource.WeekAfterSession),
         Some(UndatedReason.NoNextSession)
       ),
-      "en-US"
+      "en-US",
+      "UTC"
     );
     expect(due.tooltip).toEqual(
       Some(
@@ -133,7 +143,7 @@ describe("suggestionDue", () => {
   });
 
   it("just quotes a phrase with no reason, once the next session is scheduled", () => {
-    const due = suggestionDue(suggestion(None, Some("by our next session")), "en-US");
+    const due = suggestionDue(suggestion(None, Some("by our next session")), "en-US", "UTC");
     expect(due.tooltip).toEqual(
       Some("Heard “by our next session”. Defaults to your next session")
     );

@@ -13,11 +13,11 @@ import { useCoachingSessionSeries } from "@/lib/api/coaching-session-series";
 import { useOAuthConnections } from "@/lib/api/oauth-connection";
 import { useUser } from "@/lib/api/users";
 import { type PersonEntry, schedulablePeople } from "@/lib/people";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { type Availability, busySessions, busyWindow, knownSessions, pickerPeople } from "@/lib/schedule-draft";
 import type { BusySession } from "@/lib/scheduling";
 import { sessionEndIn, sessionStartIn, utcInstant } from "@/lib/session-window";
-import { getBrowserTimezone } from "@/lib/timezone-utils";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { CoachingSessionSeriesWithSessions } from "@/types/coaching-session-series";
 import { FALLBACK_DURATION_MINUTES } from "@/types/coaching-session-duration";
@@ -71,15 +71,10 @@ function providerOf(connections: { provider: Provider }[] | null): Option<Provid
   return first ? Some(first.provider) : None;
 }
 
-export function useScheduleTimezone(): string {
-  const timezone = useAuthStore((state) => state.userSession?.timezone);
-  return timezone || getBrowserTimezone();
-}
-
 /** `organizationId` picks whose relationships the Who list shows; busy times span every org. */
 export function useScheduleData(range: BusyRange, organizationId: Id): ScheduleData {
   const userId = useAuthStore((state) => state.userId);
-  const timezone = useScheduleTimezone();
+  const timezone = useUserTimezone();
   const now = DateTime.now().setZone(timezone);
   const [openedAt] = useState(() => DateTime.now().setZone(timezone));
 
@@ -182,7 +177,7 @@ export type SeriesLoad =
 export const NO_SERIES: SeriesLoad = { kind: "none" };
 
 export function useLoadedSeries(seriesId: Id): SeriesLoad {
-  const timezone = useScheduleTimezone();
+  const timezone = useUserTimezone();
   const { series, isLoading, isError } = useCoachingSessionSeries(seriesId, timezone);
   if (isError) return { kind: "error" };
   // The hook's placeholder has another id until the series arrives.

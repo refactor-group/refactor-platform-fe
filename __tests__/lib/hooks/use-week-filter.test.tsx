@@ -16,7 +16,7 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
 vi.mock("@/lib/hooks/use-current-organization", () => ({
   useCurrentOrganization: () => ({ currentOrganizationId: "org-1" }),
 }));
-vi.mock("@/lib/hooks/use-schedule-data", () => ({ useScheduleTimezone: () => "America/Chicago" }));
+vi.mock("@/lib/hooks/use-user-timezone", () => ({ useUserTimezone: () => "America/Chicago" }));
 
 const relationships = [
   createMockRelationship({ id: "rel-alex", coach_id: "coach-1", coachee_id: "u-alex", coachee_first_name: "Alex", coachee_last_name: "Chen" }),

@@ -20,28 +20,27 @@ export const OVERDUE_META_CLASS = "font-medium text-warning-text";
 const PAUSED_META_CLASS = "text-on-hold-text";
 const PLAIN_META_CLASS = "text-muted-foreground";
 
-function isOverdue(dueBy: DateTime, now: DateTime): boolean {
-  return dueBy.setZone(now.zone).startOf("day") < now.startOf("day");
-}
-
 function openMeta(dueBy: Option<DateTime>, now: DateTime): StatusMeta {
   if (dueBy.none) return { kind: "none" };
-  return isOverdue(dueBy.val, now)
+  return dueBy.val.startOf("day") < now.startOf("day")
     ? { kind: "overdue", dueBy: dueBy.val }
     : { kind: "due", dueBy: dueBy.val };
 }
 
+/** Dates come back in `now`'s zone, so pass now in the user's profile zone. */
 export function statusMeta(input: StatusMetaInput, now: DateTime): StatusMeta {
+  const dueBy = input.dueBy.some ? Some(input.dueBy.val.setZone(now.zone)) : None;
+  const changedAt = input.statusChangedAt.setZone(now.zone);
   switch (input.status) {
     case ItemStatus.NotStarted:
     case ItemStatus.InProgress:
-      return openMeta(input.dueBy, now);
+      return openMeta(dueBy, now);
     case ItemStatus.OnHold:
-      return { kind: "paused", dueBy: input.dueBy };
+      return { kind: "paused", dueBy };
     case ItemStatus.Completed:
-      return { kind: "done", at: input.statusChangedAt };
+      return { kind: "done", at: changedAt };
     case ItemStatus.WontDo:
-      return { kind: "closed", at: input.statusChangedAt };
+      return { kind: "closed", at: changedAt };
     default: {
       const _exhaustive: never = input.status;
       throw new Error(`Unhandled status: ${_exhaustive}`);
