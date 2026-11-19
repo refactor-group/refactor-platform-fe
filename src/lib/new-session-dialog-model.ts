@@ -1,7 +1,7 @@
 import type { DateTime } from "ts-luxon";
 import type { PickerPerson } from "@/components/ui/person-picker";
 import type { StepDialogLead, StepRailItem } from "@/components/ui/step-dialog";
-import type { ScheduleData } from "@/lib/hooks/use-schedule-data";
+import type { MeetingLink, ScheduleData } from "@/lib/hooks/use-schedule-data";
 import { moveStart } from "@/lib/move-draft";
 import type { PersonEntry } from "@/lib/people";
 import {
@@ -30,7 +30,6 @@ import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
 import type { Organization } from "@/types/organization";
 import { type Option, None, Some } from "@/types/option";
-import type { Provider } from "@/types/provider";
 import { Frequency, type RecurrenceEnd, type Weekday } from "@/types/recurrence";
 
 export const UNRESOLVED: Resolution = { kind: "unresolved" };
@@ -122,7 +121,7 @@ export interface SummaryModel {
   initials: string;
   firstName: string;
   count: number;
-  provider: Option<Provider>;
+  meeting: MeetingLink;
 }
 
 /** Who and when the session being moved is. */
@@ -239,9 +238,9 @@ export function lastSessionOf(repeat: RepeatChoice, start: Option<DateTime>, byW
   return last.some ? Some(lastSessionText(last.val, start.val)) : None;
 }
 
-export function summaryOf(entry: PersonEntry, count: number, provider: Option<Provider>): SummaryModel {
+export function summaryOf(entry: PersonEntry, count: number, meeting: MeetingLink): SummaryModel {
   const { userId, initials, firstName } = entry.person;
-  return { userId, initials, firstName, count, provider };
+  return { userId, initials, firstName, count, meeting };
 }
 
 export interface LeadInput {

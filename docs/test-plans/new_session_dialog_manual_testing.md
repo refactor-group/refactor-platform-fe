@@ -371,9 +371,15 @@ Try offline (block all requests), with Google disconnected (revoke it in Setting
 
 ### Case F5: meeting line
 
-Look at the rail footer with Google connected, Zoom connected, and neither.
+Look at the rail footer with Google connected, Zoom connected, and neither. A test coach with no provider works for neither (e.g. dmanley).
 
-**Pass:** "Google Meet link included", "Zoom link included", and no line.
+**Pass:** "Google Meet link included", then "Zoom link included". With neither, an amber warning icon and "No meeting link. Connect Google Meet or Zoom in Settings." "Settings" shows an external-link icon. A screen reader announces it as "Settings (opens in a new tab)". Nothing about the meeting link flashes while the dialog opens. Rescheduling never shows the line.
+
+### Case F5b: connect from the warning
+
+With no provider connected, choose a person, a time and a repeat. Then click Settings in the warning.
+
+**Pass:** Integrations opens in a new tab, and the dialog stays open in the first tab with every choice kept. Connect Google Meet or Zoom in the new tab, then switch back. Within a moment the warning becomes "{Provider} link included" without a reload. Scheduling now creates a session with a meeting link.
 
 ### Case F6: more create errors
 

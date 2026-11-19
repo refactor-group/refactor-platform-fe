@@ -7,7 +7,7 @@ import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { useOrganizationList } from "@/lib/api/organizations";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { DEFAULT_REPEAT_COUNT, type RepeatPrefill, useDialogRecurrence } from "@/lib/hooks/use-dialog-recurrence";
-import { type SeriesLoad, useScheduleData, useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
+import { type SeriesLoad, meetingProvider, useScheduleData, useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
 import { type SessionPlan, useScheduleSubmit } from "@/lib/hooks/use-schedule-submit";
 import { useWorkingHours } from "@/lib/hooks/use-working-hours";
 import {
@@ -208,7 +208,7 @@ export function useNewSessionDialog(
       personName: person.fullName,
       start: at,
       minutes,
-      provider: data.provider,
+      provider: meetingProvider(data.meeting),
       repeat,
       byWeekdays: recurrence.byWeekdays,
       timezone,
@@ -286,7 +286,7 @@ export function useNewSessionDialog(
     }),
     summary:
       entry.some && moving.none
-        ? Some(summaryOf(entry.val, createsCount(repeat, start, recurrence.byWeekdays), data.provider))
+        ? Some(summaryOf(entry.val, createsCount(repeat, start, recurrence.byWeekdays), data.meeting))
         : None,
     moves,
     who: {

@@ -77,13 +77,13 @@ export const useOAuthConnection = (provider: OAuthProvider) => {
  * SWR hook for fetching all OAuth connections.
  *
  */
-export const useOAuthConnections = () => {
+export const useOAuthConnections = ({ revalidateOnFocus = false } = {}) => {
   const { data, error, isLoading, mutate } = useApiSWR(
     `${OAUTH_CONNECTIONS_URL}`,
     () => OAuthConnectionApi.list(),
     {
       revalidateIfStale: false,
-      revalidateOnFocus: false,
+      revalidateOnFocus,
       revalidateOnReconnect: false,
     }
   );
