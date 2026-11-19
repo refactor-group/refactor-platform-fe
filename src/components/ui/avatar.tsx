@@ -50,9 +50,10 @@ const AvatarFallback = React.forwardRef<
 ));
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName;
 
-export type PersonAvatarSize = 26 | 28 | 36 | 40;
+export type PersonAvatarSize = 20 | 26 | 28 | 36 | 40;
 
 const PERSON_AVATAR_SIZE_CLASSES: Record<PersonAvatarSize, string> = {
+  20: "h-5 w-5 text-[9px]",
   26: "h-[26px] w-[26px] text-[10px]",
   28: "h-7 w-7 text-[10px]",
   36: "h-9 w-9 text-xs",

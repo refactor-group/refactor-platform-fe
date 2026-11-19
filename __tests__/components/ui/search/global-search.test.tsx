@@ -1,12 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
-import { GlobalSearch, groupSearchHits } from "@/components/ui/search/global-search";
+import {
+  GlobalSearch,
+  groupSearchHits,
+  groupSearchHitsByPerson,
+} from "@/components/ui/search/global-search";
+import { chipsThatFit } from "@/components/ui/search/search-people-strip";
+import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useSearch, type SearchState } from "@/lib/api/search";
 import { TestProviders } from "@/test-utils/providers";
 import { Some, None } from "@/types/option";
 import { ItemStatus } from "@/types/general";
+import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { SearchHitType, TranscriptSuggestionTarget, type SearchHit } from "@/types/search";
 import { TopicStatus } from "@/types/coaching-session-topic";
 
@@ -14,6 +21,20 @@ vi.mock("@/lib/api/search", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/search")>();
   return { ...actual, useSearch: vi.fn() };
 });
+
+vi.mock("@/lib/api/coaching-relationships", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/api/coaching-relationships")>();
+  return { ...actual, useCoachingRelationshipList: vi.fn() };
+});
+
+function mockRelationships(relationships: CoachingRelationshipWithUserNames[]) {
+  vi.mocked(useCoachingRelationshipList).mockReturnValue({
+    relationships,
+    isLoading: false,
+    isError: undefined,
+    refresh: vi.fn(),
+  } as unknown as ReturnType<typeof useCoachingRelationshipList>);
+}
 
 const goalHit: SearchHit = {
   type: SearchHitType.Goal,
@@ -150,6 +171,8 @@ describe("GlobalSearch", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // No relationships: every hit is unattributed, which is the layout before people grouping.
+    mockRelationships([]);
     vi.mocked(useRouter).mockReturnValue({
       push,
       replace: vi.fn(),
@@ -492,5 +515,400 @@ describe("groupSearchHits", () => {
   it("omits kinds with no hits", () => {
     const groups = groupSearchHits([actionHit, goalHit]);
     expect(groups.map((g) => g.type)).toEqual([SearchHitType.Goal, SearchHitType.Action]);
+  });
+});
+
+const ME = "me";
+
+const coachedByMe = (id: string, personId: string, first: string, last: string) =>
+  ({
+    id,
+    coach_id: ME,
+    coach_first_name: "Jim",
+    coach_last_name: "Hodapp",
+    coach_email: "jim@example.com",
+    coachee_id: personId,
+    coachee_first_name: first,
+    coachee_last_name: last,
+    coachee_email: `${first.toLowerCase()}@example.com`,
+  }) as CoachingRelationshipWithUserNames;
+
+const EHAB = coachedByMe("rel-ehab", "ehab", "Ehab", "Bandar");
+const CALEB = coachedByMe("rel-caleb", "caleb", "Caleb", "Ortiz");
+const PRIYA = coachedByMe("rel-priya", "priya", "Priya", "Raman");
+const SARAH = coachedByMe("rel-sarah", "sarah", "Sarah", "Kim");
+const ALEX = coachedByMe("rel-alex", "alex", "Alex", "Chen");
+const LENA = coachedByMe("rel-lena", "lena", "Lena", "Torres");
+// Ehab also coaches the signed-in user: a second relationship with the same person.
+const EHAB_COACHES_ME = {
+  ...EHAB,
+  id: "rel-ehab-reverse",
+  coach_id: "ehab",
+  coach_first_name: "Ehab",
+  coach_last_name: "Bandar",
+  coach_email: "ehab@example.com",
+  coachee_id: ME,
+  coachee_first_name: "Jim",
+  coachee_last_name: "Hodapp",
+  coachee_email: "jim@example.com",
+} as CoachingRelationshipWithUserNames;
+
+const hitFor = (relationshipId: string | null, id: string): SearchHit => ({
+  ...goalHit,
+  id,
+  title: `Goal ${id}`,
+  snippet: None,
+  coaching_relationship_id: relationshipId === null ? None : Some(relationshipId),
+});
+
+describe("groupSearchHitsByPerson", () => {
+  const relationships = [EHAB, CALEB, EHAB_COACHES_ME];
+
+  it("orders people by first appearance and keeps the server's order within each", () => {
+    const { people, other } = groupSearchHitsByPerson(
+      [hitFor("rel-caleb", "c1"), hitFor("rel-ehab", "e1"), hitFor("rel-caleb", "c2"), hitFor("rel-ehab", "e2")],
+      relationships,
+      ME
+    );
+
+    expect(people.map((g) => g.person.fullName)).toEqual(["Caleb Ortiz", "Ehab Bandar"]);
+    expect(people[0].hits.map((h) => h.id)).toEqual(["c1", "c2"]);
+    expect(people[1].hits.map((h) => h.id)).toEqual(["e1", "e2"]);
+    expect(other).toEqual([]);
+  });
+
+  it("collapses two relationships with the same person into one group", () => {
+    const { people } = groupSearchHitsByPerson(
+      [hitFor("rel-ehab", "e1"), hitFor("rel-ehab-reverse", "e2")],
+      relationships,
+      ME
+    );
+
+    expect(people).toHaveLength(1);
+    expect(people[0].person.userId).toBe("ehab");
+    expect(people[0].hits.map((h) => h.id)).toEqual(["e1", "e2"]);
+  });
+
+  it("leaves hits with no relationship, or an unknown one, in other", () => {
+    const { people, other } = groupSearchHitsByPerson(
+      [hitFor(null, "none"), hitFor("rel-ehab", "e1"), hitFor("rel-elsewhere", "unknown")],
+      relationships,
+      ME
+    );
+
+    expect(people.map((g) => g.person.userId)).toEqual(["ehab"]);
+    expect(other.map((h) => h.id)).toEqual(["none", "unknown"]);
+  });
+});
+
+describe("chipsThatFit", () => {
+  it("shows every chip when they all fit, without reserving room for the overflow chip", () => {
+    expect(chipsThatFit(100, [30, 30, 28], 40, 6)).toBe(3);
+  });
+
+  it("keeps room for the overflow chip when some are left over", () => {
+    // 4 chips = 138; 3 chips + gap + overflow = 148; 2 chips + gap + overflow = 112.
+    expect(chipsThatFit(120, [30, 30, 30, 30], 40, 6)).toBe(2);
+  });
+
+  it("always shows at least one person", () => {
+    expect(chipsThatFit(10, [30, 30], 40, 6)).toBe(1);
+  });
+});
+
+describe("GlobalSearch results by person", () => {
+  const push = vi.fn();
+  const scrollTo = vi.fn();
+  const DIMMED = "opacity-[0.32]";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.setItem("auth-store", JSON.stringify({ state: { userId: ME }, version: 2 }));
+    // jsdom has no Element.scrollTo.
+    Element.prototype.scrollTo = scrollTo;
+    vi.mocked(useRouter).mockReturnValue({
+      push,
+      replace: vi.fn(),
+      back: vi.fn(),
+      forward: vi.fn(),
+      refresh: vi.fn(),
+      prefetch: vi.fn(),
+    });
+  });
+
+  afterEach(() => {
+    localStorage.removeItem("auth-store");
+    delete (Element.prototype as { scrollTo?: unknown }).scrollTo;
+  });
+
+  const group = (name: string) => screen.getByRole("group", { name });
+  const rowsIn = (name: string) => within(group(name)).getAllByRole("option");
+  const chip = (name: RegExp) => screen.getByRole("button", { name });
+
+  const sevenForEhabOneForCaleb = [
+    ...Array.from({ length: 4 }, (_, i) => hitFor("rel-ehab", `e${i + 1}`)),
+    hitFor("rel-caleb", "c1"),
+    ...Array.from({ length: 3 }, (_, i) => hitFor("rel-ehab", `e${i + 5}`)),
+  ];
+
+  it("renders a chip and a band per person, in order of each person's first hit", async () => {
+    mockRelationships([EHAB, CALEB]);
+    mockSearch(loaded([hitFor("rel-caleb", "c1"), hitFor("rel-ehab", "e1"), hitFor("rel-caleb", "c2")]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    expect(screen.getAllByRole("button", { name: /results?$/ }).map((b) => b.textContent)).toEqual([
+      "CO" + "Caleb" + "2",
+      "EB" + "Ehab" + "1",
+    ]);
+    expect(within(group("Caleb Ortiz")).getByText("2 results")).toBeInTheDocument();
+    expect(within(group("Ehab Bandar")).getByText("1 result")).toBeInTheDocument();
+    expect(rowsIn("Caleb Ortiz").map((row) => row.textContent)).toEqual([
+      expect.stringContaining("Goal c1"),
+      expect.stringContaining("Goal c2"),
+    ]);
+    expect(document.querySelectorAll("[cmdk-group-heading]")).toHaveLength(0);
+  });
+
+  it("keeps grouping by kind for one person, under a line naming them", async () => {
+    mockRelationships([EHAB]);
+    mockSearch(
+      loaded([
+        { ...goalHit, coaching_relationship_id: Some("rel-ehab") },
+        { ...sessionHit, coaching_relationship_id: Some("rel-ehab") },
+      ])
+    );
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    expect(screen.getByText("All results are with")).toHaveTextContent(
+      "All results are with Ehab Bandar"
+    );
+    const headings = Array.from(document.querySelectorAll("[cmdk-group-heading]")).map(
+      (el) => el.textContent
+    );
+    expect(headings).toEqual(["Sessions", "Goals"]);
+    expect(screen.queryByRole("button", { name: /results?$/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Ehab Bandar" })).not.toBeInTheDocument();
+  });
+
+  it("gives one person a band, with no strip, when other hits have no person", async () => {
+    mockRelationships([EHAB]);
+    mockSearch(loaded([hitFor("rel-ehab", "e1"), hitFor(null, "none"), hitFor("rel-elsewhere", "far")]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    expect(rowsIn("Ehab Bandar")).toHaveLength(1);
+    const otherHeading = screen.getByText("Other results");
+    expect(otherHeading).toHaveAttribute("cmdk-group-heading");
+    expect(within(otherHeading.parentElement!).getAllByRole("option")).toHaveLength(2);
+    expect(screen.queryByText("All results are with")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Ehab Bandar,/ })).not.toBeInTheDocument();
+  });
+
+  it("puts hits with no person last, under Other results", async () => {
+    mockRelationships([EHAB, CALEB]);
+    mockSearch(loaded([hitFor(null, "none"), hitFor("rel-ehab", "e1"), hitFor("rel-caleb", "c1")]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    const titles = screen.getAllByRole("option").map((row) => row.textContent);
+    expect(titles).toEqual([
+      expect.stringContaining("Goal e1"),
+      expect.stringContaining("Goal c1"),
+      expect.stringContaining("Goal none"),
+    ]);
+    expect(screen.getByText("Other results")).toBeInTheDocument();
+  });
+
+  it("shows five rows for a person with seven hits and expands to all seven", async () => {
+    mockRelationships([EHAB, CALEB]);
+    mockSearch(loaded(sevenForEhabOneForCaleb));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    const input = await typeQuery("weekly");
+
+    expect(rowsIn("Ehab Bandar")).toHaveLength(5);
+    const expander = within(group("Ehab Bandar")).getByRole("button", { name: "7 results" });
+    expect(expander).toHaveAttribute("aria-expanded", "false");
+    expect(within(group("Caleb Ortiz")).queryByRole("button")).not.toBeInTheDocument();
+
+    expect(fireEvent.mouseDown(expander)).toBe(false);
+    await userEvent.click(expander);
+    expect(rowsIn("Ehab Bandar")).toHaveLength(7);
+    expect(expander).toHaveAttribute("aria-expanded", "true");
+    expect(input).toHaveFocus();
+
+    await userEvent.click(expander);
+    expect(rowsIn("Ehab Bandar")).toHaveLength(5);
+  });
+
+  it("spotlights a picked person, dims the other groups, and clears on a second click", async () => {
+    mockRelationships([EHAB, CALEB]);
+    mockSearch(loaded([hitFor("rel-ehab", "e1"), hitFor("rel-caleb", "c1"), hitFor(null, "none")]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    const input = await typeQuery("weekly");
+    const caleb = chip(/^Caleb Ortiz,/);
+    const other = screen.getByText("Other results").parentElement!;
+
+    expect(caleb).toHaveAttribute("aria-pressed", "false");
+    expect(fireEvent.mouseDown(caleb)).toBe(false);
+    await userEvent.click(caleb);
+
+    expect(caleb).toHaveAttribute("aria-pressed", "true");
+    expect(chip(/^Ehab Bandar,/)).toHaveAttribute("aria-pressed", "false");
+    expect(group("Caleb Ortiz")).not.toHaveClass(DIMMED);
+    expect(group("Ehab Bandar")).toHaveClass(DIMMED);
+    expect(other).toHaveClass(DIMMED);
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    expect(input).toHaveFocus();
+
+    await userEvent.click(caleb);
+    expect(caleb).toHaveAttribute("aria-pressed", "false");
+    expect(group("Ehab Bandar")).not.toHaveClass(DIMMED);
+    expect(other).not.toHaveClass(DIMMED);
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+  });
+
+  it("still navigates from a dimmed row", async () => {
+    mockRelationships([EHAB, CALEB]);
+    mockSearch(loaded([hitFor("rel-ehab", "e1"), hitFor("rel-caleb", "c1")]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    await userEvent.click(chip(/^Caleb Ortiz,/));
+    await userEvent.click(screen.getByText("Goal e1"));
+    expect(push).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows no overflow chip while everyone fits", async () => {
+    mockRelationships([EHAB, CALEB, PRIYA, SARAH]);
+    mockSearch(
+      loaded(["rel-ehab", "rel-caleb", "rel-priya", "rel-sarah"].map((rel) => hitFor(rel, rel)))
+    );
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    expect(screen.getAllByRole("button", { name: /results?$/ })).toHaveLength(4);
+    expect(screen.queryByRole("button", { name: /more (person|people)$/ })).not.toBeInTheDocument();
+  });
+
+  it("puts people who don't fit behind an overflow chip, and picks from its menu", async () => {
+    mockRelationships([EHAB, CALEB, PRIYA, SARAH, ALEX, LENA]);
+    mockSearch(
+      loaded(
+        ["rel-ehab", "rel-caleb", "rel-priya", "rel-sarah", "rel-alex", "rel-lena"].map((rel) =>
+          hitFor(rel, rel)
+        )
+      )
+    );
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    const input = await typeQuery("weekly");
+
+    const more = screen.getByRole("button", { name: "2 more people" });
+    expect(more).toHaveTextContent("+2");
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("button", { name: /^Lena Torres,/ })).not.toBeInTheDocument();
+
+    expect(fireEvent.mouseDown(more)).toBe(false);
+    await userEvent.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    const menu = screen.getByRole("group", { name: "More people" });
+    expect(within(menu).getAllByRole("button")).toHaveLength(2);
+
+    await userEvent.click(within(menu).getByRole("button", { name: /^Lena Torres,/ }));
+    expect(screen.queryByRole("group", { name: "More people" })).not.toBeInTheDocument();
+    expect(group("Lena Torres")).not.toHaveClass(DIMMED);
+    expect(group("Ehab Bandar")).toHaveClass(DIMMED);
+    expect(more).toHaveClass("bg-brand-tint");
+    expect(input).toHaveFocus();
+  });
+
+  it("closes the overflow menu on Escape without clearing the query", async () => {
+    mockRelationships([EHAB, CALEB, PRIYA, SARAH, ALEX, LENA]);
+    mockSearch(
+      loaded(
+        ["rel-ehab", "rel-caleb", "rel-priya", "rel-sarah", "rel-alex", "rel-lena"].map((rel) =>
+          hitFor(rel, rel)
+        )
+      )
+    );
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    const input = await typeQuery("weekly");
+
+    await userEvent.click(screen.getByRole("button", { name: "2 more people" }));
+    await userEvent.keyboard("{Escape}");
+
+    expect(screen.queryByRole("group", { name: "More people" })).not.toBeInTheDocument();
+    expect(input).toHaveValue("weekly");
+  });
+
+  it("appends a page without clearing the spotlight or the expanded group", async () => {
+    mockRelationships([EHAB, CALEB, PRIYA]);
+    mockSearch(loaded(sevenForEhabOneForCaleb, Some("CUR")));
+    const { rerender } = render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    await userEvent.click(within(group("Ehab Bandar")).getByRole("button", { name: "7 results" }));
+    await userEvent.click(chip(/^Ehab Bandar,/));
+
+    mockSearch(loaded([...sevenForEhabOneForCaleb, hitFor("rel-ehab", "e8"), hitFor("rel-priya", "p1")]));
+    rerender(<GlobalSearch />);
+
+    expect(chip(/^Ehab Bandar, 8 results/)).toHaveAttribute("aria-pressed", "true");
+    expect(rowsIn("Ehab Bandar")).toHaveLength(8);
+    expect(group("Caleb Ortiz")).toHaveClass(DIMMED);
+    // A person first seen on the new page joins the end of the strip and the list.
+    expect(chip(/^Priya Raman, 1 result/)).toBeInTheDocument();
+    expect(group("Priya Raman")).toHaveClass(DIMMED);
+  });
+
+  it("resets the spotlight and expanded groups for a new query", async () => {
+    mockRelationships([EHAB, CALEB]);
+    mockSearch(loaded(sevenForEhabOneForCaleb));
+    const { rerender } = render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    await userEvent.click(within(group("Ehab Bandar")).getByRole("button", { name: "7 results" }));
+    await userEvent.click(chip(/^Ehab Bandar,/));
+
+    mockSearch({ ...loaded(sevenForEhabOneForCaleb), query: "weekly plan" } as SearchState);
+    rerender(<GlobalSearch />);
+
+    expect(chip(/^Ehab Bandar,/)).toHaveAttribute("aria-pressed", "false");
+    expect(rowsIn("Ehab Bandar")).toHaveLength(5);
+    expect(group("Caleb Ortiz")).not.toHaveClass(DIMMED);
+  });
+
+  it("arrows across person groups, dimmed rows included, and Enter opens the row", async () => {
+    mockRelationships([EHAB, CALEB]);
+    mockSearch(loaded([hitFor("rel-ehab", "e1"), hitFor("rel-caleb", "c1"), hitFor(null, "none")]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+    await userEvent.click(chip(/^Ehab Bandar,/));
+
+    const row = (title: string) => screen.getByText(title).closest("[cmdk-item]");
+    expect(row("Goal e1")).toHaveAttribute("aria-selected", "true");
+    await userEvent.keyboard("{ArrowDown}");
+    expect(row("Goal c1")).toHaveAttribute("aria-selected", "true");
+    await userEvent.keyboard("{ArrowDown}");
+    expect(row("Goal none")).toHaveAttribute("aria-selected", "true");
+
+    await userEvent.keyboard("{Enter}");
+    expect(push).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets Enter on a focused chip pick the person instead of opening a result", async () => {
+    mockRelationships([EHAB, CALEB]);
+    mockSearch(loaded([hitFor("rel-ehab", "e1"), hitFor("rel-caleb", "c1")]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+
+    const caleb = chip(/^Caleb Ortiz,/);
+    caleb.focus();
+    expect(screen.getByRole("combobox", { name: "Search" })).toBeInTheDocument();
+    await userEvent.keyboard("{Enter}");
+
+    expect(caleb).toHaveAttribute("aria-pressed", "true");
+    expect(push).not.toHaveBeenCalled();
   });
 });
