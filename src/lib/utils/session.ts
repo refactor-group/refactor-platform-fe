@@ -6,9 +6,6 @@ import { schedulingBlockedBy, viewerOf } from "@/types/coaching-relationship";
 import { SessionUrgency } from "@/types/session-display";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { RelationshipRole } from "@/types/relationship-role";
-import type { Action } from "@/types/action";
-import { sortActionArray } from "@/types/action";
-import { SortOrder } from "@/types/sorting";
 
 /**
  * Session Utility Functions
@@ -334,47 +331,4 @@ export function selectNextUpcomingSession(
   return sessions.find(
     (session) => calculateSessionUrgency(session) !== SessionUrgency.Past
   );
-}
-
-/**
- * Pure filter matching the coaching-session Actions panel's "Due" tab
- * semantics: which actions from a given relationship should surface as
- * "due for review" at a given session.
- *
- * Pre-condition: `allActions` must already be scoped to the session's
- * coaching relationship (e.g. via the `coaching_relationship_id` query param).
- *
- * Rules:
- * 1. Exclude actions that were created in the current session (they belong
- *    to the session's own "New" tab, not the carry-forward review window).
- * 2. Include sticky actions (previously visible in the panel) regardless of
- *    current state. Dashboard callers typically pass no sticky set.
- * 3. Include only actions due within `[previousSessionDate, currentSessionDate]`
- *    — of any status. The panel's Due tab shows Completed actions too so
- *    they're visible for review; the count mirrors that.
- *
- * Results are sorted reverse-chronologically by due_by.
- */
-export function filterReviewActions(
-  allActions: Action[],
-  currentSessionId: Id,
-  currentSessionDate: DateTime,
-  previousSessionDate: DateTime | null,
-  stickyIds?: Set<Id>,
-): Action[] {
-  const endOfCurrentDate = currentSessionDate.endOf("day");
-  const startOfPrevDate = previousSessionDate?.startOf("day") ?? null;
-
-  const filtered = allActions.filter((a) => {
-    if (a.coaching_session_id === currentSessionId) return false;
-    if (stickyIds?.has(a.id)) return true;
-
-    if (a.due_by.none) return false;
-    const dueBy = a.due_by.val;
-    if (dueBy > endOfCurrentDate) return false;
-    if (!startOfPrevDate || dueBy >= startOfPrevDate) return true;
-    return false;
-  });
-
-  return sortActionArray(filtered, SortOrder.Desc, "due_by");
 }

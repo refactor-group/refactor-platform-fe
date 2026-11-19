@@ -17,12 +17,12 @@ import { useUserActionsList } from "@/lib/api/user-actions";
 import { useCoachingSessionList } from "@/lib/api/coaching-sessions";
 import {
   calculateSessionUrgency,
-  filterReviewActions,
   formatSessionTime,
   getSessionParticipantInfo,
   getUrgencyMessage,
   selectNextUpcomingSession,
 } from "@/lib/utils/session";
+import { filterReviewActions } from "@/lib/actions-due";
 import { durationText } from "@/lib/scheduling-copy";
 import { userSessionFirstLastLettersToString } from "@/types/user-session";
 import { type EnrichedCoachingSession } from "@/types/coaching-session";

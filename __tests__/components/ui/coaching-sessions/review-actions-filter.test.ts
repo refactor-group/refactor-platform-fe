@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
-import { filterReviewActions } from "@/lib/hooks/use-panel-actions";
+import { filterReviewActions } from "@/lib/actions-due";
 
 vi.mock("react-syntax-highlighter", () => ({
   Prism: ({ children }: { children: string }) => children,
