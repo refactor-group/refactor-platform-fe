@@ -85,14 +85,14 @@ describe("useMoveSession", () => {
 
   it("leaves a refusal over someone who left the organization to the refusal toast", async () => {
     const error = Object.assign(new Error("409"), {
-      response: { status: 409, data: { details: { reason: "coachee_not_a_member", user_id: "u-1" } } },
+      response: { status: 409, data: { details: { reason: "participant_not_a_member", user_id: "u-1" } } },
     });
     move.mockRejectedValue(error);
     const { result } = setup();
     act(() => result.current.move({ session, name: "Ehab Bandar", to: TO }));
     await flush();
     expect(showNotAMember).toHaveBeenCalledWith(
-      expect.objectContaining({ reason: "coachee_not_a_member" }),
+      expect.objectContaining({ reason: "participant_not_a_member" }),
       "schedule_sessions",
       expect.any(Function)
     );

@@ -3,6 +3,7 @@ import {
   setupAuthentication,
   mockCommonApiRoutes,
   mockRelationship,
+  sessionParticipants,
   MOCK_USER_ID,
   AUTH_STORE_STATE,
   COACH_VIEWER,
@@ -12,23 +13,21 @@ import {
 // The phone agenda shows one day, so the grid cases pin a desktop width.
 test.use({ timezoneId: 'America/Chicago', locale: 'en-US', viewport: { width: 1280, height: 900 } })
 
+const seat = (name: string) => {
+  const [first_name, last_name] = name.split(' ')
+  return { first_name, last_name }
+}
 const relationship = (id: string, coachId: string, coacheeId: string, coach: string, coachee: string) =>
-  mockRelationship(id, {
-    coach_id: coachId,
-    coachee_id: coacheeId,
-    coach_first_name: coach.split(' ')[0],
-    coach_last_name: coach.split(' ')[1],
-    coachee_first_name: coachee.split(' ')[0],
-    coachee_last_name: coachee.split(' ')[1],
-    viewer: coachId === MOCK_USER_ID ? COACH_VIEWER : COACHEE_VIEWER,
-  })
+  mockRelationship(
+    id,
+    {
+      coach_id: coachId,
+      coachee_id: coacheeId,
+      viewer: coachId === MOCK_USER_ID ? COACH_VIEWER : COACHEE_VIEWER,
+    },
+    { coach: seat(coach), coachee: seat(coachee) }
+  )
 type Relationship = ReturnType<typeof relationship>
-const person = (id: string, name: string) => ({
-  id,
-  first_name: name.split(' ')[0],
-  last_name: name.split(' ')[1],
-  display_name: name,
-})
 
 const COACHED_BY_ROSA = relationship('rel-rosa', 'user-rosa', MOCK_USER_ID, 'Rosa Diaz', 'Test User')
 const COACHING_JANE = relationship('rel-jane', MOCK_USER_ID, 'user-jane', 'Test User', 'Jane Smith')
@@ -44,8 +43,7 @@ const session = (id: string, date: string, rel: Relationship, seriesId: string |
   created_at: '2026-10-01T12:00:00Z',
   updated_at: '2026-10-01T12:00:00Z',
   relationship: rel,
-  coach: person(rel.coach_id, `${rel.coach_first_name} ${rel.coach_last_name}`),
-  coachee: person(rel.coachee_id, `${rel.coachee_first_name} ${rel.coachee_last_name}`),
+  participants: sessionParticipants(rel),
   topics: [],
 })
 

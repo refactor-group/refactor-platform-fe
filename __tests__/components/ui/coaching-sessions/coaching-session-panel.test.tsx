@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { CoachingSessionPanel } from "@/components/ui/coaching-sessions/coaching-session-panel"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector"
-import { createMockGoal, createMockAgreement } from "../../../test-utils"
+import { createMockGoal, createMockAgreement, mockParticipants } from "../../../test-utils"
 import { ItemStatus } from "@/types/general"
 import { GoalProgress } from "@/types/goal-progress"
 import { Some, None } from "@/types/option"
@@ -130,10 +130,7 @@ vi.mock("@/lib/hooks/use-current-coaching-relationship", () => ({
       coach_id: "coach-1",
       coachee_id: "coachee-1",
       organization_id: "org-1",
-      coach_first_name: "Jim",
-      coach_last_name: "Hodapp",
-      coachee_first_name: "Caleb",
-      coachee_last_name: "Bourg",
+      participants: mockParticipants("coach-1", "coachee-1", RelationshipKind.Coaching),
     },
     isLoading: false,
     isError: false,
@@ -196,6 +193,7 @@ import { useGoalsBySession, useGoalList, GoalApi } from "@/lib/api/goals"
 import { useAgreementList } from "@/lib/api/agreements"
 import { toast as sonnerToast } from "@/lib/toast"
 import { err } from "neverthrow"
+import { RelationshipKind } from "@/types/coaching-relationship";
 
 const goal1 = createMockGoal({
   id: "goal-1",

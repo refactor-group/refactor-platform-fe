@@ -3,7 +3,7 @@
  *
  * This file contains:
  * - API query parameter enums (UserActionsScope, UserActionsAssigneeFilter)
- * - UI filter enums (AssignedActionsFilter, CoachViewMode)
+ * - UI filter enums (AssignedActionsFilter, ActionsViewMode)
  * - Context interfaces for enriching actions with relationship/goal/session data
  * - Grouped action types for hierarchical display (by relationship, then by goal)
  */
@@ -44,11 +44,13 @@ export enum UserActionsAssigneeFilter {
  *
  * - Coach: actions assigned to the coach in each relationship
  * - Coachee: actions assigned to the coachee in each relationship
+ * - Colleague: actions assigned to the other colleague in each colleague relationship
  * - A raw UUID string targets a specific user
  */
 export enum AssigneeScope {
   Coach = "coach",
   Coachee = "coachee",
+  Colleague = "colleague",
 }
 
 /**
@@ -75,12 +77,11 @@ export enum AssignedActionsFilter {
   Completed = "completed",
 }
 
-/**
- * View mode for coaches to switch between their own actions and coachee actions
- */
-export enum CoachViewMode {
+/** The Actions page's views: the viewer's own actions, their coachees', or their colleagues'. */
+export enum ActionsViewMode {
   MyActions = "my_actions",
   CoacheeActions = "coachee_actions",
+  ColleagueActions = "colleague_actions",
 }
 
 // ============================================================================

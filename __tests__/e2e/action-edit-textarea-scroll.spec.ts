@@ -5,6 +5,8 @@ import {
   MOCK_USER_ID,
   SINGLE_RELATIONSHIP,
   COACHEE_VIEWER,
+  mockRelationship,
+  sessionParticipants,
 } from './helpers'
 
 // ---------------------------------------------------------------------------
@@ -73,6 +75,13 @@ const SESSION_ACTIONS = [
 
 const ALL_RELATIONSHIP_ACTIONS = [...SESSION_ACTIONS]
 
+const ENRICHED_RELATIONSHIP = mockRelationship(RELATIONSHIP_ID, {
+  coach_id: COACH_ID,
+  created_at: '2026-03-01T00:00:00Z',
+  updated_at: '2026-03-01T00:00:00Z',
+  viewer: COACHEE_VIEWER,
+})
+
 // Enriched session for the kanban /actions page
 const ENRICHED_SESSION = {
   id: SESSION_ID,
@@ -80,34 +89,8 @@ const ENRICHED_SESSION = {
   date: '2026-03-25T10:00:00Z',
   created_at: '2026-03-01T00:00:00Z',
   updated_at: '2026-03-01T00:00:00Z',
-  relationship: {
-    id: RELATIONSHIP_ID,
-    coach_id: COACH_ID,
-    coachee_id: `coachee-${RELATIONSHIP_ID}`,
-    organization_id: 'org-1',
-    created_at: '2026-03-01T00:00:00Z',
-    updated_at: '2026-03-01T00:00:00Z',
-    kind: 'coaching',
-    coach_is_member: true,
-    coachee_is_member: true,
-    viewer: COACHEE_VIEWER,
-    suggests_actions: true,
-    scheduling_blocked_by: null,
-  },
-  coach: {
-    id: COACH_ID,
-    email: 'coach@example.com',
-    first_name: 'John',
-    last_name: 'Doe',
-    display_name: 'John Doe',
-  },
-  coachee: {
-    id: `coachee-${RELATIONSHIP_ID}`,
-    email: 'coachee@example.com',
-    first_name: 'Jane',
-    last_name: 'Smith',
-    display_name: 'Jane Smith',
-  },
+  relationship: ENRICHED_RELATIONSHIP,
+  participants: sessionParticipants(ENRICHED_RELATIONSHIP),
   goals: [],
 }
 
@@ -219,7 +202,7 @@ async function setupActionsPage(page: Page) {
       contentType: 'application/json',
       body: JSON.stringify({
         data: {
-          coachee_actions: { [RELATIONSHIP_ID]: SESSION_ACTIONS },
+          actions_by_relationship: { [RELATIONSHIP_ID]: SESSION_ACTIONS },
         },
       }),
     })

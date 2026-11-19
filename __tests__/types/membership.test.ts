@@ -20,20 +20,18 @@ const refusalBody = (reason: string, extra: Record<string, unknown> = {}) => ({
 });
 
 describe("notAMemberRefusalOf", () => {
-  it("reads a coachee refusal from an axios error", () => {
-    expect(notAMemberRefusalOf(axiosError(409, refusalBody("coachee_not_a_member", { user_id: "u-1" })))).toEqual(
+  it("reads a participant refusal from an axios error", () => {
+    expect(notAMemberRefusalOf(axiosError(409, refusalBody("participant_not_a_member", { user_id: "u-1" })))).toEqual(
       Some({
-        reason: NotAMemberReason.Coachee,
+        reason: NotAMemberReason.Participant,
         userId: Some("u-1"),
         organizationId: Some("org-1"),
       })
     );
   });
 
-  it("reads a colleague refusal naming the other colleague", () => {
-    const refusal = notAMemberRefusalOf(axiosError(409, refusalBody("participant_not_a_member", { user_id: "u-2" })));
-    expect(refusal.some && refusal.val.reason).toBe(NotAMemberReason.Participant);
-    expect(refusal.some && refusal.val.userId).toEqual(Some("u-2"));
+  it("ignores the retired coachee reason", () => {
+    expect(notAMemberRefusalOf(axiosError(409, refusalBody("coachee_not_a_member")))).toEqual(None);
   });
 
   it("reads an assignee refusal from an EntityApiError", () => {
@@ -47,7 +45,7 @@ describe("notAMemberRefusalOf", () => {
   });
 
   it("ignores the reason on a status other than 409", () => {
-    expect(notAMemberRefusalOf(axiosError(422, refusalBody("coachee_not_a_member")))).toEqual(None);
+    expect(notAMemberRefusalOf(axiosError(422, refusalBody("participant_not_a_member")))).toEqual(None);
   });
 
   it("ignores errors that aren't HTTP errors", () => {

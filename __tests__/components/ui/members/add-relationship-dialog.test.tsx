@@ -5,6 +5,7 @@ import { toast } from "@/lib/toast";
 import { EntityApiError } from "@/types/entity-api-error";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { User } from "@/types/user";
+import { createMockRelationship } from "../../../test-utils";
 
 const createNested = vi.fn();
 const listRelationships = vi.fn();
@@ -20,7 +21,9 @@ const user = (id: string, first: string, last: string): User =>
 const CARA = user("cara", "Cara", "Test");
 const PAT = user("pat", "Pat", "Coach");
 const ANA = user("ana", "Ana", "Bell");
-const PAT_COACHES_CARA = [{ coach_id: "pat", coachee_id: "cara", kind: "coaching" } as CoachingRelationshipWithUserNames];
+const patCoachesCara = (id = "rel-1") =>
+  createMockRelationship({ id, coach_id: PAT.id, coachee_id: CARA.id }, { coach: PAT, coachee: CARA });
+const PAT_COACHES_CARA = [patCoachesCara()];
 
 function renderDialog(relationships: CoachingRelationshipWithUserNames[] = []) {
   const onClose = vi.fn();
@@ -139,14 +142,7 @@ describe("AddRelationshipDialog", () => {
 
   it("names the relationship that refused the pairing, and refreshes the list", async () => {
     createNested.mockRejectedValue(alreadyRelated({ relationship_id: "rel-9" }));
-    listRelationships.mockResolvedValue([{
-      ...PAT_COACHES_CARA[0],
-      id: "rel-9",
-      coach_first_name: "Pat",
-      coach_last_name: "Coach",
-      coachee_first_name: "Cara",
-      coachee_last_name: "Test",
-    }]);
+    listRelationships.mockResolvedValue([patCoachesCara("rel-9")]);
     const { onClose, onRelationshipsChanged } = renderDialog();
     pairCaraWithPatAsColleagues();
 

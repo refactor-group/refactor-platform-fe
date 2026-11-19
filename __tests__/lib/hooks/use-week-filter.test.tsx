@@ -19,9 +19,12 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
 vi.mock("@/lib/hooks/use-user-timezone", () => ({ useUserTimezone: () => "America/Chicago" }));
 
 const relationships = [
-  createMockRelationship({ id: "rel-alex", coach_id: "coach-1", coachee_id: "u-alex", coachee_first_name: "Alex", coachee_last_name: "Chen" }),
-  createMockRelationship({ id: "rel-erin", coach_id: "coach-1", coachee_id: "u-erin", coachee_first_name: "Erin", coachee_last_name: "Park" }),
-  createMockRelationship({ id: "rel-mine", coach_id: "u-boss", coachee_id: "coach-1", coach_first_name: "Bo", coach_last_name: "Ss", viewer: COACHEE_VIEWER }),
+  createMockRelationship({ id: "rel-alex", coach_id: "coach-1", coachee_id: "u-alex" }, { coachee: { first_name: "Alex", last_name: "Chen" } }),
+  createMockRelationship({ id: "rel-erin", coach_id: "coach-1", coachee_id: "u-erin" }, { coachee: { first_name: "Erin", last_name: "Park" } }),
+  createMockRelationship(
+    { id: "rel-mine", coach_id: "u-boss", coachee_id: "coach-1", viewer: COACHEE_VIEWER },
+    { coach: { first_name: "Bo", last_name: "Ss" } }
+  ),
 ];
 let relationshipsLoading = false;
 vi.mock("@/lib/api/coaching-relationships", () => ({

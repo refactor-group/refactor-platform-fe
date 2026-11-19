@@ -6,7 +6,8 @@ import {
 } from '../user-roles';
 import { Some, None } from '@/types/option';
 import { User, Role } from '@/types/user';
-import { CoachingRelationshipWithUserNames } from '@/types/coaching_relationship';
+import { type CoachingRelationshipWithUserNames, RelationshipKind } from '@/types/coaching-relationship';
+import { createMockRelationship } from '../../../../__tests__/test-utils';
 import { DateTime } from 'ts-luxon';
 
 describe('getUserDisplayRoles', () => {
@@ -32,19 +33,10 @@ describe('getUserDisplayRoles', () => {
 
   const createRelationship = (
     coach_id: string,
-    coachee_id: string
-  ): CoachingRelationshipWithUserNames => ({
-    id: `rel-${coach_id}-${coachee_id}`,
-    coach_id,
-    coachee_id,
-    organization_id: organizationId,
-    coach_first_name: 'Coach',
-    coach_last_name: 'Name',
-    coachee_first_name: 'Coachee',
-    coachee_last_name: 'Name',
-    created_at: now,
-    updated_at: now,
-  });
+    coachee_id: string,
+    kind = RelationshipKind.Coaching
+  ): CoachingRelationshipWithUserNames =>
+    createMockRelationship({ id: `rel-${coach_id}-${coachee_id}`, coach_id, coachee_id, kind, organization_id: organizationId });
 
   it('should return organization-specific role for a user', () => {
     const user = createUser([{ role: Role.Admin, organization_id: organizationId }]);
@@ -111,6 +103,14 @@ describe('getUserDisplayRoles', () => {
     const roles = getUserDisplayRoles(user, organizationId, relationships);
 
     expect(roles).toEqual(['Admin', 'Coach']);
+  });
+
+  it("reads a colleague-only user's role from participants", () => {
+    const user = createUser([{ role: Role.User, organization_id: organizationId }]);
+    const relationships = [createRelationship('user-1', 'user-2', RelationshipKind.Colleague)];
+    const roles = getUserDisplayRoles(user, organizationId, relationships);
+
+    expect(roles).toEqual(['Colleague', 'Member']);
   });
 
   it('should return empty array when user has no roles in organization', () => {
@@ -187,7 +187,6 @@ describe('getOrganizationMembershipRole', () => {
 });
 
 describe('getUserCoaches', () => {
-  const now = DateTime.now();
   const organizationId = 'org-123';
 
   const createRelationship = (
@@ -195,18 +194,11 @@ describe('getUserCoaches', () => {
     coachee_id: string,
     coach_first: string,
     coach_last: string
-  ): CoachingRelationshipWithUserNames => ({
-    id: `rel-${coach_id}-${coachee_id}`,
-    coach_id,
-    coachee_id,
-    organization_id: organizationId,
-    coach_first_name: coach_first,
-    coach_last_name: coach_last,
-    coachee_first_name: 'Coachee',
-    coachee_last_name: 'Name',
-    created_at: now,
-    updated_at: now,
-  });
+  ): CoachingRelationshipWithUserNames =>
+    createMockRelationship(
+      { id: `rel-${coach_id}-${coachee_id}`, coach_id, coachee_id, organization_id: organizationId },
+      { coach: { first_name: coach_first, last_name: coach_last } }
+    );
 
   it('should return coach names for a user with one coach', () => {
     const relationships = [createRelationship('coach-1', 'user-1', 'John', 'Doe')];

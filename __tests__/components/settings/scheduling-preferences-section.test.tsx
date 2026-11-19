@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CoachingPreferencesSection } from "@/components/ui/settings/coaching-preferences-section";
+import { SchedulingPreferencesSection } from "@/components/ui/settings/scheduling-preferences-section";
 import { EntityApiError } from "@/types/general";
 import { createMockUser } from "../../test-utils";
 
@@ -46,7 +46,7 @@ function makeApiError(status: number, data: unknown): EntityApiError {
   return new EntityApiError("PUT", "/users/user-1", axiosLikeError);
 }
 
-describe("CoachingPreferencesSection", () => {
+describe("SchedulingPreferencesSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
@@ -68,7 +68,7 @@ describe("CoachingPreferencesSection", () => {
   describe("auth gating", () => {
     it("does not render the section for non-coaches", () => {
       mockAuthStore.mockReturnValue({ isACoach: false, canScheduleSessions: false, userId: "user-1" });
-      const { container } = render(<CoachingPreferencesSection />);
+      const { container } = render(<SchedulingPreferencesSection />);
       expect(container.innerHTML).toBe("");
     });
   });
@@ -80,7 +80,7 @@ describe("CoachingPreferencesSection", () => {
 
     it("calls useUserMutation().update with the new value after the debounce window", async () => {
       mockUpdate.mockResolvedValue(undefined);
-      render(<CoachingPreferencesSection />);
+      render(<SchedulingPreferencesSection />);
 
       const numericInput = screen.getByRole("combobox", { name: /duration in minutes/i });
       fireEvent.change(numericInput, { target: { value: "45" } });
@@ -100,7 +100,7 @@ describe("CoachingPreferencesSection", () => {
 
     it("coalesces rapid changes into a single PUT (debounce)", async () => {
       mockUpdate.mockResolvedValue(undefined);
-      render(<CoachingPreferencesSection />);
+      render(<SchedulingPreferencesSection />);
 
       const numericInput = screen.getByRole("combobox", { name: /duration in minutes/i });
       fireEvent.change(numericInput, { target: { value: "30" } });
@@ -121,7 +121,7 @@ describe("CoachingPreferencesSection", () => {
 
     it("does not save when the value is invalid (validation gate)", async () => {
       mockUpdate.mockResolvedValue(undefined);
-      render(<CoachingPreferencesSection />);
+      render(<SchedulingPreferencesSection />);
 
       const numericInput = screen.getByRole("combobox", { name: /duration in minutes/i });
       fireEvent.change(numericInput, { target: { value: "999" } });
@@ -142,7 +142,7 @@ describe("CoachingPreferencesSection", () => {
             "default_coaching_session_duration_minutes must be between 1 and 480 (got 999)",
         })
       );
-      render(<CoachingPreferencesSection />);
+      render(<SchedulingPreferencesSection />);
 
       const numericInput = screen.getByRole("combobox", { name: /duration in minutes/i });
       fireEvent.change(numericInput, { target: { value: "45" } });
@@ -164,7 +164,7 @@ describe("CoachingPreferencesSection", () => {
       mockUpdate.mockRejectedValue(
         makeApiError(403, { status_code: 403, error: "forbidden" })
       );
-      render(<CoachingPreferencesSection />);
+      render(<SchedulingPreferencesSection />);
 
       const numericInput = screen.getByRole("combobox", { name: /duration in minutes/i });
       fireEvent.change(numericInput, { target: { value: "45" } });
@@ -183,7 +183,7 @@ describe("CoachingPreferencesSection", () => {
       mockUpdate.mockRejectedValue(
         makeApiError(503, { status_code: 503, error: "service_unavailable" })
       );
-      render(<CoachingPreferencesSection />);
+      render(<SchedulingPreferencesSection />);
 
       const numericInput = screen.getByRole("combobox", { name: /duration in minutes/i });
       fireEvent.change(numericInput, { target: { value: "45" } });
@@ -213,7 +213,7 @@ describe("CoachingPreferencesSection", () => {
     const end = () => screen.getByRole("combobox", { name: "Working hours end" });
 
     it("shows the saved hours on half-hour steps", () => {
-      render(<CoachingPreferencesSection />);
+      render(<SchedulingPreferencesSection />);
       expect(start()).toHaveValue("08:00");
       expect(end()).toHaveValue("17:30");
       expect(screen.getAllByRole("option", { name: "8:30 AM" }).length).toBeGreaterThan(0);
@@ -221,7 +221,7 @@ describe("CoachingPreferencesSection", () => {
     });
 
     it("saves both hours together after the debounce", async () => {
-      render(<CoachingPreferencesSection />);
+      render(<SchedulingPreferencesSection />);
       fireEvent.change(start(), { target: { value: "09:00" } });
       expect(mockUpdate).not.toHaveBeenCalled();
       await act(async () => {
@@ -240,13 +240,13 @@ describe("CoachingPreferencesSection", () => {
       mockRefresh.mockImplementation(() => {
         mockUserState = { ...mockUserState, user: { ...mockUserState.user } };
       });
-      const { rerender } = render(<CoachingPreferencesSection />);
+      const { rerender } = render(<SchedulingPreferencesSection />);
       fireEvent.change(start(), { target: { value: "09:00" } });
       for (let i = 0; i < 4; i += 1) {
         await act(async () => {
           vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
         });
-        rerender(<CoachingPreferencesSection />);
+        rerender(<SchedulingPreferencesSection />);
       }
       expect(mockUpdate).toHaveBeenCalledTimes(1);
     });
@@ -255,14 +255,14 @@ describe("CoachingPreferencesSection", () => {
       // SWR keeps the same user object when the server returns identical data, while the save
       // hooks hand back new values each render, so the effect reruns with the draft still dirty.
       mockRefresh.mockReset();
-      const { rerender } = render(<CoachingPreferencesSection />);
+      const { rerender } = render(<SchedulingPreferencesSection />);
       fireEvent.change(start(), { target: { value: "09:00" } });
       for (let i = 0; i < 4; i += 1) {
         await act(async () => {
           vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
         });
         mockUserState = { ...mockUserState, refresh: vi.fn() };
-        rerender(<CoachingPreferencesSection />);
+        rerender(<SchedulingPreferencesSection />);
       }
       expect(mockUpdate).toHaveBeenCalledTimes(1);
     });
@@ -270,28 +270,28 @@ describe("CoachingPreferencesSection", () => {
     it("doesn't send the same change again while the save is still settling", async () => {
       const pending = vi.fn(() => new Promise<void>(() => {}));
       mockUserState = { ...mockUserState, refresh: pending };
-      const { rerender } = render(<CoachingPreferencesSection />);
+      const { rerender } = render(<SchedulingPreferencesSection />);
       fireEvent.change(start(), { target: { value: "09:00" } });
       for (let i = 0; i < 3; i += 1) {
         await act(async () => {
           vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
         });
         mockUserState = { ...mockUserState, refresh: vi.fn(() => new Promise<void>(() => {})) };
-        rerender(<CoachingPreferencesSection />);
+        rerender(<SchedulingPreferencesSection />);
       }
       expect(mockUpdate).toHaveBeenCalledTimes(1);
     });
 
     it("a failed save shows the saved value again, and picking the same value retries", async () => {
       mockUpdate.mockRejectedValue(makeApiError(403, { status_code: 403, error: "forbidden" }));
-      const { rerender } = render(<CoachingPreferencesSection />);
+      const { rerender } = render(<SchedulingPreferencesSection />);
       fireEvent.change(start(), { target: { value: "09:00" } });
       for (let i = 0; i < 4; i += 1) {
         await act(async () => {
           vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
         });
         mockUserState = { ...mockUserState, refresh: vi.fn() };
-        rerender(<CoachingPreferencesSection />);
+        rerender(<SchedulingPreferencesSection />);
       }
       expect(mockUpdate).toHaveBeenCalledTimes(1);
       expect(mockToastError).toHaveBeenCalledTimes(1);
@@ -304,7 +304,7 @@ describe("CoachingPreferencesSection", () => {
     });
 
     it("doesn't save when the start isn't before the end, and says why", async () => {
-      render(<CoachingPreferencesSection />);
+      render(<SchedulingPreferencesSection />);
       fireEvent.change(start(), { target: { value: "18:00" } });
       await act(async () => {
         vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS * 2);
@@ -317,7 +317,7 @@ describe("CoachingPreferencesSection", () => {
       mockUpdate.mockRejectedValueOnce(
         makeApiError(422, { status_code: 422, error: "validation_error", message: "working_hours_start must be before working_hours_end" })
       );
-      render(<CoachingPreferencesSection />);
+      render(<SchedulingPreferencesSection />);
       fireEvent.change(end(), { target: { value: "16:00" } });
       await act(async () => {
         vi.advanceTimersByTime(AUTOSAVE_DEBOUNCE_MS);
@@ -329,7 +329,7 @@ describe("CoachingPreferencesSection", () => {
       mockUpdate.mockRejectedValueOnce(
         makeApiError(422, { status_code: 422, error: "validation_error", message: "out of range" })
       );
-      render(<CoachingPreferencesSection />);
+      render(<SchedulingPreferencesSection />);
       fireEvent.change(screen.getByRole("combobox", { name: /duration in minutes/i }), { target: { value: "45" } });
       fireEvent.change(end(), { target: { value: "16:00" } });
       await act(async () => {
@@ -344,17 +344,17 @@ describe("CoachingPreferencesSection", () => {
     });
 
     it("shows newly saved values when the user is read again", () => {
-      const { rerender } = render(<CoachingPreferencesSection />);
+      const { rerender } = render(<SchedulingPreferencesSection />);
       mockUserState = {
         ...mockUserState,
         user: createMockUser({ id: "user-1", working_hours_start: "10:00", working_hours_end: "17:30" }),
       };
-      rerender(<CoachingPreferencesSection />);
+      rerender(<SchedulingPreferencesSection />);
       expect(start()).toHaveValue("10:00");
     });
 
     it("keeps an unsaved edit when the user is read again", () => {
-      const { rerender } = render(<CoachingPreferencesSection />);
+      const { rerender } = render(<SchedulingPreferencesSection />);
       fireEvent.change(end(), { target: { value: "16:00" } });
       mockUserState = {
         ...mockUserState,
@@ -365,7 +365,7 @@ describe("CoachingPreferencesSection", () => {
           working_hours_end: "17:30",
         }),
       };
-      rerender(<CoachingPreferencesSection />);
+      rerender(<SchedulingPreferencesSection />);
       expect(end()).toHaveValue("16:00");
     });
   });

@@ -5,10 +5,21 @@ import { ItemStatus } from "@/types/general";
 import { Some, None } from "@/types/option";
 import {
   AssignmentFilter,
-  CoachViewMode,
+  ActionsViewMode,
 } from "@/types/assigned-actions";
 import type { Action } from "@/types/action";
 import type { EnrichedCoachingSession } from "@/lib/api/coaching-sessions";
+import type { Participant } from "@/types/participant";
+import { getCoacheeName, getCoachName } from "@/lib/utils/relationship";
+import {
+  createMockEnrichedSession,
+  createMockGoal,
+  createMockRelationship,
+  mockParticipants,
+} from "../../test-utils";
+
+const ALICE = { first_name: "Alice", last_name: "Smith" };
+const BOB = { id: "coachee-1", first_name: "Bob", last_name: "Jones" };
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -35,18 +46,10 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
 vi.mock("@/lib/api/coaching-relationships", () => ({
   useCoachingRelationshipList: () => ({
     relationships: [
-      {
-        id: "rel-1",
-        coach_id: "user-1",
-        coachee_id: "coachee-1",
-        organization_id: "org-1",
-        coach_first_name: "Alice",
-        coach_last_name: "Smith",
-        coachee_first_name: "Bob",
-        coachee_last_name: "Jones",
-        created_at: DateTime.now(),
-        updated_at: DateTime.now(),
-      },
+      createMockRelationship(
+        { id: "rel-1", coach_id: "user-1", coachee_id: "coachee-1" },
+        { coach: ALICE, coachee: BOB }
+      ),
     ],
     isLoading: false,
   }),
@@ -117,38 +120,23 @@ function makeTestAction(overrides: Partial<Action> = {}): Action {
 }
 
 function makeTestSession(
-  overrides: Partial<EnrichedCoachingSession> = {}
+  overrides: Partial<EnrichedCoachingSession> = {},
+  coachee: Partial<Participant> & { id: string } = BOB
 ): EnrichedCoachingSession {
-  return {
-    id: "session-1",
-    coaching_relationship_id: "rel-1",
+  const base = createMockEnrichedSession();
+  const relationship = {
+    ...base.relationship!,
+    id: overrides.coaching_relationship_id ?? "rel-1",
+    coach_id: "user-1",
+    coachee_id: coachee.id,
+  };
+  return createMockEnrichedSession({
     date: now.plus({ days: 1 }).toISO()!,
-    created_at: now,
-    updated_at: now,
-    relationship: {
-      id: "rel-1",
-      coach_id: "user-1",
-      coachee_id: "coachee-1",
-      organization_id: "org-1",
-      created_at: now,
-      updated_at: now,
-    },
-    coach: {
-      id: "user-1",
-      first_name: "Alice",
-      last_name: "Smith",
-    },
-    coachee: {
-      id: "coachee-1",
-      first_name: "Bob",
-      last_name: "Jones",
-    },
-    goals: [{
-      id: "goal-1",
-      title: "Test Goal",
-    }],
+    relationship,
+    participants: Some(mockParticipants("user-1", coachee.id, relationship.kind, { coach: ALICE, coachee })),
+    goals: [createMockGoal({ id: "goal-1", title: "Test Goal" })],
     ...overrides,
-  } as EnrichedCoachingSession;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -171,15 +159,13 @@ describe("useAllActionsWithContext", () => {
     mockSessions = [makeTestSession()];
 
     const { result } = renderHook(() =>
-      useAllActionsWithContext(CoachViewMode.MyActions)
+      useAllActionsWithContext(ActionsViewMode.MyActions)
     );
 
     expect(result.current.actionsWithContext).toHaveLength(1);
     const ctx = result.current.actionsWithContext[0];
-    expect(ctx.relationship.coach_first_name).toBe("Alice");
-    expect(ctx.relationship.coach_last_name).toBe("Smith");
-    expect(ctx.relationship.coachee_first_name).toBe("Bob");
-    expect(ctx.relationship.coachee_last_name).toBe("Jones");
+    expect(getCoachName(ctx.relationship)).toBe("Alice Smith");
+    expect(getCoacheeName(ctx.relationship)).toBe("Bob Jones");
     expect(ctx.relationship.coach_id).toBe("user-1");
     expect(ctx.relationship.coachee_id).toBe("coachee-1");
   });
@@ -189,7 +175,7 @@ describe("useAllActionsWithContext", () => {
     mockSessions = [makeTestSession()];
 
     const { result } = renderHook(() =>
-      useAllActionsWithContext(CoachViewMode.MyActions)
+      useAllActionsWithContext(ActionsViewMode.MyActions)
     );
 
     expect(result.current.actionsWithContext).toEqual([]);
@@ -203,11 +189,11 @@ describe("useAllActionsWithContext", () => {
       mockSessions = [makeTestSession()];
 
       const { rerender, unmount } = renderHook(() =>
-        useAllActionsWithContext(CoachViewMode.MyActions)
+        useAllActionsWithContext(ActionsViewMode.MyActions)
       );
       rerender();
       unmount();
-      renderHook(() => useAllActionsWithContext(CoachViewMode.MyActions));
+      renderHook(() => useAllActionsWithContext(ActionsViewMode.MyActions));
 
       expect(mockRefreshSessions).toHaveBeenCalledTimes(1);
     });
@@ -215,7 +201,7 @@ describe("useAllActionsWithContext", () => {
     it("refetches again for another unknown session", () => {
       mockActions = [makeTestAction({ coaching_session_id: "new-session-b" })];
       mockSessions = [makeTestSession()];
-      const { rerender } = renderHook(() => useAllActionsWithContext(CoachViewMode.MyActions));
+      const { rerender } = renderHook(() => useAllActionsWithContext(ActionsViewMode.MyActions));
 
       mockActions = [
         makeTestAction({ coaching_session_id: "new-session-b" }),
@@ -234,9 +220,9 @@ describe("useAllActionsWithContext", () => {
       mockSessions = [makeTestSession()];
       try {
         Settings.now = () => lateYesterday;
-        renderHook(() => useAllActionsWithContext(CoachViewMode.MyActions));
+        renderHook(() => useAllActionsWithContext(ActionsViewMode.MyActions));
         Settings.now = () => earlyToday;
-        renderHook(() => useAllActionsWithContext(CoachViewMode.MyActions));
+        renderHook(() => useAllActionsWithContext(ActionsViewMode.MyActions));
       } finally {
         Settings.now = originalNow;
       }
@@ -247,7 +233,7 @@ describe("useAllActionsWithContext", () => {
     it("waits until actions and sessions have loaded", () => {
       mockActions = [makeTestAction({ coaching_session_id: "new-session-d" })];
       mockSessionsLoading = true;
-      renderHook(() => useAllActionsWithContext(CoachViewMode.MyActions));
+      renderHook(() => useAllActionsWithContext(ActionsViewMode.MyActions));
 
       expect(mockRefreshSessions).not.toHaveBeenCalled();
     });
@@ -255,7 +241,7 @@ describe("useAllActionsWithContext", () => {
     it("doesn't refetch when every session is known", () => {
       mockActions = [makeTestAction()];
       mockSessions = [makeTestSession()];
-      renderHook(() => useAllActionsWithContext(CoachViewMode.MyActions));
+      renderHook(() => useAllActionsWithContext(ActionsViewMode.MyActions));
 
       expect(mockRefreshSessions).not.toHaveBeenCalled();
     });
@@ -266,7 +252,7 @@ describe("useAllActionsWithContext", () => {
     mockSessions = [makeTestSession()];
 
     const { result } = renderHook(() =>
-      useAllActionsWithContext(CoachViewMode.MyActions)
+      useAllActionsWithContext(ActionsViewMode.MyActions)
     );
 
     expect(result.current.actionsWithContext).toHaveLength(0);
@@ -276,7 +262,7 @@ describe("useAllActionsWithContext", () => {
     mockActionsLoading = true;
 
     const { result } = renderHook(() =>
-      useAllActionsWithContext(CoachViewMode.MyActions)
+      useAllActionsWithContext(ActionsViewMode.MyActions)
     );
 
     expect(result.current.isLoading).toBe(true);
@@ -286,7 +272,7 @@ describe("useAllActionsWithContext", () => {
     mockSessionsLoading = true;
 
     const { result } = renderHook(() =>
-      useAllActionsWithContext(CoachViewMode.MyActions)
+      useAllActionsWithContext(ActionsViewMode.MyActions)
     );
 
     expect(result.current.isLoading).toBe(true);
@@ -296,7 +282,7 @@ describe("useAllActionsWithContext", () => {
     mockActionsError = true;
 
     const { result } = renderHook(() =>
-      useAllActionsWithContext(CoachViewMode.MyActions)
+      useAllActionsWithContext(ActionsViewMode.MyActions)
     );
 
     expect(result.current.isError).toBeTruthy();
@@ -306,27 +292,17 @@ describe("useAllActionsWithContext", () => {
     mockSessionsError = true;
 
     const { result } = renderHook(() =>
-      useAllActionsWithContext(CoachViewMode.MyActions)
+      useAllActionsWithContext(ActionsViewMode.MyActions)
     );
 
     expect(result.current.isError).toBeTruthy();
   });
 
   it("enriches actions from multiple relationships", () => {
-    const session2 = makeTestSession({
-      id: "session-2",
-      coaching_relationship_id: "rel-2",
-      relationship: {
-        id: "rel-2",
-        coach_id: "user-1",
-        coachee_id: "coachee-2",
-        organization_id: "org-1",
-        created_at: now,
-        updated_at: now,
-      } as EnrichedCoachingSession["relationship"],
-      coach: { id: "user-1", first_name: "Alice", last_name: "Smith" },
-      coachee: { id: "coachee-2", first_name: "Charlie", last_name: "Brown" },
-    });
+    const session2 = makeTestSession(
+      { id: "session-2", coaching_relationship_id: "rel-2" },
+      { id: "coachee-2", first_name: "Charlie", last_name: "Brown" }
+    );
     mockActions = [
       makeTestAction({ id: "a1", coaching_session_id: "session-1" }),
       makeTestAction({ id: "a2", coaching_session_id: "session-2" }),
@@ -334,12 +310,12 @@ describe("useAllActionsWithContext", () => {
     mockSessions = [makeTestSession(), session2];
 
     const { result } = renderHook(() =>
-      useAllActionsWithContext(CoachViewMode.MyActions)
+      useAllActionsWithContext(ActionsViewMode.MyActions)
     );
 
     expect(result.current.actionsWithContext).toHaveLength(2);
     const names = result.current.actionsWithContext.map(
-      (a) => `${a.relationship.coachee_first_name} ${a.relationship.coachee_last_name}`
+      (a) => getCoacheeName(a.relationship)
     );
     expect(names).toContain("Bob Jones");
     expect(names).toContain("Charlie Brown");
@@ -352,7 +328,7 @@ describe("useAllActionsWithContext", () => {
     mockSessions = [makeTestSession()];
 
     const { result } = renderHook(() =>
-      useAllActionsWithContext(CoachViewMode.MyActions)
+      useAllActionsWithContext(ActionsViewMode.MyActions)
     );
 
     expect(result.current.actionsWithContext).toHaveLength(1);
@@ -369,20 +345,20 @@ describe("useAllActionsWithContext", () => {
       mockSessions = [makeTestSession()];
 
       const { result } = renderHook(() =>
-        useAllActionsWithContext(CoachViewMode.CoacheeActions)
+        useAllActionsWithContext(ActionsViewMode.CoacheeActions)
       );
 
       expect(result.current.actionsWithContext).toHaveLength(1);
       const ctx = result.current.actionsWithContext[0];
-      expect(ctx.relationship.coach_first_name).toBe("Alice");
-      expect(ctx.relationship.coachee_first_name).toBe("Bob");
+      expect(getCoachName(ctx.relationship)).toBe("Alice Smith");
+      expect(getCoacheeName(ctx.relationship)).toBe("Bob Jones");
     });
 
     it("isLoading is true while coachee actions are loading", () => {
       mockActionsLoading = true;
 
       const { result } = renderHook(() =>
-        useAllActionsWithContext(CoachViewMode.CoacheeActions)
+        useAllActionsWithContext(ActionsViewMode.CoacheeActions)
       );
 
       expect(result.current.isLoading).toBe(true);
@@ -392,7 +368,7 @@ describe("useAllActionsWithContext", () => {
       mockActionsError = true;
 
       const { result } = renderHook(() =>
-        useAllActionsWithContext(CoachViewMode.CoacheeActions)
+        useAllActionsWithContext(ActionsViewMode.CoacheeActions)
       );
 
       expect(result.current.isError).toBe(true);
@@ -403,7 +379,7 @@ describe("useAllActionsWithContext", () => {
       mockSessions = [makeTestSession()];
 
       const { result } = renderHook(() =>
-        useAllActionsWithContext(CoachViewMode.CoacheeActions, "rel-1")
+        useAllActionsWithContext(ActionsViewMode.CoacheeActions, "rel-1")
       );
 
       // If the relationship filter is passed correctly, actions matching
@@ -418,7 +394,7 @@ describe("useAllActionsWithContext", () => {
 
       const { result } = renderHook(() =>
         useAllActionsWithContext(
-          CoachViewMode.CoacheeActions,
+          ActionsViewMode.CoacheeActions,
           undefined,
           AssignmentFilter.Unassigned
         )

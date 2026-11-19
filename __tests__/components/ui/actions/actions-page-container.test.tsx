@@ -8,12 +8,14 @@ import { toast } from "@/lib/toast";
 import { ItemStatus } from "@/types/general";
 import { Some, None } from "@/types/option";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
-import { AssignmentFilter, CoachViewMode } from "@/types/assigned-actions";
+import { AssignmentFilter, ActionsViewMode } from "@/types/assigned-actions";
 import { siteConfig } from "@/site.config";
 import { EntityApiError } from "@/lib/api/entity-api";
 import { ActionsPageContainer } from "@/components/ui/actions/actions-page-container";
 import { TestProviders } from "@/test-utils/providers";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { type CoachingRelationshipWithUserNames, RelationshipKind } from "@/types/coaching-relationship";
+import { COLLEAGUE_VIEWER, createMockRelationship } from "../../../test-utils";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -37,7 +39,7 @@ vi.mock("@/lib/providers/auth-store-provider", async (importOriginal) => {
   return {
     ...actual,
     useAuthStore: (sel: (s: Record<string, unknown>) => unknown) =>
-      sel({ isACoach: true, canScheduleSessions: true }),
+      sel({ userSession: { id: "coach-1" }, canScheduleSessions: true }),
   };
 });
 
@@ -49,25 +51,25 @@ vi.mock("@/lib/hooks/use-current-organization", () => ({
 }));
 
 // Relationships
-vi.mock("@/lib/api/coaching-relationships", () => ({
-  useCoachingRelationshipList: () => ({
-    relationships: [
-      {
-        id: "rel-1",
-        coach_id: "coach-1",
-        coachee_id: "coachee-1",
-        organization_id: "org-1",
-        coach_first_name: "Alice",
-        coach_last_name: "Smith",
-        coachee_first_name: "Bob",
-        coachee_last_name: "Jones",
-        created_at: DateTime.now(),
-        updated_at: DateTime.now(),
-      },
-    ],
-    isLoading: false,
-  }),
+const relationshipList = vi.hoisted(() => ({
+  relationships: [] as CoachingRelationshipWithUserNames[],
+  isLoading: false,
 }));
+vi.mock("@/lib/api/coaching-relationships", () => ({
+  useCoachingRelationshipList: () => relationshipList,
+}));
+
+const SEATS = {
+  coach: { first_name: "Alice", last_name: "Smith" },
+  coachee: { first_name: "Bob", last_name: "Jones" },
+};
+const coachingRelationship = () =>
+  createMockRelationship({ id: "rel-1", coach_id: "coach-1", coachee_id: "coachee-1" }, SEATS);
+const colleagueRelationship = () =>
+  createMockRelationship(
+    { id: "rel-col", coach_id: "coach-1", coachee_id: "peer-1", kind: RelationshipKind.Colleague, viewer: COLLEAGUE_VIEWER },
+    { coachee: { first_name: "Cara", last_name: "Peer" } }
+  );
 
 // Action mutations
 const mockUpdate = vi.fn().mockResolvedValue({});
@@ -161,18 +163,7 @@ function makeCtx(
       updated_at: now,
       assignee_ids: ["user-1"],
     },
-    relationship: {
-      id: "rel-1",
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-      organization_id: "org-1",
-      created_at: now,
-      updated_at: now,
-      coach_first_name: "Alice",
-      coach_last_name: "Smith",
-      coachee_first_name: "Bob",
-      coachee_last_name: "Jones",
-    },
+    relationship: coachingRelationship(),
     goal: {
       goalId: "goal-1",
       title: "Test Goal",
@@ -196,6 +187,8 @@ describe("ActionsPageContainer", () => {
     mockActionsData = [];
     mockIsLoading = false;
     mockIsError = false;
+    relationshipList.relationships = [coachingRelationship()];
+    relationshipList.isLoading = false;
     // Reset navigation mocks to defaults (clearAllMocks doesn't reset mockReturnValue)
     vi.mocked(useSearchParams).mockReturnValue(
       new URLSearchParams() as any
@@ -254,7 +247,7 @@ describe("ActionsPageContainer", () => {
     );
 
     expect(mockFetchArgs).toHaveBeenCalledWith(
-      CoachViewMode.MyActions,
+      ActionsViewMode.MyActions,
       undefined,
       AssignmentFilter.Assigned,
       undefined
@@ -552,6 +545,76 @@ describe("ActionsPageContainer", () => {
   // -------------------------------------------------------------------------
   // Mutation error handling
   // -------------------------------------------------------------------------
+
+  describe("views", () => {
+    const renderAt = (query: string) => {
+      vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams(query) as any);
+      return render(
+        <Wrapper>
+          <ActionsPageContainer locale={siteConfig.locale} />
+        </Wrapper>
+      );
+    };
+    const fetchedView = () => mockFetchArgs.mock.lastCall?.slice(0, 2);
+    const replaced = () => vi.mocked(useRouter).mock.results[0].value.replace;
+
+    it("offers a coach and colleague all three views", () => {
+      relationshipList.relationships = [coachingRelationship(), colleagueRelationship()];
+      renderAt("");
+
+      expect(screen.getAllByRole("radio").map((item) => item.textContent)).toEqual([
+        "My Actions",
+        "Coachee Actions",
+        "Colleagues' Actions",
+      ]);
+    });
+
+    it("shows My Actions for a view the viewer doesn't have", () => {
+      relationshipList.relationships = [colleagueRelationship()];
+      renderAt("view=coachee_actions");
+
+      expect(fetchedView()).toEqual([ActionsViewMode.MyActions, undefined]);
+      expect(screen.getByRole("radio", { name: "My Actions" })).toBeChecked();
+    });
+
+    it.each([
+      ["view=colleague_actions&rel=rel-1", ActionsViewMode.ColleagueActions],
+      ["view=coachee_actions&rel=rel-col", ActionsViewMode.CoacheeActions],
+    ])("never fetches %s with a relationship outside the view", (query, view) => {
+      relationshipList.relationships = [coachingRelationship(), colleagueRelationship()];
+      renderAt(query);
+
+      expect(fetchedView()).toEqual([view, undefined]);
+    });
+
+    it("keeps the URL's view while the relationships load", () => {
+      relationshipList.relationships = [];
+      relationshipList.isLoading = true;
+      const { rerender } = renderAt("view=colleague_actions");
+      expect(replaced()).not.toHaveBeenCalled();
+
+      relationshipList.relationships = [colleagueRelationship()];
+      relationshipList.isLoading = false;
+      rerender(
+        <Wrapper>
+          <ActionsPageContainer locale={siteConfig.locale} />
+        </Wrapper>
+      );
+      expect(fetchedView()).toEqual([ActionsViewMode.ColleagueActions, undefined]);
+    });
+
+    it("drops a relationship the picked view doesn't offer", async () => {
+      relationshipList.relationships = [coachingRelationship(), colleagueRelationship()];
+      const user = userEvent.setup();
+      renderAt("view=colleague_actions&rel=rel-col");
+
+      await user.click(screen.getByRole("radio", { name: "Coachee Actions" }));
+
+      await waitFor(() => {
+        expect(replaced()).toHaveBeenCalledWith("/actions?view=coachee_actions", { scroll: false });
+      });
+    });
+  });
 
   describe("mutation error handling", () => {
     // Helper: trigger delete by flipping the compact card, clicking Edit, then Delete

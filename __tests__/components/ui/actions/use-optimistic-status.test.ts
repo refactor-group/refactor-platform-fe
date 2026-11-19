@@ -5,6 +5,7 @@ import { ItemStatus } from "@/types/general";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { Some } from "@/types/option";
 import { useOptimisticStatus } from "@/components/ui/actions/use-optimistic-status";
+import { createMockRelationship } from "../../../test-utils";
 
 const now = DateTime.now();
 
@@ -25,18 +26,10 @@ function makeCtx(
       updated_at: now,
       assignee_ids: [],
     },
-    relationship: {
-      id: "rel-1",
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-      organization_id: "org-1",
-      created_at: now,
-      updated_at: now,
-      coach_first_name: "Alice",
-      coach_last_name: "",
-      coachee_first_name: "Bob",
-      coachee_last_name: "",
-    },
+    relationship: createMockRelationship(
+      { id: "rel-1", coach_id: "coach-1", coachee_id: "coachee-1" },
+      { coach: { first_name: "Alice", last_name: "" }, coachee: { first_name: "Bob", last_name: "" } }
+    ),
     goal: { goalId: "goal-1", title: "Goal" },
     sourceSession: { coachingSessionId: "session-1", sessionDate: now },
     nextSession: null,

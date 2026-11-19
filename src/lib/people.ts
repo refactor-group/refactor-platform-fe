@@ -2,6 +2,7 @@ import type { DateTime } from "ts-luxon";
 import type { MenuPerson } from "@/components/ui/join-session/types";
 import { type PersonActivity, personActivity } from "@/lib/person-activity";
 import { sessionStartIn } from "@/lib/session-window";
+import { otherParticipantOf } from "@/lib/participants";
 import { calculateSessionUrgency } from "@/lib/utils/session";
 import {
   type CoachingRelationshipWithUserNames,
@@ -34,9 +35,8 @@ export function menuPerson(userId: Id, first: string, last: string, email: strin
 }
 
 export function otherParticipant(rel: CoachingRelationshipWithUserNames, userId: Id): MenuPerson {
-  return rel.coach_id === userId
-    ? menuPerson(rel.coachee_id, rel.coachee_first_name, rel.coachee_last_name, rel.coachee_email)
-    : menuPerson(rel.coach_id, rel.coach_first_name, rel.coach_last_name, rel.coach_email);
+  const { id, first_name, last_name, email } = otherParticipantOf(rel, userId);
+  return menuPerson(id, first_name, last_name, email);
 }
 
 /** Case-insensitive substring match on the trimmed query; a blank query matches everyone. */

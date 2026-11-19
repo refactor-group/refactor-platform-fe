@@ -8,6 +8,7 @@ import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import { KanbanActionCard } from "@/components/ui/actions/kanban-action-card";
 import { TestProviders } from "@/test-utils/providers";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { createMockRelationship } from "../../../test-utils";
 
 
 function Wrapper({ children }: { children: ReactNode }) {
@@ -42,18 +43,10 @@ function makeCtx(
       updated_at: now,
       assignee_ids: ["user-1"],
     },
-    relationship: {
-      id: "rel-1",
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-      organization_id: "org-1",
-      created_at: now,
-      updated_at: now,
-      coach_first_name: "Alice",
-      coach_last_name: "Smith",
-      coachee_first_name: "Bob",
-      coachee_last_name: "Jones",
-    },
+    relationship: createMockRelationship(
+      { id: "rel-1", coach_id: "coach-1", coachee_id: "coachee-1" },
+      { coach: { first_name: "Alice", last_name: "Smith" }, coachee: { first_name: "Bob", last_name: "Jones" } }
+    ),
     goal: {
       goalId: "goal-1",
       title: "Test Goal",

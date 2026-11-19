@@ -4,7 +4,7 @@ import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useActionsFetch } from "@/lib/hooks/use-actions-fetch";
 import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import { useSessionContextFetch } from "@/lib/hooks/use-session-context-fetch";
-import { AssignmentFilter, CoachViewMode } from "@/types/assigned-actions";
+import { AssignmentFilter, ActionsViewMode } from "@/types/assigned-actions";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
 import type { Action } from "@/types/action";
 import type { Id } from "@/types/general";
@@ -47,19 +47,19 @@ function useRefetchSessionsForUnknownActions(
 }
 
 /**
- * Fetches and enriches all actions for the current user (or their coachees).
+ * Fetches and enriches the actions of an Actions page view.
  *
  * Unlike useAssignedActions, this hook skips filterActionsByStatus and
  * groupActionsByRelationship — the kanban board groups by status column
  * and applies its own client-side filters.
  *
- * @param viewMode - Whether to show the user's own actions or their coachees' actions
+ * @param viewMode - Whose actions: the user's own, their coachees' or their colleagues'
  * @param relationshipId - Optional filter to a specific coaching relationship (server-side)
  * @param assignmentFilter - Filter by assignment status (assigned/unassigned/all)
  * @param options - SWR overrides for the actions and session fetches
  */
 export function useAllActionsWithContext(
-  viewMode: CoachViewMode,
+  viewMode: ActionsViewMode,
   relationshipId?: Id,
   assignmentFilter: AssignmentFilter = AssignmentFilter.Assigned,
   options?: SWRConfiguration

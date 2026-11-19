@@ -3,7 +3,7 @@ import { renderHook } from "@testing-library/react";
 import { DateTime, Settings } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
 import { None, Some } from "@/types/option";
-import { AssignmentFilter, CoachViewMode, type AssignedActionWithContext } from "@/types/assigned-actions";
+import { AssignmentFilter, ActionsViewMode, type AssignedActionWithContext } from "@/types/assigned-actions";
 import { useOpenActionCount } from "@/lib/hooks/use-open-action-count";
 import { countVisibleActions, DEFAULT_ACTIONS_VIEW } from "@/lib/hooks/use-actions-view";
 import { createMockAction } from "../../test-utils";
@@ -68,7 +68,7 @@ describe("useOpenActionCount", () => {
   it("reads the page's default view from the cache without revalidating", () => {
     renderHook(() => useOpenActionCount());
     expect(h.fetch).toHaveBeenCalledWith(
-      CoachViewMode.MyActions,
+      ActionsViewMode.MyActions,
       undefined,
       AssignmentFilter.Assigned,
       {

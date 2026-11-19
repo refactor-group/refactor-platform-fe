@@ -29,9 +29,14 @@ export const handlers = [
       data: [
         {
           id: "rel-1",
-          coach_name: "John Doe",
-          coachee_name: "Jane Smith",
+          coach_id: "user-1",
+          coachee_id: "user-2",
           organization_id: "org-1",
+          kind: "coaching",
+          participants: [
+            { id: "user-1", first_name: "John", last_name: "Doe", email: "john@example.com", role: "coach", is_member: true },
+            { id: "user-2", first_name: "Jane", last_name: "Smith", email: "jane@example.com", role: "coachee", is_member: true },
+          ],
         },
       ],
     });

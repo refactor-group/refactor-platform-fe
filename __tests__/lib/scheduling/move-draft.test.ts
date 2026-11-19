@@ -41,7 +41,7 @@ describe("movePerson", () => {
   });
 
   it("has no one without participants", () => {
-    expect(movePerson({ ...E_18, coach: undefined, coachee: undefined }, ME, [])).toEqual(None);
+    expect(movePerson({ ...E_18, participants: None }, ME, [])).toEqual(None);
   });
 });
 

@@ -9,15 +9,10 @@ import {
   IMMINENT_SESSION_THRESHOLD_MINUTES,
   SOON_SESSION_THRESHOLD_MINUTES,
 } from "@/lib/utils/session";
-import {
-  getOtherParticipantName,
-  getUserRoleInRelationship,
-} from "@/lib/utils/relationship";
 import { SessionUrgency } from "@/types/session-display";
 import { RelationshipRole } from "@/types/relationship-role";
+import { None } from "@/types/option";
 import {
-  createMockUser,
-  createMockRelationship,
   createMockSession,
   createSessionAt,
   COACHEE_VIEWER,
@@ -188,72 +183,6 @@ describe("getUrgencyMessage", () => {
   });
 });
 
-describe("getOtherParticipantName", () => {
-  it("returns coachee name when user is the coach", () => {
-    const user = createMockUser({ id: "coach-1" });
-    const relationship = createMockRelationship({
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-      coachee_first_name: "Alice",
-      coachee_last_name: "Smith",
-    });
-
-    const name = getOtherParticipantName(relationship, user);
-    expect(name).toBe("Alice Smith");
-  });
-
-  it("returns coach name when user is the coachee", () => {
-    const user = createMockUser({ id: "coachee-1" });
-    const relationship = createMockRelationship({
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-      coach_first_name: "Bob",
-      coach_last_name: "Johnson",
-    });
-
-    const name = getOtherParticipantName(relationship, user);
-    expect(name).toBe("Bob Johnson");
-  });
-
-  it("handles missing last name gracefully", () => {
-    const user = createMockUser({ id: "coach-1" });
-    const relationship = createMockRelationship({
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-      coachee_first_name: "Alice",
-      coachee_last_name: "",
-    });
-
-    const name = getOtherParticipantName(relationship, user);
-    expect(name).toBe("Alice");
-  });
-});
-
-describe("getUserRoleInRelationship", () => {
-  it("returns coach when user is the coach", () => {
-    const user = createMockUser({ id: "coach-1" });
-    const relationship = createMockRelationship({
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-    });
-
-    const role = getUserRoleInRelationship(relationship, user);
-    expect(role).toBe("coach");
-  });
-
-  it("returns coachee when user is the coachee", () => {
-    const user = createMockUser({ id: "coachee-1" });
-    const relationship = createMockRelationship({
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-    });
-
-    const role = getUserRoleInRelationship(relationship, user);
-    expect(role).toBe("coachee");
-  });
-});
-
-
 describe("selectNextUpcomingSession", () => {
   it("returns undefined for an empty list", () => {
     expect(selectNextUpcomingSession([])).toBeUndefined();
@@ -332,8 +261,8 @@ describe("getSessionParticipantInfo", () => {
     expect(getSessionParticipantInfo(session, "coach-1")).toBeNull();
   });
 
-  it("returns a 'data not loaded' fallback when the counterpart user is missing", () => {
-    const session = createMockEnrichedSession({ coachee: undefined });
+  it("returns a 'data not loaded' fallback when the participants are missing", () => {
+    const session = createMockEnrichedSession({ participants: None });
     const info = getSessionParticipantInfo(session, "coach-1");
     expect(info).not.toBeNull();
     expect(info?.canSchedule).toBe(true);
@@ -341,26 +270,6 @@ describe("getSessionParticipantInfo", () => {
     expect(info?.firstName).toBe("");
     expect(info?.lastName).toBe("");
     expect(info?.isMissing).toBe(true);
-  });
-
-  it("falls back to display_name when the loaded user has empty first/last names", () => {
-    const session = createMockEnrichedSession({
-      coachee: {
-        id: "coachee-1",
-        email: "alex@example.com",
-        first_name: "",
-        last_name: "",
-        display_name: "A. Chen",
-        timezone: "America/Los_Angeles",
-        roles: [],
-        created_at: "",
-        updated_at: "",
-      },
-    });
-    const info = getSessionParticipantInfo(session, "coach-1");
-    expect(info).not.toBeNull();
-    expect(info?.participantName).toBe("A. Chen");
-    expect(info?.isMissing).toBe(false);
   });
 });
 

@@ -2,10 +2,12 @@
 // read transform (string | null on the list/enriched reads, absent on the single
 // read) and its exclusion from the write serialize. The frozen
 // coaching-session-title.test.ts pins the client-side fallback rule; this file
-// pins the display_title and series wire handling.
+// pins the display_title, series and participants wire handling.
 
 import { describe, it, expect } from "vitest";
 import { Some } from "@/types/option";
+import { RelationshipKind } from "@/types/coaching-relationship";
+import { mockParticipants } from "../test-utils";
 import {
   transformCoachingSession,
   serializeCoachingSession,
@@ -98,5 +100,24 @@ describe("transformCoachingSession — series", () => {
   it("never includes series on the wire", () => {
     const wire = serializeCoachingSession(transformCoachingSession(withSeries));
     expect("series" in wire).toBe(false);
+  });
+});
+
+describe("transformCoachingSession — participants", () => {
+  const relationship = { id: "r1", coach_id: "c", coachee_id: "e", kind: RelationshipKind.Coaching };
+  const participants = mockParticipants("c", "e", RelationshipKind.Coaching);
+
+  it("wraps the participants of a session read with its relationship as Some", () => {
+    expect(transformCoachingSession({ ...rawWire, relationship, participants }).participants).toEqual(
+      Some(participants)
+    );
+  });
+
+  it("is None without a relationship", () => {
+    expect(transformCoachingSession(rawWire).participants.none).toBe(true);
+  });
+
+  it("throws on a relationship without participants", () => {
+    expect(() => transformCoachingSession({ ...rawWire, relationship })).toThrow();
   });
 });

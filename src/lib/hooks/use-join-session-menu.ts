@@ -1,5 +1,6 @@
 "use client";
 
+import { otherParticipantInSession } from "@/lib/participants";
 import { useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { DateTime } from "ts-luxon";
@@ -53,7 +54,7 @@ import { coachingSessionTitle, enrichedTitleSource } from "@/types/coaching-sess
 import type { Id } from "@/types/general";
 import { type Option, None, Some } from "@/types/option";
 import { SessionUrgency } from "@/types/session-display";
-import type { User } from "@/types/user";
+import type { Participant } from "@/types/participant";
 
 export interface TodayEntry {
   session: MenuSession;
@@ -127,8 +128,8 @@ export function toMenuSession(session: EnrichedCoachingSession, timezone: string
   };
 }
 
-function personFromUser(user: User): MenuPerson {
-  return menuPerson(user.id, user.first_name, user.last_name, user.email);
+function personFrom(p: Participant): MenuPerson {
+  return menuPerson(p.id, p.first_name, p.last_name, p.email);
 }
 
 function todayPerson(
@@ -136,8 +137,8 @@ function todayPerson(
   userId: Id,
   people: PersonEntry[]
 ): Option<MenuPerson> {
-  const other = session.relationship?.coach_id === userId ? session.coachee : session.coach;
-  if (other) return Some(personFromUser(other));
+  const other = otherParticipantInSession(session, userId);
+  if (other.some) return Some(personFrom(other.val));
   const entry = people.find((p) => p.relationshipIds.includes(session.coaching_relationship_id));
   return entry ? Some(entry.person) : None;
 }

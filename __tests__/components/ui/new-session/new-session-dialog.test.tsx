@@ -21,8 +21,8 @@ import { toast } from "@/lib/toast";
 import { EntityApiError } from "@/types/entity-api-error";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { None, Some } from "@/types/option";
-import { COACHEE_VIEWER, createMockSession } from "../../../test-utils";
-import { ALL, NEAREST, NOW, RELATIONSHIPS, ZONE, at } from "../../../lib/scheduling/roster";
+import { createMockSession } from "../../../test-utils";
+import { ALL, coachedBySomeoneElse, NEAREST, NOW, RELATIONSHIPS, ZONE, at } from "../../../lib/scheduling/roster";
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
@@ -466,7 +466,7 @@ describe("NewSessionDialog: Resolve overlap", () => {
   it("only keeps both when the other session isn't mine to move", () => {
     vi.mocked(useEnrichedCoachingSessionsForUser).mockReturnValue({
       enrichedSessions: ALL.map((s) =>
-        s.id === "e-18" ? { ...s, relationship: { ...s.relationship!, coach_id: "someone-else", viewer: COACHEE_VIEWER } } : s
+        s.id === "e-18" ? coachedBySomeoneElse(s) : s
       ),
       isLoading: false,
       isError: undefined,

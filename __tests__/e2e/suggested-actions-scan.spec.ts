@@ -4,6 +4,7 @@ import {
   mockCommonApiRoutes,
   MOCK_USER_ID,
   SINGLE_RELATIONSHIP,
+  mockRelationship,
   COACHEE_VIEWER,
 } from './helpers'
 
@@ -24,12 +25,11 @@ const TIPS = {
 
 const BASE_RELATIONSHIP = SINGLE_RELATIONSHIP[0]
 type Relationship = typeof BASE_RELATIONSHIP
-const AS_COACH: Relationship = { ...BASE_RELATIONSHIP, coach_id: MOCK_USER_ID }
-const AS_COACHEE: Relationship = {
-  ...BASE_RELATIONSHIP,
+const AS_COACH: Relationship = mockRelationship(BASE_RELATIONSHIP.id, { coach_id: MOCK_USER_ID })
+const AS_COACHEE: Relationship = mockRelationship(BASE_RELATIONSHIP.id, {
   coachee_id: MOCK_USER_ID,
   viewer: COACHEE_VIEWER,
-}
+})
 
 const sessionOn = (date: string) => ({
   id: SESSION_ID,

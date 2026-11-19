@@ -4,6 +4,7 @@ import { Agreement } from "@/types/agreement";
 import { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 import { CoachingRelationshipWithUserNames, RelationshipKind, type RelationshipViewer } from "@/types/coaching-relationship";
 import { RelationshipRole } from "@/types/relationship-role";
+import type { Participant, Participants } from "@/types/participant";
 import { Goal } from "@/types/goal";
 import { ItemStatus } from "@/types/general";
 import { Some, None } from "@/types/option";
@@ -63,31 +64,72 @@ export function createMockOrganization(
   };
 }
 
+export function createMockParticipant(overrides?: Partial<Participant>): Participant {
+  return {
+    id: "user-1",
+    first_name: "Jim",
+    last_name: "Hodapp",
+    email: "jim@example.com",
+    role: RelationshipRole.Coach,
+    is_member: true,
+    ...overrides,
+  };
+}
+
+/** Per-seat participant overrides; ids and roles follow the relationship unless given. */
+export interface MockSeats {
+  coach?: Partial<Participant>;
+  coachee?: Partial<Participant>;
+}
+
+/** [coach seat, coachee seat] for the given ids and kind, as the backend sends them. */
+export function mockParticipants(
+  coachId: string,
+  coacheeId: string,
+  kind: RelationshipKind,
+  seats: MockSeats = {}
+): Participants {
+  const colleague = kind === RelationshipKind.Colleague;
+  return [
+    createMockParticipant({
+      id: coachId,
+      role: colleague ? RelationshipRole.Colleague : RelationshipRole.Coach,
+      ...seats.coach,
+    }),
+    createMockParticipant({
+      id: coacheeId,
+      first_name: "Caleb",
+      last_name: "Bourg",
+      email: "caleb@example.com",
+      role: colleague ? RelationshipRole.Colleague : RelationshipRole.Coachee,
+      ...seats.coachee,
+    }),
+  ];
+}
+
 export function createMockRelationship(
-  overrides?: Partial<CoachingRelationshipWithUserNames>
+  overrides?: Partial<CoachingRelationshipWithUserNames>,
+  seats?: MockSeats
 ): CoachingRelationshipWithUserNames {
   const now = DateTime.now();
-  return {
+  const base = {
     id: "rel-1",
     coach_id: "user-1",
     coachee_id: "user-2",
     organization_id: "org-1",
-    coach_first_name: "Jim",
-    coach_last_name: "Hodapp",
-    coachee_first_name: "Caleb",
-    coachee_last_name: "Bourg",
-    coach_email: "jim@example.com",
-    coachee_email: "caleb@example.com",
     created_at: now, // CoachingRelationship expects DateTime object
     updated_at: now,
     kind: RelationshipKind.Coaching,
-    coach_is_member: true,
-    coachee_is_member: true,
     // Seen by its coach, user-1, the viewer most tests sign in as.
     viewer: COACH_VIEWER,
     suggests_actions: true,
     scheduling_blocked_by: null,
     ...overrides,
+  };
+  return {
+    ...base,
+    participants:
+      overrides?.participants ?? mockParticipants(base.coach_id, base.coachee_id, base.kind, seats),
   };
 }
 
@@ -158,7 +200,7 @@ export function createMockEnrichedSession(
   overrides?: Partial<EnrichedCoachingSession>
 ): EnrichedCoachingSession {
   const now = DateTime.now();
-  return {
+  const session: Omit<EnrichedCoachingSession, "participants"> = {
     id: "session-1",
     coaching_relationship_id: "rel-1",
     date: now.plus({ hours: 2 }).toISO() ?? "",
@@ -177,35 +219,9 @@ export function createMockEnrichedSession(
       created_at: now,
       updated_at: now,
       kind: RelationshipKind.Coaching,
-      coach_is_member: true,
-      coachee_is_member: true,
       viewer: COACH_VIEWER,
       suggests_actions: true,
       scheduling_blocked_by: null,
-    },
-    coach: {
-      id: "coach-1",
-      email: "coach@example.com",
-      first_name: "Jim",
-      last_name: "Hodapp",
-      display_name: "Jim Hodapp",
-      timezone: "America/Los_Angeles",
-      default_coaching_session_duration_minutes: 60,
-      roles: [],
-      created_at: now.toISO() ?? "",
-      updated_at: now.toISO() ?? "",
-    },
-    coachee: {
-      id: "coachee-1",
-      email: "coachee@example.com",
-      first_name: "Alex",
-      last_name: "Chen",
-      display_name: "Alex Chen",
-      timezone: "America/Los_Angeles",
-      default_coaching_session_duration_minutes: 60,
-      roles: [],
-      created_at: now.toISO() ?? "",
-      updated_at: now.toISO() ?? "",
     },
     organization: {
       id: "org-1",
@@ -217,6 +233,17 @@ export function createMockEnrichedSession(
     goals: [],
     topics: None,
     ...overrides,
+  };
+  if (overrides?.participants || !session.relationship) return { ...session, participants: overrides?.participants ?? None };
+  const { coach_id, coachee_id, kind } = session.relationship;
+  return {
+    ...session,
+    participants: Some(
+      mockParticipants(coach_id, coachee_id, kind, {
+        coach: { first_name: "Jim", last_name: "Hodapp", email: "coach@example.com" },
+        coachee: { first_name: "Alex", last_name: "Chen", email: "coachee@example.com" },
+      })
+    ),
   };
 }
 

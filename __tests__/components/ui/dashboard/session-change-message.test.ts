@@ -7,7 +7,7 @@ import { SessionRemoval } from "@/lib/session-actions";
 import { createMockRelationship } from "../../../test-utils";
 
 const relationships = [
-  createMockRelationship({ id: "rel-1", coachee_first_name: "James", coachee_last_name: "Hodapp" }),
+  createMockRelationship({ id: "rel-1" }, { coachee: { first_name: "James", last_name: "Hodapp" } }),
 ];
 // 03:00 UTC on Nov 5 is 9 PM on Nov 4 in Chicago (after DST ends).
 const session = { date: "2026-11-05T03:00:00", coaching_relationship_id: "rel-1" };

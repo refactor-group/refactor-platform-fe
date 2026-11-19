@@ -4,15 +4,32 @@ import {
   mockCommonApiRoutes,
   MOCK_USER_ID,
   COACHEE_VIEWER,
+  mockRelationship,
+  sessionParticipants,
 } from './helpers'
 
 // ---------------------------------------------------------------------------
 // Mock data — ISO strings, not DateTime objects (API response format)
 // ---------------------------------------------------------------------------
 
+const ENRICHED_RELATIONSHIP = mockRelationship(
+  'rel-1',
+  {
+    coach_id: 'coach-1',
+    coachee_id: MOCK_USER_ID,
+    created_at: '2026-02-01T00:00:00Z',
+    updated_at: '2026-02-01T00:00:00Z',
+    viewer: COACHEE_VIEWER,
+  },
+  {
+    coach: { first_name: 'Alice', last_name: 'Smith', email: 'coach@example.com' },
+    coachee: { first_name: 'Test', last_name: 'User', email: 'test@example.com' },
+  }
+)
+
 /**
- * Enriched coaching session with relationship + user data.
- * addContextToAction needs: session.relationship, session.coach, session.coachee
+ * Enriched coaching session with relationship + participants.
+ * addContextToAction needs: session.relationship, session.participants
  */
 const ENRICHED_SESSION = {
   id: 'session-1',
@@ -20,34 +37,8 @@ const ENRICHED_SESSION = {
   date: '2026-02-20T10:00:00Z',
   created_at: '2026-02-01T00:00:00Z',
   updated_at: '2026-02-01T00:00:00Z',
-  relationship: {
-    id: 'rel-1',
-    coach_id: 'coach-1',
-    coachee_id: MOCK_USER_ID,
-    organization_id: 'org-1',
-    created_at: '2026-02-01T00:00:00Z',
-    updated_at: '2026-02-01T00:00:00Z',
-    kind: 'coaching',
-    coach_is_member: true,
-    coachee_is_member: true,
-    viewer: COACHEE_VIEWER,
-    suggests_actions: true,
-    scheduling_blocked_by: null,
-  },
-  coach: {
-    id: 'coach-1',
-    email: 'coach@example.com',
-    first_name: 'Alice',
-    last_name: 'Smith',
-    display_name: 'Alice Smith',
-  },
-  coachee: {
-    id: MOCK_USER_ID,
-    email: 'test@example.com',
-    first_name: 'Test',
-    last_name: 'User',
-    display_name: 'Test User',
-  },
+  relationship: ENRICHED_RELATIONSHIP,
+  participants: sessionParticipants(ENRICHED_RELATIONSHIP),
   goals: [{
     id: 'goal-1',
     title: 'Test Goal',
@@ -118,7 +109,7 @@ async function setupActionsPage(
       contentType: 'application/json',
       body: JSON.stringify({
         data: {
-          coachee_actions: { 'rel-1': OPEN_ACTIONS },
+          actions_by_relationship: { 'rel-1': OPEN_ACTIONS },
         },
       }),
     })

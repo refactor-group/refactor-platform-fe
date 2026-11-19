@@ -5,6 +5,7 @@ import {
 } from "@/types/coaching-relationship";
 import { conflictDetailsOf, conflictReasonOf } from "@/types/entity-api-error";
 import type { Id } from "@/types/general";
+import { participantName, Seat, seatParticipant } from "@/lib/participants";
 import { type Option, None, Some } from "@/types/option";
 
 /** A pair holds at most one relationship per organization, except coaching each other. */
@@ -37,10 +38,6 @@ export async function existingRelationshipOf(
   }
 }
 
-function fullName(first: string, last: string): string {
-  return `${first} ${last}`.trim();
-}
-
 /** "Ada and Mate are already colleagues" or "Ada is already Mate's coach"; generic when it couldn't be read. */
 export function pairAlreadyRelatedMessage(
   existing: Option<CoachingRelationshipWithUserNames>,
@@ -50,7 +47,9 @@ export function pairAlreadyRelatedMessage(
   if (existing.none) return `${first} and ${second} already have a relationship`;
   const r = existing.val;
   if (r.kind === RelationshipKind.Colleague) return `${first} and ${second} are already colleagues`;
-  return `${fullName(r.coach_first_name, r.coach_last_name)} is already ${fullName(r.coachee_first_name, r.coachee_last_name)}'s coach`;
+  const coach = participantName(seatParticipant(r, Seat.Coach));
+  const coachee = participantName(seatParticipant(r, Seat.Coachee));
+  return `${coach} is already ${coachee}'s coach`;
 }
 
 export interface ActionsBecomingVisible {

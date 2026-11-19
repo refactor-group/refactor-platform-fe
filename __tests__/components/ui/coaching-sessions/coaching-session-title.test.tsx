@@ -2,6 +2,8 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Some, None, type Option } from "@/types/option";
 import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
+import { RelationshipKind } from "@/types/coaching-relationship";
+import { mockParticipants } from "../../../test-utils";
 
 const mockUpdateTitle = vi.fn();
 const mockRefresh = vi.fn();
@@ -40,10 +42,10 @@ vi.mock("@/lib/hooks/use-current-coaching-relationship", () => ({
       coach_id: "coach-1",
       coachee_id: "coachee-1",
       organization_id: "org-1",
-      coach_first_name: "Jordan",
-      coach_last_name: "Smith",
-      coachee_first_name: "Alex",
-      coachee_last_name: "Chen",
+      participants: mockParticipants("coach-1", "coachee-1", RelationshipKind.Coaching, {
+        coach: { first_name: "Jordan", last_name: "Smith" },
+        coachee: { first_name: "Alex", last_name: "Chen" },
+      }),
     },
     isLoading: false,
     isError: false,

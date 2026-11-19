@@ -7,11 +7,11 @@ import {
   kindChange,
   leadOf,
   relationshipChoices,
-  roleIn,
 } from "@/lib/change-relationship-dialog-model";
-import { type CoachingRelationshipWithUserNames, RelationshipKind } from "@/types/coaching-relationship";
+import { RelationshipKind } from "@/types/coaching-relationship";
 import { Some } from "@/types/option";
 import { RelationshipRole } from "@/types/relationship-role";
+import { createMockRelationship } from "../test-utils";
 
 const CARA: Member = { userId: "cara", firstName: "Cara", fullName: "Cara Test", initials: "CT", email: "cara@example.com" };
 
@@ -21,18 +21,13 @@ const relationship = (
   kind = RelationshipKind.Coaching,
   members = { coach: true, coachee: true }
 ) =>
-  ({
-    id: `${coach[0]}-${coachee[0]}`,
-    coach_id: coach[0],
-    coach_first_name: coach[1],
-    coach_last_name: "X",
-    coachee_id: coachee[0],
-    coachee_first_name: coachee[1],
-    coachee_last_name: "X",
-    kind,
-    coach_is_member: members.coach,
-    coachee_is_member: members.coachee,
-  }) as CoachingRelationshipWithUserNames;
+  createMockRelationship(
+    { id: `${coach[0]}-${coachee[0]}`, coach_id: coach[0], coachee_id: coachee[0], kind },
+    {
+      coach: { first_name: coach[1], last_name: "X", is_member: members.coach },
+      coachee: { first_name: coachee[1], last_name: "X", is_member: members.coachee },
+    }
+  );
 
 const PAT_COACHES_CARA = relationship(["pat", "Pat"], ["cara", "Cara"]);
 const CARA_COACHES_PAT = relationship(["cara", "Cara"], ["pat", "Pat"]);
@@ -69,13 +64,7 @@ describe("hasChangeableRelationship", () => {
   });
 });
 
-describe("roleIn and kindChange", () => {
-  it("reads the member's role", () => {
-    expect(roleIn(PAT_COACHES_CARA, "cara")).toBe(RelationshipRole.Coachee);
-    expect(roleIn(CARA_COACHES_PAT, "cara")).toBe(RelationshipRole.Coach);
-    expect(roleIn(ANA_COLLEAGUE, "cara")).toBe(RelationshipRole.Colleague);
-  });
-
+describe("kindChange", () => {
   it("names the coach for coaching and none for colleagues", () => {
     expect(kindChange("cara", "pat", RelationshipRole.Coach, false)).toEqual({
       kind: RelationshipKind.Coaching,

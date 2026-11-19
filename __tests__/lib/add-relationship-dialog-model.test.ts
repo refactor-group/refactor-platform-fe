@@ -13,9 +13,10 @@ import {
   stepTitle,
   summaryLine,
 } from "@/lib/add-relationship-dialog-model";
-import { type CoachingRelationshipWithUserNames, RelationshipKind } from "@/types/coaching-relationship";
+import { RelationshipKind } from "@/types/coaching-relationship";
 import { None, Some } from "@/types/option";
 import { RelationshipRole } from "@/types/relationship-role";
+import { createMockRelationship } from "../test-utils";
 
 const member = (userId: string, first: string, last: string): Member => ({
   userId,
@@ -32,12 +33,12 @@ const MEMBERS = [PAT, CARA, ANA];
 
 // Pat already coaches Cara.
 const RELATIONSHIPS = [
-  { coach_id: "pat", coachee_id: "cara", kind: RelationshipKind.Coaching } as CoachingRelationshipWithUserNames,
+  createMockRelationship({ coach_id: "pat", coachee_id: "cara", kind: RelationshipKind.Coaching }),
 ];
 
 // Ana and Cara are colleagues.
 const ANA_CARA_COLLEAGUES = [
-  { coach_id: "ana", coachee_id: "cara", kind: RelationshipKind.Colleague } as CoachingRelationshipWithUserNames,
+  createMockRelationship({ coach_id: "ana", coachee_id: "cara", kind: RelationshipKind.Colleague }),
 ];
 
 describe("newRelationship", () => {

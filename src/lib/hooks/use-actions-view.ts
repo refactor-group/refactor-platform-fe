@@ -4,7 +4,7 @@ import { applyTimeFilter, visibleStatuses } from "@/components/ui/actions/utils"
 import { useAllActionsWithContext } from "@/lib/hooks/use-all-actions-with-context";
 import {
   AssignmentFilter,
-  CoachViewMode,
+  ActionsViewMode,
   StatusVisibility,
   TimeRange,
   type AssignedActionWithContext,
@@ -14,7 +14,7 @@ import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 
 /** The Actions page's filters; the page starts on DEFAULT_ACTIONS_VIEW. */
 export interface ActionsView {
-  viewMode: CoachViewMode;
+  viewMode: ActionsViewMode;
   relationshipId?: Id;
   assignmentFilter: AssignmentFilter;
   timeRange: TimeRange;
@@ -22,7 +22,7 @@ export interface ActionsView {
 }
 
 export const DEFAULT_ACTIONS_VIEW = {
-  viewMode: CoachViewMode.MyActions,
+  viewMode: ActionsViewMode.MyActions,
   assignmentFilter: AssignmentFilter.Assigned,
   timeRange: TimeRange.Last30Days,
   statusVisibility: StatusVisibility.Open,

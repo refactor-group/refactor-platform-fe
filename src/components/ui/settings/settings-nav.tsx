@@ -24,7 +24,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: "Preferences",
     icon: Settings,
     children: [
-      { title: "Coaching Sessions", href: "/settings/preferences", icon: Clock },
+      { title: "Scheduling", href: "/settings/preferences", icon: Clock },
     ],
   },
   {
