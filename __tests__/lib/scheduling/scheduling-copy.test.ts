@@ -6,6 +6,7 @@ import {
   currentlyLine,
   meetingLine,
   moveSubmitLabel,
+  noMeetingLead,
   moveTitle,
   nothingElseLine,
   overlapLine,
@@ -125,10 +126,13 @@ describe("rail and resolve lines", () => {
     expect(createsLine(8, "Ehab")).toBe("8 sessions with Ehab");
   });
 
-  it("names the meeting link by provider, or nothing", () => {
-    expect(meetingLine(Some(Provider.Google))).toEqual(Some("Google Meet link included"));
-    expect(meetingLine(Some(Provider.Zoom))).toEqual(Some("Zoom link included"));
-    expect(meetingLine(None)).toEqual(None);
+  it("names the meeting link by provider", () => {
+    expect(meetingLine(Provider.Google)).toBe("Google Meet link included");
+    expect(meetingLine(Provider.Zoom)).toBe("Zoom link included");
+  });
+
+  it("names every provider in the no-link lead", () => {
+    expect(noMeetingLead()).toBe("No meeting link. Connect Google Meet or Zoom in");
   });
 
   it("says where the moved session is now", () => {

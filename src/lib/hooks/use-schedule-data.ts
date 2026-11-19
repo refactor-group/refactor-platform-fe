@@ -16,7 +16,7 @@ import { type PersonEntry, schedulablePeople } from "@/lib/people";
 import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { type Availability, busySessions, busyWindow, knownSessions, pickerPeople } from "@/lib/schedule-draft";
-import type { BusySession } from "@/lib/scheduling";
+import type { BusySession, MeetingLink } from "@/lib/scheduling";
 import { sessionEndIn, sessionStartIn, utcInstant } from "@/lib/session-window";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { CoachingSessionSeriesWithSessions } from "@/types/coaching-session-series";
@@ -48,7 +48,7 @@ export interface ScheduleData {
   /** Whether `busy` has been read; empty while loading or failed isn't free. */
   availability: Availability;
   coachStarts: DateTime[];
-  provider: Option<Provider>;
+  meeting: MeetingLink;
   defaultMinutes: number;
 }
 
@@ -66,9 +66,10 @@ function coachStartsFrom(history: EnrichedCoachingSession[], now: DateTime, time
     .filter((start) => start >= since);
 }
 
-function providerOf(connections: { provider: Provider }[] | null): Option<Provider> {
-  const first = connections?.[0];
-  return first ? Some(first.provider) : None;
+function meetingLinkOf(connections: { provider: Provider }[] | null): MeetingLink {
+  if (!connections) return { kind: "unknown" };
+  const first = connections[0];
+  return first ? { kind: "included", provider: first.provider } : { kind: "missing" };
 }
 
 /** `organizationId` picks whose relationships the Who list shows; busy times span every org. */
@@ -133,7 +134,7 @@ export function useScheduleData(range: BusyRange, organizationId: Id): ScheduleD
       ? { kind: "loading" }
       : { kind: "loaded" };
 
-  const { connections } = useOAuthConnections();
+  const { connections } = useOAuthConnections({ fresh: true });
   const { user } = useUser(userId);
 
   // The dialog's open time is "now" for the Who list; it needn't tick while open.
@@ -162,7 +163,7 @@ export function useScheduleData(range: BusyRange, organizationId: Id): ScheduleD
     busy,
     availability,
     coachStarts,
-    provider: providerOf(connections),
+    meeting: meetingLinkOf(connections),
     defaultMinutes: user?.default_coaching_session_duration_minutes ?? FALLBACK_DURATION_MINUTES,
   };
 }

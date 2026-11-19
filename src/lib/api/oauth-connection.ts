@@ -73,19 +73,19 @@ export const useOAuthConnection = (provider: OAuthProvider) => {
   };
 };
 
+const CACHED = { revalidateIfStale: false, revalidateOnFocus: false, revalidateOnReconnect: false };
+// Settings may change in another tab, so `fresh` rereads on mount and on every return.
+const FRESH = { revalidateIfStale: true, revalidateOnFocus: true, focusThrottleInterval: 0, revalidateOnReconnect: false };
+
 /**
  * SWR hook for fetching all OAuth connections.
  *
  */
-export const useOAuthConnections = () => {
+export const useOAuthConnections = ({ fresh = false } = {}) => {
   const { data, error, isLoading, mutate } = useApiSWR(
     `${OAUTH_CONNECTIONS_URL}`,
     () => OAuthConnectionApi.list(),
-    {
-      revalidateIfStale: false,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    }
+    fresh ? FRESH : CACHED
   );
 
   return {

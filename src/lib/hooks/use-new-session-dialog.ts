@@ -50,6 +50,7 @@ import {
   type StepMode,
   busyOn,
   currentStep,
+  meetingProvider,
   nextStep,
   prevStep,
   stepOrder,
@@ -209,7 +210,7 @@ export function useNewSessionDialog(
       personName: person.fullName,
       start: at,
       minutes,
-      provider: data.provider,
+      provider: meetingProvider(data.meeting),
       repeat,
       byWeekdays: recurrence.byWeekdays,
       timezone,
@@ -287,7 +288,7 @@ export function useNewSessionDialog(
     }),
     summary:
       entry.some && moving.none
-        ? Some(summaryOf(entry.val, createsCount(repeat, start, recurrence.byWeekdays), data.provider))
+        ? Some(summaryOf(entry.val, createsCount(repeat, start, recurrence.byWeekdays), data.meeting))
         : None,
     moves,
     who: {
