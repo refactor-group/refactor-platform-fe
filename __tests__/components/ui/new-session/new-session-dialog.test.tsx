@@ -213,9 +213,9 @@ describe("NewSessionDialog: Who", () => {
     expect(screen.queryByText(/No meeting link/)).not.toBeInTheDocument();
   });
 
-  it("rechecks connections when the user returns to the tab", () => {
+  it("rereads connections on open and when the user returns to the tab", () => {
     renderDialog();
-    expect(useOAuthConnections).toHaveBeenCalledWith({ revalidateOnFocus: true });
+    expect(useOAuthConnections).toHaveBeenCalledWith({ fresh: true });
   });
 
   it("says so when there's no one to schedule with", () => {

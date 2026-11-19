@@ -225,6 +225,13 @@ export function meetingLine(provider: Provider): string {
   return `${providerName(provider)} link included`;
 }
 
+/** Leads into the Settings link: "No meeting link. Connect Google Meet or Zoom in". */
+export function noMeetingLead(): string {
+  const names = Object.values(Provider).map(providerName);
+  const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names.join("");
+  return `No meeting link. Connect ${list} in`;
+}
+
 /** "Today", "Tomorrow", "In 3 days" or "In 2 weeks", counted in calendar days in start's zone. */
 export function relativeDayText(start: DateTime, now: DateTime): string {
   const days = Math.round(start.startOf("day").diff(now.setZone(start.zone).startOf("day"), "days").days);

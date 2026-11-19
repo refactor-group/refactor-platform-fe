@@ -1,7 +1,7 @@
 import type { DateTime } from "ts-luxon";
 import type { PickerPerson } from "@/components/ui/person-picker";
 import type { StepDialogLead, StepRailItem } from "@/components/ui/step-dialog";
-import type { MeetingLink, ScheduleData } from "@/lib/hooks/use-schedule-data";
+import type { ScheduleData } from "@/lib/hooks/use-schedule-data";
 import { moveStart } from "@/lib/move-draft";
 import type { PersonEntry } from "@/lib/people";
 import {
@@ -17,6 +17,7 @@ import {
   type BusyClash,
   type BusySession,
   type Cadence,
+  type MeetingLink,
   type MoveScope,
   type RepeatChoice,
   StepKind,

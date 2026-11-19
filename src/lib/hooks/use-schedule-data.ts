@@ -15,7 +15,7 @@ import { useUser } from "@/lib/api/users";
 import { type PersonEntry, schedulablePeople } from "@/lib/people";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { type Availability, busySessions, busyWindow, knownSessions, pickerPeople } from "@/lib/schedule-draft";
-import type { BusySession } from "@/lib/scheduling";
+import type { BusySession, MeetingLink } from "@/lib/scheduling";
 import { sessionEndIn, sessionStartIn, utcInstant } from "@/lib/session-window";
 import { getBrowserTimezone } from "@/lib/timezone-utils";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
@@ -66,20 +66,10 @@ function coachStartsFrom(history: EnrichedCoachingSession[], now: DateTime, time
     .filter((start) => start >= since);
 }
 
-/** Whether new sessions get a meeting link; unknown until connections load. */
-export type MeetingLink =
-  | { kind: "unknown" }
-  | { kind: "included"; provider: Provider }
-  | { kind: "missing" };
-
 function meetingLinkOf(connections: { provider: Provider }[] | null): MeetingLink {
   if (!connections) return { kind: "unknown" };
   const first = connections[0];
   return first ? { kind: "included", provider: first.provider } : { kind: "missing" };
-}
-
-export function meetingProvider(meeting: MeetingLink): Option<Provider> {
-  return meeting.kind === "included" ? Some(meeting.provider) : None;
 }
 
 export function useScheduleTimezone(): string {
@@ -149,8 +139,7 @@ export function useScheduleData(range: BusyRange, organizationId: Id): ScheduleD
       ? { kind: "loading" }
       : { kind: "loaded" };
 
-  // Picks up a provider connected in another tab once the user comes back.
-  const { connections } = useOAuthConnections({ revalidateOnFocus: true });
+  const { connections } = useOAuthConnections({ fresh: true });
   const { user } = useUser(userId);
 
   // The dialog's open time is "now" for the Who list; it needn't tick while open.

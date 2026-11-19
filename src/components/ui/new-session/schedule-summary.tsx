@@ -3,9 +3,9 @@
 import { ExternalLink, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { PersonAvatar } from "@/components/ui/avatar";
-import type { MeetingLink } from "@/lib/hooks/use-schedule-data";
 import type { SummaryModel } from "@/lib/new-session-dialog-model";
-import { createsLine, meetingLine } from "@/lib/scheduling-copy";
+import type { MeetingLink } from "@/lib/scheduling";
+import { createsLine, meetingLine, noMeetingLead } from "@/lib/scheduling-copy";
 
 export function ScheduleSummary({ userId, initials, firstName, count, meeting }: SummaryModel) {
   return (
@@ -43,7 +43,7 @@ function NoMeetingLink() {
     <p className="mt-0.5 flex gap-1 text-xs text-warning-text">
       <TriangleAlert className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
       <span>
-        No meeting link. Connect Google Meet or Zoom in{" "}
+        {noMeetingLead()}{" "}
         <Link
           href="/settings/integrations"
           target="_blank"

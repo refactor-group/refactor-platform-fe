@@ -7,7 +7,7 @@ import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { useOrganizationList } from "@/lib/api/organizations";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { DEFAULT_REPEAT_COUNT, type RepeatPrefill, useDialogRecurrence } from "@/lib/hooks/use-dialog-recurrence";
-import { type SeriesLoad, meetingProvider, useScheduleData, useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
+import { type SeriesLoad, useScheduleData, useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
 import { type SessionPlan, useScheduleSubmit } from "@/lib/hooks/use-schedule-submit";
 import { useWorkingHours } from "@/lib/hooks/use-working-hours";
 import {
@@ -49,6 +49,7 @@ import {
   type StepMode,
   busyOn,
   currentStep,
+  meetingProvider,
   nextStep,
   prevStep,
   stepOrder,
