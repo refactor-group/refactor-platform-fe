@@ -4,6 +4,8 @@ import {
   mockCommonApiRoutes,
   MOCK_USER_ID,
   MULTIPLE_RELATIONSHIPS,
+  mockRelationship,
+  sessionParticipants,
 } from './helpers'
 
 const ORGANIZATIONS = [
@@ -51,7 +53,9 @@ async function mockOrganizations(page: Page) {
 }
 
 // Coaching in two relationships is what shows the Join session trigger.
-const COACHING_TWO = MULTIPLE_RELATIONSHIPS.map((rel) => ({ ...rel, coach_id: MOCK_USER_ID }))
+const COACHING_TWO = MULTIPLE_RELATIONSHIPS.map(({ id, coachee_id, participants: [coach, coachee] }) =>
+  mockRelationship(id, { coach_id: MOCK_USER_ID, coachee_id }, { coach, coachee })
+)
 
 async function setup(page: Page, context: Parameters<typeof setupAuthentication>[1]) {
   await setupAuthentication(page, context)
@@ -97,7 +101,7 @@ async function mockActions(page: Page) {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: { coachee_actions: { [MOCK_USER_ID]: actions } } }),
+      body: JSON.stringify({ data: { actions_by_relationship: { [MOCK_USER_ID]: actions } } }),
     })
   })
   await page.route('**/actions/action-*', async (route) => {
@@ -127,6 +131,7 @@ async function mockActions(page: Page) {
               created_at: RECENT,
               updated_at: RECENT,
               relationship: COACHING_TWO[0],
+              participants: sessionParticipants(COACHING_TWO[0]),
             },
           ],
         }),

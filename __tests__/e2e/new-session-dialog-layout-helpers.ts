@@ -3,8 +3,9 @@ import {
   AUTH_STORE_STATE,
   COACHEE_VIEWER,
   MOCK_USER_ID,
-  SINGLE_RELATIONSHIP,
   mockCommonApiRoutes,
+  mockRelationship,
+  sessionParticipants,
   setupAuthentication,
 } from './helpers'
 
@@ -13,7 +14,7 @@ import {
 /** Monday, November 16, 2026, 8:00 AM in Chicago (CST, UTC-6). */
 export const NOW = '2026-11-16T14:00:00Z'
 
-const COACH = { id: MOCK_USER_ID, first_name: 'Test', last_name: 'User', display_name: 'Test User' }
+const COACH = { first_name: 'Test', last_name: 'User', email: 'test@example.com' }
 
 const PEOPLE = [
   ['rel-max', 'max', 'Maximiliana', 'Montgomery-Fitzgerald'],
@@ -26,31 +27,27 @@ const PEOPLE = [
   ['rel-sarah', 'sarah', 'Sarah', 'Kim'],
 ] as const
 
-const COACHED = PEOPLE.map(([id, coacheeId, first, last]) => ({
-  ...SINGLE_RELATIONSHIP[0],
-  id,
-  coach_id: MOCK_USER_ID,
-  coachee_id: coacheeId,
-  coach_first_name: COACH.first_name,
-  coach_last_name: COACH.last_name,
-  coachee_first_name: first,
-  coachee_last_name: last,
-  coachee_email: `${coacheeId}@example.com`,
-}))
+const COACHED = PEOPLE.map(([id, coacheeId, first, last]) =>
+  mockRelationship(
+    id,
+    { coach_id: MOCK_USER_ID, coachee_id: coacheeId },
+    { coach: COACH, coachee: { first_name: first, last_name: last, email: `${coacheeId}@example.com` } }
+  )
+)
 
 /** The user is the coachee here, so a clash with this session can't be moved. */
-const MY_COACH_RELATIONSHIP = {
-  ...SINGLE_RELATIONSHIP[0],
-  id: 'rel-my-coach',
-  coach_id: 'constantine',
-  coachee_id: MOCK_USER_ID,
-  coach_first_name: 'Constantine',
-  coach_last_name: 'Abernathy-Whitfield',
-  coach_email: 'constantine.abernathy-whitfield@example.com',
-  coachee_first_name: COACH.first_name,
-  coachee_last_name: COACH.last_name,
-  viewer: COACHEE_VIEWER,
-}
+const MY_COACH_RELATIONSHIP = mockRelationship(
+  'rel-my-coach',
+  { coach_id: 'constantine', coachee_id: MOCK_USER_ID, viewer: COACHEE_VIEWER },
+  {
+    coach: {
+      first_name: 'Constantine',
+      last_name: 'Abernathy-Whitfield',
+      email: 'constantine.abernathy-whitfield@example.com',
+    },
+    coachee: COACH,
+  }
+)
 
 export const RELATIONSHIPS = [...COACHED, MY_COACH_RELATIONSHIP]
 
@@ -61,13 +58,6 @@ export const EHAB_SERIES_ID = 'series-ehab'
 type Relationship = (typeof RELATIONSHIPS)[number]
 
 const relationship = (id: string): Relationship => RELATIONSHIPS.find((rel) => rel.id === id)!
-
-const user = (id: string, first: string, last: string) => ({
-  id,
-  first_name: first,
-  last_name: last,
-  display_name: `${first} ${last}`,
-})
 
 /** `date` is naive UTC, as the backend sends it. */
 function session(id: string, relId: string, date: string, seriesId: string | null = null) {
@@ -84,8 +74,7 @@ function session(id: string, relId: string, date: string, seriesId: string | nul
     created_at: '2026-10-01T00:00:00Z',
     updated_at: '2026-10-01T00:00:00Z',
     relationship: rel,
-    coach: user(rel.coach_id, rel.coach_first_name, rel.coach_last_name),
-    coachee: user(rel.coachee_id, rel.coachee_first_name, rel.coachee_last_name),
+    participants: sessionParticipants(rel),
   }
 }
 

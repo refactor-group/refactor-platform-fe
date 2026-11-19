@@ -3,6 +3,7 @@ import {
   setupAuthentication,
   mockCommonApiRoutes,
   MOCK_USER_ID,
+  mockRelationship,
 } from './helpers'
 
 // The member row's "Pair with…" dialog: the real StepDialog flow, the
@@ -41,19 +42,14 @@ const SELF = makeMember(MOCK_USER_ID, 'Test', 'User', 'Admin')
 const CARA = makeMember(CARA_ID, 'Cara', 'Test', 'User')
 const PAT = makeMember(PAT_ID, 'Pat', 'Coach', 'User')
 
-const PAT_COACHES_CARA = {
-  id: 'rel-1',
-  organization_id: ORG_ID,
-  coach_id: PAT_ID,
-  coachee_id: CARA_ID,
-  coach_first_name: 'Pat',
-  coach_last_name: 'Coach',
-  coachee_first_name: 'Cara',
-  coachee_last_name: 'Test',
-  kind: 'coaching',
-  created_at: '2024-01-01T00:00:00Z',
-  updated_at: '2024-01-01T00:00:00Z',
-}
+const PAT_COACHES_CARA = mockRelationship(
+  'rel-1',
+  { organization_id: ORG_ID, coach_id: PAT_ID, coachee_id: CARA_ID, viewer: null },
+  {
+    coach: { first_name: PAT.first_name, last_name: PAT.last_name, email: PAT.email },
+    coachee: { first_name: CARA.first_name, last_name: CARA.last_name, email: CARA.email },
+  }
+)
 
 const ADMIN_AUTH_STORE_STATE = {
   state: {

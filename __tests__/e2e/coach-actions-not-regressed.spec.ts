@@ -5,6 +5,8 @@ import {
   MOCK_USER_ID,
   MOCK_ORGANIZATIONS,
   SINGLE_RELATIONSHIP,
+  mockRelationship,
+  sessionParticipants,
 } from './helpers'
 
 // Regression guard for the coachee-actions visibility fix: a coach viewing
@@ -54,6 +56,7 @@ const ENRICHED_SESSION = {
   created_at: RECENT,
   updated_at: RECENT,
   relationship: SINGLE_RELATIONSHIP[0],
+  participants: sessionParticipants(SINGLE_RELATIONSHIP[0]),
 }
 
 test.describe('Coach viewing /actions (regression guard)', () => {
@@ -64,7 +67,7 @@ test.describe('Coach viewing /actions (regression guard)', () => {
     // The user coaches in the current organization → assignee=<their own id>.
     await setupAuthentication(page, context)
     await mockCommonApiRoutes(page, {
-      relationships: [{ ...SINGLE_RELATIONSHIP[0], coach_id: MOCK_USER_ID }],
+      relationships: [mockRelationship(RELATIONSHIP_ID, { coach_id: MOCK_USER_ID })],
     })
 
     await page.route('**/users/current/organizations', async (route) => {
@@ -98,7 +101,7 @@ test.describe('Coach viewing /actions (regression guard)', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             data: {
-              coachee_actions: {
+              actions_by_relationship: {
                 [MOCK_USER_ID]: [COACH_ASSIGNED_ACTION],
               },
             },

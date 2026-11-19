@@ -2,14 +2,14 @@ import { test, expect, type Page } from '@playwright/test'
 import {
   setupAuthentication,
   mockCommonApiRoutes,
+  mockRelationship,
+  sessionParticipants,
   MOCK_USER_ID,
-  SINGLE_RELATIONSHIP,
 } from './helpers'
 
 test.use({ timezoneId: 'America/Chicago', locale: 'en-US', viewport: { width: 1280, height: 900 } })
 
-const RELATIONSHIP = { ...SINGLE_RELATIONSHIP[0], coach_id: MOCK_USER_ID }
-const COACHEE = { id: RELATIONSHIP.coachee_id, first_name: 'Jane', last_name: 'Smith', display_name: 'Jane Smith' }
+const RELATIONSHIP = mockRelationship('rel-1', { coach_id: MOCK_USER_ID })
 
 const session = (id: string, date: string, series: { id: string; last_session_date: string } | null) => ({
   id,
@@ -22,7 +22,7 @@ const session = (id: string, date: string, series: { id: string; last_session_da
   created_at: '2026-10-01T12:00:00Z',
   updated_at: '2026-10-01T12:00:00Z',
   relationship: RELATIONSHIP,
-  coachee: COACHEE,
+  participants: sessionParticipants(RELATIONSHIP),
 })
 
 const SERIES_SESSION = session('series-session', '2026-10-21T21:00:00', {
