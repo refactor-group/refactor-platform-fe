@@ -18,13 +18,22 @@ One phase is one commit. A fresh implementer builds each phase, and the overseer
 
 | # | Phase | Status |
 |---|---|---|
-| 1 | `lib/actions-due.ts` + `useActionsDue`; move the panel, `statusMeta` and `addContextToAction` onto it | pending |
-| 2 | Week plumbing: `useWeekAt` export, `+Goal` include, `useNextSession`; goals card on it; `?actions=due` | pending |
+| 1 | `lib/actions-due.ts` + `useActionsDue`; move the panel, `statusMeta` and `addContextToAction` onto it | done `27f32da5` |
+| 2 | Week plumbing: `useWeekAt` export, `+Goal` include, `useNextSession`; goals card on it; `?actions=due` | done `bf7bde06` |
 | 3 | Error tokens; `ui/errors/card-error.tsx`; goals card error on `CardError` | pending |
 | 4 | `lib/next-session-copy.ts` (headline, when line) | pending |
-| 5 | `TodaysBriefingPanel`, `NextSessionCard` and its parts; swap them into the container; delete the old files | pending |
+| 5 | `TodaysBriefingPanel`, `NextSessionCard` and its parts; swap them into the container; delete the old files; update existing test plans that name Add New, the Upcoming session card or "Schedule a coaching session" | pending |
 | 6 | `.claude/file-organization.md`, the CLAUDE.md row, the coding-standards pointer | pending |
 | — | Overseer: real-backend check, light/dark/phone screenshots, draft PR | pending |
+
+Acceptance: `docs/test-plans/next_session_card_manual_testing.md`, written before the UI phases and kept static. The overseer runs it against the real backend before the draft PR.
+
+Existing plans that phase 5 must update, because they name removed UI:
+- `relationship_access_manual_testing.md`: DASH-01 to DASH-03, NEW-02.
+- `new_session_dialog_manual_testing.md`: the entry point at the top and the Add New case.
+- `design_system_manual_testing.md`: the "Add New" and "Schedule a coaching session" checks.
+- `colleague_relationships_manual_testing.md`: COL-30, COL-30a.
+- `week_grid_manual_testing.md`: Case 1.1 and the Part 9 regression line.
 
 Baseline on main `b60f695` (Node 24): tsc clean, lint 0 errors / 85 warnings, unit tests 337 files / 3374 tests.
 
