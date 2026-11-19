@@ -26,7 +26,7 @@ One phase is one commit. A fresh implementer builds each phase, and the overseer
 | 5b | Real-backend fixes: the loading placeholder mirrors the populated layout (no panel jump); the goals card shows the week request's error with Try again | done `024ec93c` |
 | 6 | Automated coverage of the manual plan: `__tests__/e2e/next-session-card.spec.ts`, a `?actions=due` case in `action-deep-link.spec.ts`, and the Due-tab parity integration test | done `38bf39b8` |
 | 7 | `.claude/file-organization.md`, the CLAUDE.md row, the coding-standards pointer | done `c1d0d33f` |
-| — | Overseer: real-backend check, light/dark/phone screenshots, draft PR | real-backend check done; found the two 5b defects |
+| — | Overseer: real-backend check, light/dark/phone screenshots, draft PR | done: draft PR #574 |
 
 Acceptance: `docs/test-plans/next_session_card_manual_testing.md`, written before the UI phases and kept static. The overseer runs it against the real backend before the draft PR.
 
