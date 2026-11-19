@@ -445,6 +445,19 @@ test.describe('Action deep-link: email link loads session, switches panel, scrol
     await expect(page.getByText(targetAction.body).first()).toBeVisible()
   })
 
+  test('?actions=due opens the Actions panel on the Due tab', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(!!isMobile, 'Desktop panel layout test only')
+
+    await page.goto(`/coaching-sessions/${SESSION_ID}?panel=actions&actions=due`)
+    await dismissDevErrorOverlay(page)
+
+    await expect(page.getByTestId('action-tab-due')).toHaveAttribute('aria-selected', 'true', { timeout: 15_000 })
+    await expect(page.getByTestId('action-tab-new')).toHaveAttribute('aria-selected', 'false')
+  })
+
   test('review action card back-view has correct deep-link href', async ({
     page,
     isMobile,
