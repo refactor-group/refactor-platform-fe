@@ -187,9 +187,9 @@ export const CoachingPreferencesSection: FC = () => {
   return (
     <FieldSet>
       <FieldGroup>
-        <FieldLegend>Default Coaching Session Duration</FieldLegend>
+        <FieldLegend>Default Session Duration</FieldLegend>
         <FieldDescription>
-          Pre-fills the duration when you schedule a new coaching session.
+          Pre-fills the duration when you schedule a new session.
           You can override the duration for any individual session.
         </FieldDescription>
 

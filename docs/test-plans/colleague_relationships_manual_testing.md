@@ -237,6 +237,7 @@ in DevTools that the responses have `participants` and none of the removed keys.
 | COL-B4 | Remove COACHEE from O1 (`ORG-04`), then as COACH: new session with COACHEE from a stale dialog, resend an R1 invite | COACH | 409 `participant_not_a_member` (was `coachee_not_a_member`); the toast names COACHEE, with Add back for an admin. Restore COACHEE after. Then the same for MEMBER on RC, as COL-50 | SES-46 |
 | COL-B5 | Kanban card and session panel assignee picker after COL-B4's removal | COACH | COACHEE shown but can't be newly assigned (from `participants[].is_member`) | |
 | COL-B6 | A tab opened before the deploy, used after it without a reload | COACH | The relationship list shows the error state, not a crash; a reload fixes it | |
+| COL-B7 | User menu, Settings | MEMBER | Opens on **Scheduling** (`/settings/preferences`), not Meetings; no "coaching" in the page's copy | |
 
 ### 3.11 Regression (`COL-9x`)
 

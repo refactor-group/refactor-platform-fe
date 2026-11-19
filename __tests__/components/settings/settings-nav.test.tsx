@@ -20,6 +20,16 @@ describe("SettingsNav", () => {
     });
   });
 
+  it("names the preferences page Scheduling", () => {
+    vi.mocked(usePathname).mockReturnValue("/settings/preferences");
+
+    render(<SettingsNav />);
+
+    screen.getAllByRole("link", { name: /Scheduling/ }).forEach((link) => {
+      expect(link).toHaveAttribute("href", "/settings/preferences");
+    });
+  });
+
   it("highlights active child item based on current pathname", () => {
     vi.mocked(usePathname).mockReturnValue("/settings/integrations");
 
