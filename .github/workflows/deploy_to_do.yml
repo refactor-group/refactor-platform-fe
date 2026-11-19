@@ -1,4 +1,4 @@
-name: Deploy to DigitalOcean via Tailscale UI
+name: Deploy to Production
 
 permissions:
   contents: read # Read-only access to repository contents
