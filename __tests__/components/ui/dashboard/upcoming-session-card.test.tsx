@@ -1,7 +1,8 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DateTime } from "ts-luxon";
-import { createEnrichedSessionAt, createMockGoal, COACHEE_VIEWER } from "../../../test-utils";
+import { createEnrichedSessionAt, createMockGoal, COACHEE_VIEWER, mockParticipants } from "../../../test-utils";
+import { RelationshipKind } from "@/types/coaching-relationship";
 import type { EnrichedCoachingSession, CoachingSession } from "@/types/coaching-session";
 import type { Action } from "@/types/action";
 import { ItemStatus } from "@/types/general";
@@ -143,17 +144,11 @@ describe("UpcomingSessionCard — populated state", () => {
     const past = createEnrichedSessionAt(-120, {
       id: "past",
       coaching_relationship_id: "rel-1",
-      coachee: {
-        id: "coachee-past",
-        email: "p@example.com",
-        first_name: "Past",
-        last_name: "Person",
-        display_name: "Past Person",
-        timezone: "America/Los_Angeles",
-        roles: [],
-        created_at: "",
-        updated_at: "",
-      },
+      participants: Some(
+        mockParticipants("coach-1", "coachee-1", RelationshipKind.Coaching, {
+          coachee: { first_name: "Past", last_name: "Person" },
+        })
+      ),
     });
     const imminent = createEnrichedSessionAt(15, {
       id: "imminent",

@@ -1,3 +1,4 @@
+import { otherParticipantInSession } from "@/lib/participants";
 import type { DateTime } from "ts-luxon";
 import type { StepRailItem } from "@/components/ui/step-dialog";
 import { type PersonEntry, menuPerson } from "@/lib/people";
@@ -25,8 +26,9 @@ const SERIES_LOADING_HINT = "Loading the series…";
 export function movePerson(session: EnrichedCoachingSession, userId: Id, entries: PersonEntry[]): Option<PersonEntry> {
   const entry = entries.find((e) => e.relationshipIds.includes(session.coaching_relationship_id));
   if (entry) return Some(entry);
-  const other = session.relationship?.coach_id === userId ? session.coachee : session.coach;
-  if (!other) return None;
+  const found = otherParticipantInSession(session, userId);
+  if (found.none) return None;
+  const other = found.val;
   return Some({
     person: menuPerson(other.id, other.first_name, other.last_name, other.email),
     relationshipIds: [session.coaching_relationship_id],

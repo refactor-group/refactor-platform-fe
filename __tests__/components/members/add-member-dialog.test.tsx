@@ -7,8 +7,9 @@ import { AddMemberDialog } from "@/components/ui/members/add-member-dialog";
 import { AddMemberMode } from "@/lib/add-member-dialog-model";
 import { USER_LOOKUP_RATE_LIMITED_MESSAGE } from "@/lib/api/users";
 import { toast } from "@/lib/toast";
-import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
+import { RelationshipKind, type CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import type { User } from "@/types/user";
+import { createMockRelationship } from "../../test-utils";
 
 // A concrete base URL so msw can match the real API calls this dialog makes.
 vi.mock("@/site.config", () => ({
@@ -33,6 +34,11 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
 
 const ADA = { id: "user-9", first_name: "Ada", last_name: "Lovelace", email: "ada@example.com" };
 const GRACE = { id: "user-2", first_name: "Grace", last_name: "Hopper", email: "grace@example.com" } as User;
+const graceAndAda = () =>
+  createMockRelationship(
+    { id: "rel-9", kind: RelationshipKind.Colleague, coach_id: GRACE.id, coachee_id: ADA.id },
+    { coach: GRACE, coachee: ADA }
+  );
 
 /** Lookup handler that only answers for Ada's exact email. */
 function lookupHandler(matches: typeof ADA | null) {
@@ -475,16 +481,7 @@ describe("AddMemberDialog – attaching an existing account", () => {
       http.get("*/organizations/:organizationId/coaching_relationships", () =>
         HttpResponse.json({
           status_code: 200,
-          data: [{
-            id: "rel-9",
-            kind: "colleague",
-            coach_id: GRACE.id,
-            coachee_id: ADA.id,
-            coach_first_name: "Grace",
-            coach_last_name: "Hopper",
-            coachee_first_name: "Ada",
-            coachee_last_name: "Lovelace",
-          }],
+          data: [graceAndAda()],
         })
       )
     );
@@ -502,9 +499,8 @@ describe("AddMemberDialog – attaching an existing account", () => {
 
   it("shows a found account's existing relationships as already paired", async () => {
     captureAdds();
-    const graceAndAda = { coach_id: GRACE.id, coachee_id: ADA.id, kind: "colleague" } as CoachingRelationshipWithUserNames;
     const user = userEvent.setup();
-    renderDialog({ relationships: [graceAndAda] });
+    renderDialog({ relationships: [graceAndAda()] });
 
     await findAda(user);
     await next(user);

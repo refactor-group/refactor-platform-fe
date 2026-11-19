@@ -33,14 +33,14 @@ const role = (r: Role, organizationId: string | null): UserRole =>
 const adminOfRefused = [role(Role.Admin, "org-1")];
 const adminOfViewed = [role(Role.User, "org-1"), role(Role.Admin, "org-current")];
 
-const coacheeRefusal: NotAMemberRefusal = {
-  reason: NotAMemberReason.Coachee,
+const participantRefusal: NotAMemberRefusal = {
+  reason: NotAMemberReason.Participant,
   userId: Some("u-1"),
   organizationId: Some("org-1"),
 };
 const nameOf = () => Some("Maya Diaz");
 
-function show(roles: UserRole[], refusal = coacheeRefusal, purpose = AddBackPurpose.ResendInvite, lookup = nameOf) {
+function show(roles: UserRole[], refusal = participantRefusal, purpose = AddBackPurpose.ResendInvite, lookup = nameOf) {
   session.roles = roles;
   const { result } = renderHook(() => useNotAMemberToast());
   result.current(refusal, purpose, lookup);
@@ -74,7 +74,7 @@ describe("useNotAMemberToast", () => {
   });
 
   it("points anyone else at an admin, with no button", () => {
-    const { message, action } = show([role(Role.User, "org-1")], coacheeRefusal, AddBackPurpose.ScheduleSessions);
+    const { message, action } = show([role(Role.User, "org-1")], participantRefusal, AddBackPurpose.ScheduleSessions);
 
     expect(message).toBe("Maya Diaz is no longer in this organization · Ask an admin to add Maya Diaz back");
     expect(action).toBeUndefined();
@@ -82,7 +82,7 @@ describe("useNotAMemberToast", () => {
 
   it("passes the refused person's id to the name lookup", () => {
     const lookup = vi.fn(() => None);
-    show(adminOfViewed, coacheeRefusal, AddBackPurpose.AssignActions, lookup);
+    show(adminOfViewed, participantRefusal, AddBackPurpose.AssignActions, lookup);
     expect(lookup).toHaveBeenCalledWith(Some("u-1"));
   });
 
@@ -94,7 +94,7 @@ describe("useNotAMemberToast", () => {
   it("falls back to the current organization when the refusal names none", () => {
     const { action } = show(
       [role(Role.Admin, "org-current")],
-      { ...coacheeRefusal, organizationId: None },
+      { ...participantRefusal, organizationId: None },
       AddBackPurpose.ScheduleSessions
     );
     action?.onClick();

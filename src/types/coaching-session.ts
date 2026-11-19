@@ -2,7 +2,7 @@ import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
 import { SortOrder } from "@/types/sorting";
 import { CoachingRelationship } from "@/types/coaching-relationship";
-import { User } from "@/types/user";
+import { isParticipants, type Participants } from "@/types/participant";
 import { Organization } from "@/types/organization";
 import { Goal } from "@/types/goal";
 import { Agreement } from "@/types/agreement";
@@ -66,18 +66,15 @@ interface CoachingSessionSeriesSummary {
  * This type extends CoachingSession with optional fields that are populated
  * based on the include parameter sent to the API.
  *
- * NOTE: The backend returns coach and coachee as TOP-LEVEL fields, not nested
- * inside the relationship object. The relationship field only contains IDs.
+ * NOTE: The backend returns participants as a TOP-LEVEL field, not nested
+ * inside the relationship object.
  */
 export interface EnrichedCoachingSession extends CoachingSession {
   /** Relationship data with IDs only (included when include=relationship) */
   relationship?: CoachingRelationship;
 
-  /** Coach user object (included when include=relationship) */
-  coach?: User;
-
-  /** Coachee user object (included when include=relationship) */
-  coachee?: User;
+  /** Some with include=relationship. */
+  participants: Option<Participants>;
 
   /** Organization data (included when include=organization, requires relationship) */
   organization?: Organization;
@@ -180,9 +177,10 @@ export type CoachingSessionWire = Omit<
  * the EnrichedCoachingSession include-fields (coach/coachee/goals/…) pass
  * through untouched when this is reused for the enriched list endpoint. */
 export function transformCoachingSession(raw: any): EnrichedCoachingSession {
-  if (raw == null) return { ...defaultCoachingSession(), topics: None };
+  if (raw == null) return { ...defaultCoachingSession(), topics: None, participants: None };
   return {
     ...raw,
+    participants: transformParticipants(raw),
     title: typeof raw.title === "string" ? Some(raw.title) : None,
     // string -> Some, null -> None, absent (single read) -> undefined.
     display_title:
@@ -204,6 +202,14 @@ export function transformCoachingSession(raw: any): EnrichedCoachingSession {
       ? Some(raw.topics.map(transformCoachingSessionTopic))
       : None,
   };
+}
+
+function transformParticipants(raw: any): Option<Participants> {
+  if (raw.relationship == null) return None;
+  if (!isParticipants(raw.participants)) {
+    throw new Error("Unexpected coaching session participants shape");
+  }
+  return Some(raw.participants);
 }
 
 function transformSeriesSummary(raw: any): Option<CoachingSessionSeriesSummary> {

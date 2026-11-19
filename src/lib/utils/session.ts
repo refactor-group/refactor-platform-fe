@@ -1,3 +1,4 @@
+import { otherParticipantInSession, participantName as participantNameOf } from "@/lib/participants";
 import { DateTime } from "ts-luxon";
 import { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 import { Id } from "@/types/general";
@@ -295,9 +296,9 @@ export function getSessionParticipantInfo(
   const canSchedule = viewer.val.can_schedule_sessions;
   const schedulingOpen = schedulingBlockedBy(relationship).none;
   // Identity, not permission: the other person is whoever isn't the viewer.
-  const participant = relationship.coach_id === userId ? session.coachee : session.coach;
+  const other = otherParticipantInSession(session, userId);
 
-  if (!participant) {
+  if (other.none) {
     return {
       participantName: "(data not loaded)",
       firstName: "",
@@ -309,9 +310,8 @@ export function getSessionParticipantInfo(
     };
   }
 
-  const participantName =
-    `${participant.first_name} ${participant.last_name}`.trim() ||
-    participant.display_name;
+  const participant = other.val;
+  const participantName = participantNameOf(participant);
 
   return {
     participantName,

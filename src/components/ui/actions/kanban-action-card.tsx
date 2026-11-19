@@ -6,9 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/components/lib/utils";
 import { NonMemberIdsProvider } from "@/components/ui/coaching-sessions/non-member-ids-context";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
-import {
-  nonMemberIdsOf,
-} from "@/types/coaching-relationship";
+import { nonMemberIds } from "@/lib/participants";
 import { getCoachName, getCoacheeName, relationshipPairLabel } from "@/lib/utils/relationship";
 import { CompactActionCard } from "@/components/ui/coaching-sessions/action-card-compact";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
@@ -63,7 +61,7 @@ const KanbanActionCardContent = memo(function KanbanActionCardContent({
         </span>
       </div>
 
-      <NonMemberIdsProvider ids={nonMemberIdsOf(ctx.relationship)}>
+      <NonMemberIdsProvider ids={nonMemberIds(ctx.relationship)}>
         <CompactActionCard
           action={ctx.action}
           locale={locale}

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/actions/utils";
 import type { Action } from "@/types/action";
 import { actionStatusToString } from "@/types/general";
+import { createMockRelationship } from "../../../test-utils";
 
 // ---------------------------------------------------------------------------
 // Test data factory
@@ -49,18 +50,10 @@ function makeAction(
       updated_at: now,
       assignee_ids: ["user-1"],
     },
-    relationship: {
-      id: overrides.relationshipId ?? "rel-1",
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-      organization_id: "org-1",
-      created_at: now,
-      updated_at: now,
-      coach_first_name: "Alice",
-      coach_last_name: "Smith",
-      coachee_first_name: "Bob",
-      coachee_last_name: "Jones",
-    },
+    relationship: createMockRelationship(
+      { id: overrides.relationshipId ?? "rel-1", coach_id: "coach-1", coachee_id: "coachee-1" },
+      { coach: { first_name: "Alice", last_name: "Smith" }, coachee: { first_name: "Bob", last_name: "Jones" } }
+    ),
     goal: {
       goalId: "goal-1",
       title: "Test Goal",

@@ -7,6 +7,7 @@ import {
   CoachingRelationshipWithUserNames,
   RelationshipKindChange,
   defaultCoachingRelationshipWithUserNames,
+  parseCoachingRelationship,
 } from "@/types/coaching-relationship";
 import { ResultAsync } from "neverthrow";
 import { EntityApiError } from "@/types/entity-api-error";
@@ -31,11 +32,12 @@ export const CoachingRelationshipApi = {
   list: async (
     organizationId: Id
   ): Promise<CoachingRelationshipWithUserNames[]> =>
-    EntityApi.listFn<CoachingRelationshipWithUserNames>(
+    EntityApi.listFn<unknown, CoachingRelationshipWithUserNames>(
       `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}`,
       {
         params: { organization_id: organizationId },
-      }
+      },
+      parseCoachingRelationship
     ),
 
   /**
@@ -49,9 +51,9 @@ export const CoachingRelationshipApi = {
     organizationId: Id,
     relationshipId: Id
   ): Promise<CoachingRelationshipWithUserNames> =>
-    EntityApi.getFn<CoachingRelationshipWithUserNames>(
+    EntityApi.getFn<unknown>(
       `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}/${relationshipId}`
-    ),
+    ).then(parseCoachingRelationship),
 
   /**
    * Unimplemented
@@ -73,13 +75,10 @@ export const CoachingRelationshipApi = {
     organizationId: Id,
     entity: NewCoachingRelationship
   ): Promise<CoachingRelationshipWithUserNames> => {
-    return EntityApi.createFn<
-      NewCoachingRelationship,
-      CoachingRelationshipWithUserNames
-    >(
+    return EntityApi.createFn<NewCoachingRelationship, unknown>(
       `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}`,
       entity
-    );
+    ).then(parseCoachingRelationship);
   },
 
   /**
@@ -93,7 +92,7 @@ export const CoachingRelationshipApi = {
   ): ResultAsync<CoachingRelationshipWithUserNames, EntityApiError> => {
     const url = `${ORGANIZATIONS_BASEURL}/${organizationId}/${COACHING_RELATIONSHIPS_BASEURL}/${relationshipId}/kind`;
     return ResultAsync.fromPromise(
-      EntityApi.updateFn<RelationshipKindChange, CoachingRelationshipWithUserNames>(url, change),
+      EntityApi.updateFn<RelationshipKindChange, unknown>(url, change).then(parseCoachingRelationship),
       (e) => EntityApiError.from("PUT", url, e)
     );
   },

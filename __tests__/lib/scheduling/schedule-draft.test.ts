@@ -36,15 +36,10 @@ describe("schedulablePeople", () => {
   });
 
   it("lists a colleague, whichever seat I'm stored in", () => {
-    const colleague = createMockRelationship({
-      id: "rel-c",
-      kind: RelationshipKind.Colleague,
-      coach_id: "mate",
-      coachee_id: ME,
-      coach_first_name: "Mate",
-      coach_last_name: "Peer",
-      viewer: COLLEAGUE_VIEWER,
-    });
+    const colleague = createMockRelationship(
+      { id: "rel-c", kind: RelationshipKind.Colleague, coach_id: "mate", coachee_id: ME, viewer: COLLEAGUE_VIEWER },
+      { coach: { first_name: "Mate", last_name: "Peer" } }
+    );
     const names = schedulablePeople(ME, [...RELATIONSHIPS, colleague]).map((p) => p.person.fullName);
     expect(names).toContain("Mate Peer");
   });

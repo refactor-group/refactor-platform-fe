@@ -3,16 +3,13 @@ import { otherParticipant } from "@/lib/people";
 import { createMockRelationship } from "../test-utils";
 
 describe("otherParticipant", () => {
-  const rel = createMockRelationship({
-    coach_id: "coach",
-    coach_first_name: "Jan",
-    coach_last_name: "Van Dyke",
-    coachee_id: "coachee",
-    coachee_first_name: "Mary Ann",
-    coachee_last_name: "Lee",
-    coach_email: "jan@example.com",
-    coachee_email: "maryann@example.com",
-  });
+  const rel = createMockRelationship(
+    { coach_id: "coach", coachee_id: "coachee" },
+    {
+      coach: { first_name: "Jan", last_name: "Van Dyke", email: "jan@example.com" },
+      coachee: { first_name: "Mary Ann", last_name: "Lee", email: "maryann@example.com" },
+    }
+  );
 
   it("builds the other person from their first and last names", () => {
     expect(otherParticipant(rel, "coachee")).toEqual({

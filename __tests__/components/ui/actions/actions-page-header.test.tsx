@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import {
   AssignmentFilter,
-  CoachViewMode,
+  ActionsViewMode,
   StatusVisibility,
   TimeRange,
 } from "@/types/assigned-actions";
@@ -20,8 +20,8 @@ function Wrapper({ children }: { children: ReactNode }) {
 // ---------------------------------------------------------------------------
 
 const defaultProps = {
-  isCoach: false,
-  viewMode: CoachViewMode.MyActions,
+  views: [ActionsViewMode.MyActions],
+  viewMode: ActionsViewMode.MyActions,
   onViewModeChange: vi.fn(),
   statusVisibility: StatusVisibility.Open,
   onStatusVisibilityChange: vi.fn(),
@@ -56,26 +56,28 @@ describe("ActionsPageHeader", () => {
     expect(screen.getByText("Actions")).toBeInTheDocument();
   });
 
-  it("shows coach view toggle when isCoach is true", () => {
+  it.each([
+    ["coach and colleague", [ActionsViewMode.MyActions, ActionsViewMode.CoacheeActions, ActionsViewMode.ColleagueActions], ["My Actions", "Coachee Actions", "Colleagues' Actions"]],
+    ["coach only", [ActionsViewMode.MyActions, ActionsViewMode.CoacheeActions], ["My Actions", "Coachee Actions"]],
+    ["colleague only", [ActionsViewMode.MyActions, ActionsViewMode.ColleagueActions], ["My Actions", "Colleagues' Actions"]],
+  ])("shows a %s viewer's views in order", (_, views, labels) => {
     render(
       <Wrapper>
-        <ActionsPageHeader {...defaultProps} isCoach={true} />
+        <ActionsPageHeader {...defaultProps} views={views} />
       </Wrapper>
     );
 
-    expect(screen.getByText("My Actions")).toBeInTheDocument();
-    expect(screen.getByText("Coachee Actions")).toBeInTheDocument();
+    expect(screen.getAllByRole("radio").map((item) => item.textContent)).toEqual(labels);
   });
 
-  it("hides coach view toggle when isCoach is false", () => {
+  it("shows no toggle for a coachee, who has only My Actions", () => {
     render(
       <Wrapper>
-        <ActionsPageHeader {...defaultProps} isCoach={false} />
+        <ActionsPageHeader {...defaultProps} />
       </Wrapper>
     );
 
     expect(screen.queryByText("My Actions")).not.toBeInTheDocument();
-    expect(screen.queryByText("Coachee Actions")).not.toBeInTheDocument();
   });
 
   it("renders status visibility controls inside filter popover", async () => {
@@ -115,18 +117,21 @@ describe("ActionsPageHeader", () => {
     );
   });
 
-  it("calls onViewModeChange when toggling coach view", async () => {
+  it("calls onViewModeChange with the picked view", async () => {
     const user = userEvent.setup();
 
     render(
       <Wrapper>
-        <ActionsPageHeader {...defaultProps} isCoach={true} />
+        <ActionsPageHeader
+          {...defaultProps}
+          views={[ActionsViewMode.MyActions, ActionsViewMode.ColleagueActions]}
+        />
       </Wrapper>
     );
 
-    await user.click(screen.getByText("Coachee Actions"));
+    await user.click(screen.getByText("Colleagues' Actions"));
     expect(defaultProps.onViewModeChange).toHaveBeenCalledWith(
-      CoachViewMode.CoacheeActions
+      ActionsViewMode.ColleagueActions
     );
   });
 

@@ -25,8 +25,8 @@ function openNextOfSeries(row: EnrichedCoachingSession, timezone: string, openMo
         toast.error("This series has no upcoming sessions");
         return;
       }
-      const { relationship, coach, coachee } = row;
-      openMove({ ...next.val, relationship, coach, coachee, topics: None }, MoveScope.Following);
+      const { relationship, participants } = row;
+      openMove({ ...next.val, relationship, participants, topics: None }, MoveScope.Following);
     },
     (error) => {
       console.error("Failed to load the coaching session series:", error);

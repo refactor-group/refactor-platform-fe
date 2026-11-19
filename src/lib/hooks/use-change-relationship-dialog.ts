@@ -24,10 +24,10 @@ import {
   leadOf,
   railOf,
   relationshipChoices,
-  roleIn,
   stepTitle,
 } from "@/lib/change-relationship-dialog-model";
 import { useNotAMemberToast } from "@/lib/hooks/use-not-a-member-toast";
+import { roleIn } from "@/lib/participants";
 import { otherParticipant } from "@/lib/people";
 import { toast } from "@/lib/toast";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";

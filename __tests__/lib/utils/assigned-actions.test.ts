@@ -10,6 +10,7 @@ import {
   resolveGoalContext,
   buildGoalContext,
 } from "@/lib/utils/assigned-actions";
+import { createMockEnrichedSession } from "../../test-utils";
 
 // ---------------------------------------------------------------------------
 // Factories
@@ -51,27 +52,8 @@ function makeAction(overrides: Partial<Action> = {}): Action {
   };
 }
 
-function makeSession(
-  goals: Goal[] = []
-): EnrichedCoachingSession {
-  return {
-    id: "session-1",
-    coaching_relationship_id: "rel-1",
-    date: now.toISO()!,
-    created_at: now.toISO()!,
-    updated_at: now.toISO()!,
-    goals,
-    relationship: {
-      id: "rel-1",
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-      organization_id: "org-1",
-      created_at: now,
-      updated_at: now,
-      coach: { id: "coach-1", email: "c@test.com", first_name: "Alice", last_name: "Coach", display_name: null, created_at: now, updated_at: now },
-      coachee: { id: "coachee-1", email: "e@test.com", first_name: "Bob", last_name: "Coachee", display_name: null, created_at: now, updated_at: now },
-    },
-  };
+function makeSession(goals: Goal[] = []): EnrichedCoachingSession {
+  return createMockEnrichedSession({ date: now.toISO()!, goals });
 }
 
 // ---------------------------------------------------------------------------
