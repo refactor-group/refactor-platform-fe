@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { DateTime } from "ts-luxon";
+import { describe, it, expect, afterEach } from "vitest";
+import { DateTime, Settings } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
 import { Some, None } from "@/types/option";
 import {
@@ -210,6 +210,20 @@ describe("groupByStatus", () => {
 // ---------------------------------------------------------------------------
 
 describe("applyTimeFilter", () => {
+  const originalNow = Settings.now;
+  afterEach(() => {
+    Settings.now = originalNow;
+  });
+
+  it("cuts the window on the profile zone's day", () => {
+    // 03:00 UTC on Dec 1 is still Nov 30 in Chicago, so Chicago's cutoff is Oct 31, a day before UTC's.
+    const pinned = DateTime.fromISO("2026-12-01T03:00:00Z").toMillis();
+    Settings.now = () => pinned;
+    const actions = [makeAction({ id: "edge", due_by: DateTime.fromISO("2026-10-31T12:00:00Z") })];
+    expect(applyTimeFilter(actions, TimeRange.Last30Days, "America/Chicago")).toHaveLength(1);
+    expect(applyTimeFilter(actions, TimeRange.Last30Days, "UTC")).toHaveLength(0);
+  });
+
   it("AllTime returns all actions unfiltered", () => {
     const actions = [
       makeAction({
@@ -219,7 +233,7 @@ describe("applyTimeFilter", () => {
       makeAction({ id: "recent", due_by: DateTime.now() }),
     ];
 
-    const result = applyTimeFilter(actions, TimeRange.AllTime);
+    const result = applyTimeFilter(actions, TimeRange.AllTime, "UTC");
 
     expect(result).toHaveLength(2);
   });
@@ -236,7 +250,7 @@ describe("applyTimeFilter", () => {
       }),
     ];
 
-    const result = applyTimeFilter(actions, TimeRange.Last30Days);
+    const result = applyTimeFilter(actions, TimeRange.Last30Days, "UTC");
 
     expect(result).toHaveLength(1);
     expect(result[0].action.id).toBe("recent");
@@ -258,7 +272,7 @@ describe("applyTimeFilter", () => {
       }),
     ];
 
-    const result = applyTimeFilter(actions, TimeRange.Last90Days);
+    const result = applyTimeFilter(actions, TimeRange.Last90Days, "UTC");
 
     expect(result).toHaveLength(2);
     expect(result.map((a) => a.action.id)).toEqual(["old", "recent"]);
@@ -272,7 +286,7 @@ describe("applyTimeFilter", () => {
       }),
     ];
 
-    const result = applyTimeFilter(actions, TimeRange.Last30Days);
+    const result = applyTimeFilter(actions, TimeRange.Last30Days, "UTC");
 
     expect(result).toHaveLength(1);
   });
@@ -284,15 +298,15 @@ describe("applyTimeFilter", () => {
       makeAction({ id: "old", due_by: DateTime.now().minus({ days: 200 }) }),
     ];
 
-    const bounded = applyTimeFilter(actions, TimeRange.Last30Days);
+    const bounded = applyTimeFilter(actions, TimeRange.Last30Days, "UTC");
     expect(bounded.map((a) => a.action.id)).toEqual(["undated", "recent"]);
 
-    const all = applyTimeFilter(actions, TimeRange.AllTime);
+    const all = applyTimeFilter(actions, TimeRange.AllTime, "UTC");
     expect(all.map((a) => a.action.id)).toEqual(["undated", "recent", "old"]);
   });
 
   it("returns empty array for empty input", () => {
-    const result = applyTimeFilter([], TimeRange.Last30Days);
+    const result = applyTimeFilter([], TimeRange.Last30Days, "UTC");
     expect(result).toEqual([]);
   });
 });

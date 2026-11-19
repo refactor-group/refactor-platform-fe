@@ -7,7 +7,8 @@ import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { useOrganizationList } from "@/lib/api/organizations";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { DEFAULT_REPEAT_COUNT, type RepeatPrefill, useDialogRecurrence } from "@/lib/hooks/use-dialog-recurrence";
-import { type SeriesLoad, useScheduleData, useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
+import { type SeriesLoad, useScheduleData } from "@/lib/hooks/use-schedule-data";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import { type SessionPlan, useScheduleSubmit } from "@/lib/hooks/use-schedule-submit";
 import { useWorkingHours } from "@/lib/hooks/use-working-hours";
 import {
@@ -94,7 +95,7 @@ export function useNewSessionDialog(
   const series = seriesLoad.kind === "loaded" ? Some(seriesLoad.series) : None;
   const seriesFailed = seriesLoad.kind === "error";
   const desktop = unwrapOr(useMediaQuery(MODAL_DESKTOP_QUERY), false);
-  const zone = useScheduleTimezone();
+  const zone = useUserTimezone();
   const [initial] = useState(() => initialDraft(request, zone));
   const moving = request.kind === "move" ? Some(request.session) : None;
   const [personId, setPersonId] = useState<Option<Id>>(None);

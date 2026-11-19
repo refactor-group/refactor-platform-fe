@@ -55,6 +55,23 @@ describe("statusMeta", () => {
   });
 });
 
+describe("statusMeta in the profile zone", () => {
+  // 20:00 on the 29th in Chicago is already the 30th in Tokyo.
+  const tokyoNow = DateTime.fromISO("2026-10-30T12:00:00", { zone: "Asia/Tokyo" });
+  const chicagoEvening = at("2026-10-29T20:00:00");
+
+  it("dates the due day in now's zone", () => {
+    const meta = statusMeta({ status: ItemStatus.NotStarted, dueBy: Some(chicagoEvening), statusChangedAt: changed }, tokyoNow);
+    expect(meta.kind).toBe("due");
+    expect(formatStatusMeta(meta, "en-US")).toEqual(Some("Due Oct 30"));
+  });
+
+  it("dates done and closed in now's zone", () => {
+    const meta = statusMeta({ status: ItemStatus.Completed, dueBy: None, statusChangedAt: chicagoEvening }, tokyoNow);
+    expect(formatStatusMeta(meta, "en-US")).toEqual(Some("Done Oct 30"));
+  });
+});
+
 describe("formatStatusMeta", () => {
   const cases: Array<[string, StatusMeta, string]> = [
     ["due", { kind: "due", dueBy: at("2026-11-04") }, "Due Nov 4"],

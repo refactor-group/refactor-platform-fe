@@ -91,7 +91,7 @@ function isDueBeforeNextSession(
   if (!nextSession) return true; // Include if no next session scheduled
 
   if (action.due_by.none) return false;
-  const nextSessionDate = DateTime.fromISO(nextSession.date);
+  const nextSessionDate = DateTime.fromISO(nextSession.date, { zone: "utc" });
   return action.due_by.val <= nextSessionDate;
 }
 
@@ -109,7 +109,7 @@ function wasCompletedSinceLastSession(
   );
   if (!lastSession) return true; // Include if no last session
 
-  const lastSessionDate = DateTime.fromISO(lastSession.date);
+  const lastSessionDate = DateTime.fromISO(lastSession.date, { zone: "utc" });
   return action.status_changed_at >= lastSessionDate;
 }
 
@@ -217,7 +217,7 @@ export function buildGoalContext(
 export function buildSessionContext(session: EnrichedCoachingSession): SessionContext {
   return {
     coachingSessionId: session.id,
-    sessionDate: DateTime.fromISO(session.date),
+    sessionDate: DateTime.fromISO(session.date, { zone: "utc" }),
   };
 }
 
@@ -232,12 +232,14 @@ export function buildSessionContext(session: EnrichedCoachingSession): SessionCo
  * @param action - The action to enrich
  * @param sessionMap - Map of session IDs to enriched sessions
  * @param nextSessionByRelationship - Map of relationship IDs to next sessions
+ * @param timezone - The user's profile zone, whose calendar days decide overdue
  * @returns Enriched action with context, or null if session/relationship not found
  */
 export function addContextToAction(
   action: Action,
   sessionMap: Map<Id, EnrichedCoachingSession>,
-  nextSessionByRelationship: Map<Id, EnrichedCoachingSession>
+  nextSessionByRelationship: Map<Id, EnrichedCoachingSession>,
+  timezone: string
 ): AssignedActionWithContext | null {
   const session = sessionMap.get(action.coaching_session_id);
   if (!session) return null;
@@ -250,9 +252,9 @@ export function addContextToAction(
   );
 
   // Compare dates only (not times) to avoid marking items due today as overdue
-  const today = DateTime.now().startOf("day");
+  const today = DateTime.now().setZone(timezone).startOf("day");
   const isOverdue = action.due_by.some
-    ? action.due_by.val.startOf("day") < today
+    ? action.due_by.val.setZone(timezone).startOf("day") < today
     : false;
 
   return {
@@ -272,16 +274,18 @@ export function addContextToAction(
  * @param actions - Array of actions to enrich
  * @param sessionMap - Map of session IDs to enriched sessions
  * @param nextSessionByRelationship - Map of relationship IDs to next sessions
+ * @param timezone - The user's profile zone, whose calendar days decide overdue
  * @returns Array of enriched actions with context
  */
 export function addContextToActions(
   actions: Action[],
   sessionMap: Map<Id, EnrichedCoachingSession>,
-  nextSessionByRelationship: Map<Id, EnrichedCoachingSession>
+  nextSessionByRelationship: Map<Id, EnrichedCoachingSession>,
+  timezone: string
 ): AssignedActionWithContext[] {
   return actions
     .map((action) =>
-      addContextToAction(action, sessionMap, nextSessionByRelationship)
+      addContextToAction(action, sessionMap, nextSessionByRelationship, timezone)
     )
     .filter((a): a is AssignedActionWithContext => a !== null);
 }
@@ -411,12 +415,14 @@ export interface ProcessedActions {
  * @param filter - Filter type to apply
  * @param userId - User ID for filtering (null skips user assignment check)
  * @param lookupMaps - Session lookup maps for context enrichment
+ * @param timezone - The user's profile zone, whose calendar days decide overdue
  */
 export function processActions(
   rawActions: Action[],
   filter: AssignedActionsFilter,
   userId: Id | null,
-  lookupMaps: SessionLookupMaps
+  lookupMaps: SessionLookupMaps,
+  timezone: string
 ): ProcessedActions {
   const { sessionMap, nextSessionByRelationship, lastSessionByRelationship } =
     lookupMaps;
@@ -435,7 +441,8 @@ export function processActions(
   const actionsWithContext = addContextToActions(
     filteredActions,
     sessionMap,
-    nextSessionByRelationship
+    nextSessionByRelationship,
+    timezone
   );
 
   // Step 3: Group by relationship

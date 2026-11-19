@@ -68,7 +68,7 @@ describe("selectReviewActionsForSession", () => {
       }),
     ];
 
-    const result = selectReviewActionsForSession(actions, sessionsAsc, "s2");
+    const result = selectReviewActionsForSession(actions, sessionsAsc, "s2", "UTC");
     expect(result.map((a) => a.id)).toEqual(["a-due"]);
   });
 
@@ -86,7 +86,7 @@ describe("selectReviewActionsForSession", () => {
       }),
     ];
 
-    const result = selectReviewActionsForSession(actions, sessionsAsc, "s1");
+    const result = selectReviewActionsForSession(actions, sessionsAsc, "s1", "UTC");
     expect(result.map((a) => a.id).sort()).toEqual(["a-recent", "a-very-old"]);
   });
 
@@ -99,7 +99,7 @@ describe("selectReviewActionsForSession", () => {
       }),
     ];
 
-    expect(selectReviewActionsForSession(actions, sessionsAsc, "missing")).toEqual([]);
+    expect(selectReviewActionsForSession(actions, sessionsAsc, "missing", "UTC")).toEqual([]);
   });
 
   it("treats sessions in a different relationship as if absent when picking the previous session", () => {
@@ -120,7 +120,7 @@ describe("selectReviewActionsForSession", () => {
       }),
     ];
 
-    const result = selectReviewActionsForSession(actions, sessions, "a2");
+    const result = selectReviewActionsForSession(actions, sessions, "a2", "UTC");
     expect(result.map((a) => a.id)).toEqual(["a-rel-a-window"]);
   });
 
@@ -138,7 +138,7 @@ describe("selectReviewActionsForSession", () => {
       }),
     ];
 
-    const result = selectReviewActionsForSession(actions, sessionsAsc, "s2");
+    const result = selectReviewActionsForSession(actions, sessionsAsc, "s2", "UTC");
     expect(result.map((a) => a.id)).toEqual(["a-later", "a-earlier"]);
   });
 
@@ -164,6 +164,7 @@ describe("selectReviewActionsForSession", () => {
       actions,
       sessionsAsc,
       "s1",
+      "UTC",
       fallback
     );
     expect(result.map((a) => a.id)).toEqual(["a-within-fallback"]);

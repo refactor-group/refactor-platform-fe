@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import type { SWRConfiguration } from "swr";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useActionsFetch } from "@/lib/hooks/use-actions-fetch";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import { useSessionContextFetch } from "@/lib/hooks/use-session-context-fetch";
 import { AssignmentFilter, CoachViewMode } from "@/types/assigned-actions";
 import type { AssignedActionWithContext } from "@/types/assigned-actions";
@@ -67,6 +68,7 @@ export function useAllActionsWithContext(
     userSession: state.userSession,
   }));
   const userId = userSession?.id ?? null;
+  const timezone = useUserTimezone();
 
   const {
     actions,
@@ -96,9 +98,10 @@ export function useAllActionsWithContext(
       addContextToActions(
         actions,
         lookupMaps.sessionMap,
-        lookupMaps.nextSessionByRelationship
+        lookupMaps.nextSessionByRelationship,
+        timezone
       ),
-    [actions, lookupMaps]
+    [actions, lookupMaps, timezone]
   );
 
   const isLoading = !userId || actionsLoading || sessionsLoading;

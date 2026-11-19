@@ -516,6 +516,15 @@ Open a session's Actions panel with suggested actions from a transcript, one wit
 
 **Pass:** the back shows the meta line (e.g. "Due Nov 8") and Done, a 14px title, assignee avatars with names, and pill-shaped Edit and Delete buttons. In edit mode the labels are 12.5px grey, and each control is a borderless pill that turns grey on hover, with a caret. The assignee menu lists each person with a 26px avatar and an indigo check on the assigned ones, with no checkboxes; a person who can't be picked is dimmed with the reason below. The goal menu puts its check on the right. Save and Cancel (Accept and Cancel on suggestions) are pills. Everything reads clearly in Dark and fits at 375px.
 
+### Case I7b: due dates follow the profile time zone
+
+1. Set your profile time zone to one far from your computer's (e.g. Asia/Tokyo with the Mac on Central time), in Settings.
+2. Have an action due late in the evening on your computer's clock, e.g. 9 PM Wednesday Central, which is Thursday in Tokyo. A suggestion defaulting to the next session works too.
+3. Look at the card on the Actions page, in the session panel (front, back and edit faces) and on a suggested action card. Open the due date picker, then pick a different day.
+4. Have an action due late yesterday on your computer's clock that is today in the profile zone.
+
+**Pass:** every due date reads the profile zone's day ("Due Thu…"), matching the session header's dates. The picker opens on that day and marks the profile zone's today. Picking another day saves the start of that day in the profile zone. The action from step 4 isn't marked overdue. A card's "From session" date, the session panel's Due tab, the dashboard's "N actions due" and the Actions page's Last 30 days filter all go by profile-zone days. With the profile and computer in the same zone, nothing changes.
+
 ### Case I8: agreement, goal and topic cards
 
 1. Open a session's Agreements panel: flip an agreement with ⓘ, then click Edit.

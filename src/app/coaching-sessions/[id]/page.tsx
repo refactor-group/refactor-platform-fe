@@ -3,7 +3,7 @@
 import { Separator } from "@/components/ui/separator";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import { useAddFromNotes } from "@/lib/hooks/use-add-from-notes";
 
 import { CoachingSessionTitle } from "@/components/ui/coaching-sessions/coaching-session-title";
@@ -51,7 +51,6 @@ import {
 import { FocusedPanel } from "@/types/coaching-session-layout";
 
 import { DateTime } from "ts-luxon";
-import { getBrowserTimezone } from "@/lib/timezone-utils";
 
 // Width of the shared left side panel (Topics / Goals / Actions / Agreements).
 // One value drives all four sections so spacing stays consistent.
@@ -143,9 +142,7 @@ export default function CoachingSessionsPage() {
         ? PanelSection.Actions
         : PanelSection.Topics;
 
-  const { userSession } = useAuthStore((state) => ({
-    userSession: state.userSession,
-  }));
+  const timezone = useUserTimezone();
 
   // Get current coaching session from URL
   const { currentCoachingSession, currentCoachingSessionId, isError } = useCurrentCoachingSession();
@@ -360,7 +357,7 @@ export default function CoachingSessionsPage() {
               afterSessionLock={currentCoachingSession
                 ? afterSessionLockFor(
                     currentCoachingSession,
-                    userSession?.timezone || getBrowserTimezone()
+                    timezone
                   )
                 : NO_AFTER_SESSION_LOCK}
               defaultSection={panelSection}

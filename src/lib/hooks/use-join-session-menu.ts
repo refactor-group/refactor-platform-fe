@@ -22,6 +22,7 @@ import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { usePeopleActivity } from "@/lib/hooks/use-people-activity";
 import { useTodaysSessions } from "@/lib/hooks/use-todays-sessions";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import {
   type PersonActivity,
   activityRelationship,
@@ -43,7 +44,6 @@ import {
   menuPerson,
   peopleFor,
 } from "@/lib/people";
-import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { calculateSessionUrgency } from "@/lib/utils/session";
 import type {
   CoachingSession,
@@ -322,11 +322,8 @@ function resolveSelected(
 }
 
 export function useJoinSessionMenu(): JoinSessionMenuModel {
-  const { userId, userSession } = useAuthStore((state) => ({
-    userId: state.userId,
-    userSession: state.userSession,
-  }));
-  const timezone = userSession?.timezone || getBrowserTimezone();
+  const userId = useAuthStore((state) => state.userId);
+  const timezone = useUserTimezone();
   const { currentOrganizationId } = useCurrentOrganization();
   const pathname = usePathname() ?? "";
 

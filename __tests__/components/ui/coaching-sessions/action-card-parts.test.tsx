@@ -10,6 +10,9 @@ import { GoalPill } from "@/components/ui/goal-pill";
 import { createMockGoal } from "../../../test-utils";
 import { NonMemberIdsProvider } from "@/components/ui/coaching-sessions/non-member-ids-context";
 
+const profile = vi.hoisted(() => ({ zone: "UTC" }));
+vi.mock("@/lib/hooks/use-user-timezone", () => ({ useUserTimezone: () => profile.zone }));
+
 function Wrapper({ children }: { children: ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
 }
@@ -257,5 +260,40 @@ describe("DueDatePicker", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /Feb 14, 2025/ }));
     expect(screen.getByText("February 2025")).toBeInTheDocument();
+  });
+
+  describe("in a profile zone ahead of the browser", () => {
+    beforeEach(() => {
+      profile.zone = "Asia/Tokyo";
+      return () => {
+        profile.zone = "UTC";
+      };
+    });
+
+    // 20:00 UTC on Feb 14 is 05:00 on Feb 15 in Tokyo.
+    const late = DateTime.fromISO("2025-02-14T20:00:00Z");
+
+    it("shows the profile zone's date", () => {
+      render(
+        <Wrapper>
+          <DueDatePicker value={late} onChange={vi.fn()} locale="en-US" variant="button" />
+        </Wrapper>
+      );
+      expect(screen.getByRole("button", { name: /Feb 15, 2025/ })).toBeInTheDocument();
+    });
+
+    it("picks the start of a day in the profile zone", async () => {
+      const onChange = vi.fn();
+      render(
+        <Wrapper>
+          <DueDatePicker value={late} onChange={onChange} locale="en-US" variant="button" />
+        </Wrapper>
+      );
+      await userEvent.click(screen.getByRole("button", { name: /Feb 15, 2025/ }));
+      await userEvent.click(screen.getByRole("gridcell", { name: "20" }));
+      const picked: DateTime = onChange.mock.calls[0][0];
+      expect(picked.zoneName).toBe("Asia/Tokyo");
+      expect(picked.toISO()).toBe("2025-02-20T00:00:00.000+09:00");
+    });
   });
 });

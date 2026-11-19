@@ -18,6 +18,7 @@ import { AssigneeAvatars, resolveAssignees } from "@/components/ui/coaching-sess
 import { ActionEditForm } from "@/components/ui/coaching-sessions/action-card-compact";
 import { cn } from "@/components/lib/utils";
 import { CARD_BUTTON } from "@/components/ui/card-field";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import { mayActOnSuggestion, suggestionDue } from "@/lib/utils/transcript-suggestions";
 import { formatTimestamp } from "@/lib/utils/transcript-format-timestamp";
 import { useTapTooltip } from "@/lib/hooks/use-tap-tooltip";
@@ -256,6 +257,7 @@ function SuggestionEditBack({
   const [goalId, setGoalId] = useState<Option<Id>>(proposal.goal_id);
   const [confirming, setConfirming] = useState<Option<ActionEdits>>(None);
   const { pending, run } = useInFlight();
+  const timezone = useUserTimezone();
 
   const { allAssignees, resolvedAssignees } = resolveAssignees(
     assigneeIds,
@@ -270,7 +272,7 @@ function SuggestionEditBack({
       : {};
   const action = {
     ...proposal,
-    due_by: Some(picked.some ? picked.val : suggestionDue(suggestion, locale).at),
+    due_by: Some(picked.some ? picked.val : suggestionDue(suggestion, locale, timezone).at),
   };
 
   const toggleAssignee = (id: Id) =>
@@ -471,7 +473,7 @@ function SuggestionDueLabel({
   locale: string;
 }) {
   const tap = useTapTooltip();
-  const due = suggestionDue(suggestion, locale);
+  const due = suggestionDue(suggestion, locale, useUserTimezone());
   const kind = due.spoken ? "spoken" : "default";
   // The meta line of the full card; a date heard in the transcript reads stronger than a default one.
   const tone = cn(
