@@ -208,3 +208,9 @@ export function conflictReasonOf(error: unknown): Option<string> {
   const details = conflictDetailsOf(error);
   return details.some && typeof details.val.reason === "string" ? Some(details.val.reason) : None;
 }
+
+/** Whether a 409's `details.reason` is `reason`. */
+export function hasConflictReason(error: unknown, reason: string): boolean {
+  const found = conflictReasonOf(error);
+  return found.some && found.val === reason;
+}

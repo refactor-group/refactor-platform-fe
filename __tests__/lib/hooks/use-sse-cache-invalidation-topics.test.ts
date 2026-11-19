@@ -55,3 +55,15 @@ describe("coaching_relationship_kind_changed", () => {
     ]);
   });
 });
+
+describe("meeting_recording_updated", () => {
+  it("refreshes the session's recording, so the other participant's button shows it started", () => {
+    renderHook(() => useSSECacheInvalidation(null));
+    mutate.mockClear();
+    handlers.get("meeting_recording_updated")!();
+    const base = siteConfig.env.backendServiceURL;
+    const recording = `${base}/coaching_sessions/s-1/meeting_recording`;
+    const relationships = `${base}/organizations/o-1/coaching_relationships`;
+    expect(revalidated([recording, relationships])).toEqual([recording]);
+  });
+});
