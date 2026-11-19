@@ -1,7 +1,9 @@
 import { useApiSWR } from "@/lib/hooks/use-api-swr";
 import { type KeyedMutator } from "swr";
 import { siteConfig } from "@/site.config";
+import { ResultAsync, errAsync, okAsync } from "neverthrow";
 import { EntityApi } from "@/lib/api/entity-api";
+import { EntityApiError, hasConflictReason } from "@/types/entity-api-error";
 import type { Id } from "@/types/general";
 import {
   parseMeetingRecording,
@@ -22,15 +24,14 @@ export const MeetingRecordingApi = {
     return raw === null ? null : parseMeetingRecording(raw);
   },
 
-  start: async (
-    sessionId: Id,
-    meetingUrl: string
-  ): Promise<MeetingRecording> => {
-    const raw = await EntityApi.createFn<{ meeting_url: string }, unknown>(
-      `${COACHING_SESSIONS_BASEURL}/${sessionId}/meeting_recording`,
-      { meeting_url: meetingUrl }
+  start: (sessionId: Id, meetingUrl: string): ResultAsync<MeetingRecording, EntityApiError> => {
+    const url = `${COACHING_SESSIONS_BASEURL}/${sessionId}/meeting_recording`;
+    return ResultAsync.fromPromise(
+      EntityApi.createFn<{ meeting_url: string }, unknown>(url, { meeting_url: meetingUrl }).then(
+        parseMeetingRecording
+      ),
+      (e) => EntityApiError.from("POST", url, e)
     );
-    return parseMeetingRecording(raw);
   },
 
   stop: async (sessionId: Id): Promise<MeetingRecording> => {
@@ -41,12 +42,18 @@ export const MeetingRecordingApi = {
   },
 };
 
+/** One bot per session: the other participant may have started it first. */
+export type RecordingStart =
+  | { kind: "started"; recording: MeetingRecording }
+  | { kind: "already_active" };
+
 export interface UseMeetingRecording {
   recording: MeetingRecording | null;
   isLoading: boolean;
   isError: Error | undefined;
   refresh: KeyedMutator<MeetingRecording | null>;
-  startRecording: (meetingUrl: string) => Promise<MeetingRecording>;
+  /** A recording already active counts as success, as `already_active`. */
+  startRecording: (meetingUrl: string) => ResultAsync<RecordingStart, EntityApiError>;
   stopRecording: () => Promise<MeetingRecording>;
 }
 
@@ -61,11 +68,17 @@ export function useMeetingRecording(sessionId: Id | null): UseMeetingRecording {
     { revalidateOnFocus: true }
   );
 
-  const startRecording = async (meetingUrl: string): Promise<MeetingRecording> => {
-    const created = await MeetingRecordingApi.start(sessionId!, meetingUrl);
-    await mutate(created, { revalidate: false });
-    return created;
-  };
+  const startRecording = (meetingUrl: string): ResultAsync<RecordingStart, EntityApiError> =>
+    MeetingRecordingApi.start(sessionId!, meetingUrl)
+      .map((recording): RecordingStart => {
+        void mutate(recording, { revalidate: false });
+        return { kind: "started", recording };
+      })
+      .orElse((error) => {
+        if (!hasConflictReason(error, "recording_already_active")) return errAsync(error);
+        void mutate();
+        return okAsync<RecordingStart, EntityApiError>({ kind: "already_active" });
+      });
 
   const stopRecording = async (): Promise<MeetingRecording> => {
     const updated = await MeetingRecordingApi.stop(sessionId!);
