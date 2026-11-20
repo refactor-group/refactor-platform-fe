@@ -194,6 +194,54 @@ describe("ActionSectionContent", () => {
       await user.click(screen.getByTestId("action-tab-due"));
       expect(onActiveTabChange).toHaveBeenCalledWith("due");
     });
+
+    it("reports the initial 'Due' tab from ?actions=due", () => {
+      vi.mocked(useSearchParams).mockReturnValueOnce(
+        new URLSearchParams({ actions: "due" }) as never
+      );
+      const onActiveTabChange = vi.fn();
+
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps({ onActiveTabChange })} />
+        </Wrapper>
+      );
+
+      expect(onActiveTabChange).toHaveBeenCalledWith("due");
+    });
+
+    it("reports the initial 'New' tab without ?actions=due", () => {
+      const onActiveTabChange = vi.fn();
+
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps({ onActiveTabChange })} />
+        </Wrapper>
+      );
+
+      expect(onActiveTabChange).toHaveBeenCalledWith("new");
+    });
+
+    it("reports each tab click exactly once", async () => {
+      vi.mocked(useSearchParams).mockReturnValueOnce(
+        new URLSearchParams({ actions: "due" }) as never
+      );
+      const user = userEvent.setup();
+      const onActiveTabChange = vi.fn();
+
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps({ onActiveTabChange })} />
+        </Wrapper>
+      );
+      expect(onActiveTabChange.mock.calls).toEqual([["due"]]);
+
+      await user.click(screen.getByTestId("action-tab-new"));
+      expect(onActiveTabChange.mock.calls).toEqual([["due"], ["new"]]);
+
+      await user.click(screen.getByTestId("action-tab-due"));
+      expect(onActiveTabChange.mock.calls).toEqual([["due"], ["new"], ["due"]]);
+    });
   });
 
   // ── Action cards rendering ───────────────────────────────────────

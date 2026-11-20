@@ -114,10 +114,14 @@ export function ActionSectionContent({
     (value: string) => {
       if (value !== "due" && value !== "new") return;
       setActiveTab(value);
-      onActiveTabChange?.(value);
     },
-    [onActiveTabChange]
+    []
   );
+
+  // Report every tab change, including the initial one from ?actions=due.
+  useEffect(() => {
+    onActiveTabChange?.(activeTab);
+  }, [activeTab, onActiveTabChange]);
 
   // ── Highlight & scroll-to for deep-linked or in-page requested actions ─
   const [highlightRequest, setHighlightRequest] = useState<Option<{ id: Id; nonce: number }>>(None);
@@ -172,13 +176,6 @@ export function ActionSectionContent({
   if (requiredTab !== null && activeTab !== requiredTab) {
     setActiveTab(requiredTab);
   }
-
-  // Notify parent asynchronously to avoid mid-render parent updates
-  useEffect(() => {
-    if (requiredTab !== null) {
-      onActiveTabChange?.(requiredTab);
-    }
-  }, [requiredTab, onActiveTabChange]);
 
   // Derive activeHighlight from the highlight target, cleared after animation.
   // When clearedHighlightKey matches the current key, the highlight is off.
