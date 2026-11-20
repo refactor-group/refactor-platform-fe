@@ -6,7 +6,7 @@ import { cn } from "@/components/lib/utils";
 import { PersonAvatar } from "@/components/ui/avatar";
 import type { MenuPerson } from "@/components/ui/join-session/types";
 import type { Id } from "@/types/general";
-import { type Option, Some, None } from "@/types/option";
+import { type Option, Some, None, unwrapOr } from "@/types/option";
 
 export interface StripPerson {
   person: MenuPerson;
@@ -84,10 +84,9 @@ export function SearchPeopleStrip({ people, spotlight, onPick }: SearchPeopleStr
         row.clientWidth > 0
           ? Some(chipsThatFit(row.clientWidth, widths, overflowWidth, CHIP_GAP_PX))
           : None;
+      // Keeping the same object when nothing changed avoids a re-render per observation.
       setMeasured((current) =>
-        current.some === fit.some && (!fit.some || !current.some || current.val === fit.val)
-          ? current
-          : fit
+        unwrapOr(current, null) === unwrapOr(fit, null) ? current : fit
       );
     };
     const observer = new ResizeObserver(measure);
