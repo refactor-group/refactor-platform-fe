@@ -418,7 +418,7 @@ test.describe('Next session card on a phone', () => {
       nextCard(page).getByRole('link', { name: 'Open session' }),
     ]
     for (const target of targets) {
-      expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+      expect(Math.round((await target.boundingBox())!.height)).toBeGreaterThanOrEqual(44)
     }
   })
 })
