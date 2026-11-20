@@ -290,9 +290,19 @@ test.describe('Next session card on a desktop', () => {
   test('(5.1) At a glance opens by default and folds from its header', async ({ page, context }) => {
     await open(page, context, { sessions: ALL })
     await expect(glanceButton(page)).toHaveAttribute('aria-expanded', 'true')
+    const openSession = nextCard(page).getByRole('link', { name: 'Open session' })
+    const cardBefore = (await nextCard(page).boundingBox())!
+    const pillBefore = (await openSession.boundingBox())!
     await glanceButton(page).click()
     await expect(glanceButton(page)).toHaveAttribute('aria-expanded', 'false')
     await expect(row(page, 'Topics')).toBeHidden()
+    const cardAfter = (await nextCard(page).boundingBox())!
+    const pillAfter = (await openSession.boundingBox())!
+    expect(Math.abs(cardAfter.height - cardBefore.height)).toBeLessThanOrEqual(1)
+    expect(Math.abs(pillAfter.y - pillBefore.y)).toBeLessThanOrEqual(1)
+    await glanceButton(page).focus()
+    await page.keyboard.press('Tab')
+    await expect(openSession).toBeFocused()
     await glanceButton(page).click()
     await expect(glanceButton(page)).toHaveAttribute('aria-expanded', 'true')
   })

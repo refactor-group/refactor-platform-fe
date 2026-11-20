@@ -77,15 +77,28 @@ export function NextSessionGlance({ rows }: { rows: GlanceRow[] }) {
         className={GLANCE_HEADER_CLASS}
       >
         At a glance
-        <ChevronUp className={cn("h-3.5 w-3.5 text-faint", !open && "rotate-180")} aria-hidden />
+        <ChevronUp
+          className={cn(
+            "h-3.5 w-3.5 text-faint transition-transform duration-200 motion-reduce:transition-none",
+            !open && "rotate-180"
+          )}
+          aria-hidden
+        />
       </button>
-      {open && (
-        <ul id={listId}>
-          {rows.map((row, i) => (
-            <GlanceRowLink key={row.label} row={row} last={i === rows.length - 1} />
-          ))}
-        </ul>
-      )}
+      {/* Stays laid out when folded so the card doesn't move. */}
+      <ul
+        id={listId}
+        className={cn(
+          "transition-[opacity,transform,visibility] duration-200 ease-out motion-reduce:transition-none",
+          open ? "visible translate-y-0 opacity-100" : "invisible -translate-y-1 opacity-0"
+        )}
+        inert={!open}
+        aria-hidden={open ? undefined : true}
+      >
+        {rows.map((row, i) => (
+          <GlanceRowLink key={row.label} row={row} last={i === rows.length - 1} />
+        ))}
+      </ul>
     </div>
   );
 }

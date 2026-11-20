@@ -282,11 +282,18 @@ describe("NextSessionCard populated", () => {
 
     fireEvent.click(glanceToggle());
     expect(glanceToggle()).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText("Topics")).not.toBeInTheDocument();
+    const list = screen.getByRole("list", { hidden: true });
+    expect(list).toHaveClass("invisible", "opacity-0");
+    expect(list).toHaveAttribute("inert");
+    expect(list).toHaveAttribute("aria-hidden", "true");
 
     fireEvent.click(glanceToggle());
     expect(glanceToggle()).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("Topics")).toBeInTheDocument();
+    expect(list).not.toHaveClass("invisible");
+    expect(list).toHaveClass("opacity-100");
+    expect(list).not.toHaveAttribute("inert");
+    expect(list).not.toHaveAttribute("aria-hidden");
+    expect(screen.getByRole("link", { name: /Topics/ })).toBeVisible();
   });
 
   it("leaves out the title, duration, Reschedule and Join", () => {
