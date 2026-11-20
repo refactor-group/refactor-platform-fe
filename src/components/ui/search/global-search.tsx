@@ -209,9 +209,11 @@ export function groupSearchHitsByPerson(
   const groupsByPerson = new Map<Id, PersonHitGroup>();
   const other: SearchHit[] = [];
   for (const hit of hits) {
-    const relationship = hit.coaching_relationship_id.some
-      ? relationshipsById.get(hit.coaching_relationship_id.val)
-      : undefined;
+    if (!hit.coaching_relationship_id.some) {
+      other.push(hit);
+      continue;
+    }
+    const relationship = relationshipsById.get(hit.coaching_relationship_id.val);
     if (!relationship) {
       other.push(hit);
       continue;
