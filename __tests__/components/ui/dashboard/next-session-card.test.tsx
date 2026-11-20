@@ -246,6 +246,49 @@ describe("NextSessionCard populated", () => {
     expect(screen.queryByText("Agreements from last session")).not.toBeInTheDocument();
   });
 
+  it("says Couldn't load, not None, when actions fail", () => {
+    setNext({ session: Some(sessionAt("15:05")) });
+    mockUseActionsDue.mockReturnValue({
+      due: [],
+      summary: { kind: ActionsDueKind.None },
+      previous: None,
+      isLoading: false,
+      isError: true,
+    });
+    renderCard();
+
+    const row = glanceLink("Actions due");
+    expect(within(row).getByText("Couldn't load")).toHaveClass("text-muted-foreground");
+    expect(within(row).queryByText("None")).not.toBeInTheDocument();
+    expect(row).toHaveAttribute("href", "/coaching-sessions/next-id?panel=actions&actions=due");
+  });
+
+  it("holds an inert Agreements slot while actions load", () => {
+    setNext({ session: Some(sessionAt("15:05")) });
+    mockUseActionsDue.mockReturnValue({
+      due: [],
+      summary: { kind: ActionsDueKind.None },
+      previous: None,
+      isLoading: true,
+      isError: false,
+    });
+    const { container } = renderCard();
+
+    expect(container.querySelectorAll("ul > li")).toHaveLength(4);
+    const box = screen.getByText("Agreements from last session");
+    expect(box).toHaveClass("invisible", ...GLANCE_ROW_CLASS.split(" "));
+    expect(box).toHaveAttribute("inert");
+    expect(screen.queryByRole("link", { name: /Agreements from last session/ })).toBeNull();
+  });
+
+  it("drops the Agreements row once loaded with no previous session", () => {
+    setNext({ session: Some(sessionAt("15:05")) });
+    setActionsDue({ kind: ActionsDueKind.None }, None);
+    const { container } = renderCard();
+
+    expect(container.querySelectorAll("ul > li")).toHaveLength(3);
+  });
+
   it("counts actions due when none are overdue", () => {
     setNext({ session: Some(sessionAt("15:05")) });
     setActionsDue({ kind: ActionsDueKind.Count, count: 3 });

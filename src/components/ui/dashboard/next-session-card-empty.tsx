@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { NextSessionLabel } from "@/components/ui/dashboard/next-session-label";
 
 interface NextSessionCardEmptyProps {
   canSchedule: boolean;
@@ -9,7 +10,7 @@ interface NextSessionCardEmptyProps {
 export function NextSessionCardEmpty({ canSchedule, onCreateSession }: NextSessionCardEmptyProps) {
   return (
     <>
-      <p className="text-label font-medium text-ink-2">Next session</p>
+      <NextSessionLabel />
       <div className="my-auto">
         <p className="text-card-title">No more sessions this week.</p>
         <p className="mt-1.5 text-sm text-muted-foreground">Check back on Monday.</p>

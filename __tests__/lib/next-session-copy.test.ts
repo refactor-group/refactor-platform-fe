@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
 import { nextSessionHeadline, nextSessionWhen } from "@/lib/next-session-copy";
 import { SessionUrgency } from "@/types/session-display";
+import { None, Some } from "@/types/option";
 
 const at = (iso: string) => DateTime.fromISO(iso, { zone: "America/Chicago" });
 
@@ -9,37 +10,37 @@ describe("nextSessionHeadline", () => {
   const now = at("2026-11-19T12:00");
 
   it("labels a session later today", () => {
-    expect(nextSessionHeadline("Justin", at("2026-11-19T15:05"), now)).toBe("Today with Justin at 3:05 PM");
+    expect(nextSessionHeadline(Some("Justin"), at("2026-11-19T15:05"), now)).toBe("Today with Justin at 3:05 PM");
   });
 
   it("labels a session tomorrow", () => {
-    expect(nextSessionHeadline("Justin", at("2026-11-20T10:00"), now)).toBe("Tomorrow with Justin at 10:00 AM");
+    expect(nextSessionHeadline(Some("Justin"), at("2026-11-20T10:00"), now)).toBe("Tomorrow with Justin at 10:00 AM");
   });
 
   it("uses the weekday further out", () => {
-    expect(nextSessionHeadline("Justin", at("2026-11-21T11:00"), now)).toBe("Saturday with Justin at 11:00 AM");
+    expect(nextSessionHeadline(Some("Justin"), at("2026-11-21T11:00"), now)).toBe("Saturday with Justin at 11:00 AM");
   });
 
   it("labels a session under way across midnight as yesterday", () => {
-    expect(nextSessionHeadline("Justin", at("2026-11-19T23:30"), at("2026-11-20T00:10"))).toBe(
+    expect(nextSessionHeadline(Some("Justin"), at("2026-11-19T23:30"), at("2026-11-20T00:10"))).toBe(
       "Yesterday with Justin at 11:30 PM"
     );
   });
 
   it("counts calendar days, not 24-hour spans", () => {
-    expect(nextSessionHeadline("Justin", at("2026-11-20T00:15"), at("2026-11-19T23:50"))).toBe(
+    expect(nextSessionHeadline(Some("Justin"), at("2026-11-20T00:15"), at("2026-11-19T23:50"))).toBe(
       "Tomorrow with Justin at 12:15 AM"
     );
   });
 
   it("counts calendar days across the fall-back DST change", () => {
     const saturday = at("2026-10-31T20:00");
-    expect(nextSessionHeadline("Justin", at("2026-11-01T10:00"), saturday)).toBe("Tomorrow with Justin at 10:00 AM");
-    expect(nextSessionHeadline("Justin", at("2026-11-02T09:00"), saturday)).toBe("Monday with Justin at 9:00 AM");
+    expect(nextSessionHeadline(Some("Justin"), at("2026-11-01T10:00"), saturday)).toBe("Tomorrow with Justin at 10:00 AM");
+    expect(nextSessionHeadline(Some("Justin"), at("2026-11-02T09:00"), saturday)).toBe("Monday with Justin at 9:00 AM");
   });
 
   it("drops 'with' for an empty first name", () => {
-    expect(nextSessionHeadline("", at("2026-11-19T15:05"), now)).toBe("Today at 3:05 PM");
+    expect(nextSessionHeadline(None, at("2026-11-19T15:05"), now)).toBe("Today at 3:05 PM");
   });
 });
 

@@ -12,6 +12,7 @@ import { PulsingDot, PulsingDotTone } from "@/components/ui/pulsing-dot";
 import { CardError } from "@/components/ui/errors/card-error";
 import { PanelSection } from "@/components/ui/coaching-sessions/coaching-session-panel-selector";
 import { NextSessionCardEmpty } from "@/components/ui/dashboard/next-session-card-empty";
+import { NextSessionLabel } from "@/components/ui/dashboard/next-session-label";
 import {
   NextSessionGlance,
   GlanceValueKind,
@@ -32,7 +33,7 @@ import { sessionStartIn } from "@/lib/session-window";
 import { calculateSessionUrgency } from "@/lib/utils/session";
 import type { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Id } from "@/types/general";
-import { Some, type Option } from "@/types/option";
+import { None, Some, type Option } from "@/types/option";
 
 interface NextSessionCardProps {
   /** Opens the New session dialog from the empty state. */
@@ -68,10 +69,6 @@ function NextSessionShell({ tone, children }: { tone: ShellTone; children: React
       {children}
     </Card>
   );
-}
-
-function NextSessionLabel() {
-  return <p className="text-label font-medium text-ink-2">Next session</p>;
 }
 
 function PlaceholderBar({ className }: { className: string }) {
@@ -127,8 +124,9 @@ function NextSessionCardError({ retry }: { retry: () => void }) {
   );
 }
 
-function actionsDueValue(summary: ActionsDueSummary, loading: boolean): GlanceValue {
+function actionsDueValue(summary: ActionsDueSummary, loading: boolean, error: boolean): GlanceValue {
   if (loading) return { kind: GlanceValueKind.Text, text: "" };
+  if (error) return { kind: GlanceValueKind.Text, text: "Couldn't load" };
   switch (summary.kind) {
     case ActionsDueKind.None:
       return { kind: GlanceValueKind.Text, text: "None" };
@@ -147,10 +145,20 @@ function panelHref(sessionId: Id, panel: PanelSection): string {
   return `/coaching-sessions/${sessionId}?panel=${panel}`;
 }
 
+// Holds an inert slot while loading so the list doesn't shift when `previous` lands.
+function agreementsRow(loading: boolean, previous: Option<CoachingSession>): GlanceRow[] {
+  const row = { label: "Agreements from last session", value: { kind: GlanceValueKind.None } } as const;
+  if (loading) return [{ ...row, href: "#", hidden: true }];
+  return previous.some
+    ? [{ ...row, href: panelHref(previous.val.id, PanelSection.Agreements), hidden: false }]
+    : [];
+}
+
 function glanceRows(
   session: EnrichedCoachingSession,
   summary: ActionsDueSummary,
   actionsLoading: boolean,
+  actionsError: boolean,
   previous: Option<CoachingSession>
 ): GlanceRow[] {
   const topicCount = session.topics.some ? session.topics.val.length : 0;
@@ -159,25 +167,20 @@ function glanceRows(
     label: "Topics",
     value: { kind: GlanceValueKind.Text, text: topicCount > 0 ? String(topicCount) : "None yet" },
     href: panelHref(session.id, PanelSection.Topics),
+    hidden: false,
   };
   const actions: GlanceRow = {
     label: "Actions due",
-    value: actionsDueValue(summary, actionsLoading),
+    value: actionsDueValue(summary, actionsLoading, actionsError),
     href: `${panelHref(session.id, PanelSection.Actions)}&actions=due`,
+    hidden: false,
   };
-  const agreements: GlanceRow[] = previous.some
-    ? [
-        {
-          label: "Agreements from last session",
-          value: { kind: GlanceValueKind.None },
-          href: panelHref(previous.val.id, PanelSection.Agreements),
-        },
-      ]
-    : [];
+  const agreements = agreementsRow(actionsLoading, previous);
   const goals: GlanceRow = {
     label: "Goals",
     value: { kind: GlanceValueKind.Text, text: goalCount > 0 ? `${goalCount} active` : "None yet" },
     href: panelHref(session.id, PanelSection.Goals),
+    hidden: false,
   };
   return [topics, actions, ...agreements, goals];
 }
@@ -195,10 +198,14 @@ function NextSessionBody({
   const start = sessionStartIn(session.date, timezone);
   const urgency = calculateSessionUrgency(session, now);
   const other = otherParticipantInSession(session, viewerId);
-  const firstName = other.some ? other.val.first_name : "";
-  const headline = nextSessionHeadline(firstName, start, now);
+  const headline = nextSessionHeadline(other.some ? Some(other.val.first_name) : None, start, now);
   const when = nextSessionWhen(start, now, urgency);
-  const { summary, previous, isLoading: actionsLoading } = useActionsDue(session, viewerId, now);
+  const {
+    summary,
+    previous,
+    isLoading: actionsLoading,
+    isError: actionsError,
+  } = useActionsDue(session, viewerId, now);
 
   return (
     <>
@@ -225,7 +232,7 @@ function NextSessionBody({
         {when.hot && <PulsingDot tone={PulsingDotTone.Accent} className="h-1.5 w-1.5" />}
         {when.text}
       </p>
-      <NextSessionGlance rows={glanceRows(session, summary, actionsLoading, previous)} />
+      <NextSessionGlance rows={glanceRows(session, summary, actionsLoading, actionsError, previous)} />
       <div className="mt-auto pt-4">
         <Button asChild className="w-full min-h-11 sm:min-h-10">
           <Link href={`/coaching-sessions/${session.id}`}>Open session</Link>

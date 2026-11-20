@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { DateTime, Settings } from "ts-luxon";
 import {
   calculateSessionUrgency,
   selectNextUpcomingSession,
@@ -73,8 +74,19 @@ describe("calculateSessionUrgency", () => {
 });
 
 describe("selectNextUpcomingSession", () => {
+  const originalNow = Settings.now;
+  const NOW = DateTime.fromISO("2026-11-19T18:00:00.000Z", { zone: "utc" });
+
+  beforeEach(() => {
+    Settings.now = () => NOW.toMillis();
+  });
+
+  afterEach(() => {
+    Settings.now = originalNow;
+  });
+
   it("returns undefined for an empty list", () => {
-    expect(selectNextUpcomingSession([])).toBeUndefined();
+    expect(selectNextUpcomingSession([], NOW)).toBeUndefined();
   });
 
   it("returns undefined when every session is in the past", () => {
@@ -82,27 +94,33 @@ describe("selectNextUpcomingSession", () => {
       createEnrichedSessionAt(-120),
       createEnrichedSessionAt(-240),
     ];
-    expect(selectNextUpcomingSession(sessions)).toBeUndefined();
+    expect(selectNextUpcomingSession(sessions, NOW)).toBeUndefined();
   });
 
   it("selects the first non-past session in a mixed list", () => {
     const past = createEnrichedSessionAt(-120, { id: "past" });
     const imminent = createEnrichedSessionAt(15, { id: "imminent" });
     const later = createEnrichedSessionAt(SOON_SESSION_THRESHOLD_MINUTES + 60, { id: "later" });
-    const result = selectNextUpcomingSession([past, imminent, later]);
+    const result = selectNextUpcomingSession([past, imminent, later], NOW);
     expect(result?.id).toBe("imminent");
   });
 
   it("selects an underway session over a later one", () => {
     const underway = createEnrichedSessionAt(-30, { id: "underway" });
     const later = createEnrichedSessionAt(SOON_SESSION_THRESHOLD_MINUTES + 60, { id: "later" });
-    const result = selectNextUpcomingSession([underway, later]);
+    const result = selectNextUpcomingSession([underway, later], NOW);
     expect(result?.id).toBe("underway");
   });
 
   it("returns the only session when it is not past", () => {
     const soon = createEnrichedSessionAt(90, { id: "only" });
-    expect(selectNextUpcomingSession([soon])?.id).toBe("only");
+    expect(selectNextUpcomingSession([soon], NOW)?.id).toBe("only");
+  });
+
+  it("judges sessions by the passed now, not the real clock", () => {
+    const ended = createEnrichedSessionAt(-62, { id: "ended" });
+    Settings.now = () => NOW.minus({ minutes: 120 }).toMillis();
+    expect(selectNextUpcomingSession([ended], NOW)).toBeUndefined();
   });
 });
 

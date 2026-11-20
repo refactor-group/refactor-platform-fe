@@ -23,7 +23,7 @@ export function useNextSession(): NextSession {
   const now = useNow(30_000);
   const week = useWeekAt(CURRENT_WEEK, now, timezone);
   const { sessions, isLoading, isError, refresh } = useWeekSessions(week);
-  const next = selectNextUpcomingSession(sessions);
+  const next = selectNextUpcomingSession(sessions, now);
   return {
     session: next ? Some(next) : None,
     isLoading,

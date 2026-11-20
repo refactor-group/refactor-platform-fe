@@ -43,7 +43,7 @@ describe("useNextSession", () => {
   it("wraps the selected session in Some", () => {
     selectNext.mockReturnValue(session);
     const { result } = renderHook(() => useNextSession());
-    expect(selectNext).toHaveBeenCalledWith(sessions);
+    expect(selectNext).toHaveBeenCalledWith(sessions, NOW);
     expect(result.current.session).toEqual(Some(session));
   });
 

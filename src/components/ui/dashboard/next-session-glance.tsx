@@ -27,6 +27,8 @@ export interface GlanceRow {
   label: string;
   value: GlanceValue;
   href: string;
+  /** Keeps the row's box but hides it from sight, input and assistive tech. */
+  hidden: boolean;
 }
 
 function GlanceRowValue({ value }: { value: GlanceValue }) {
@@ -45,6 +47,15 @@ function GlanceRowValue({ value }: { value: GlanceValue }) {
 }
 
 function GlanceRowLink({ row, last }: { row: GlanceRow; last: boolean }) {
+  if (row.hidden) {
+    return (
+      <li aria-hidden>
+        <div inert className={cn(GLANCE_ROW_CLASS, "invisible", last && "border-b")}>
+          {row.label}
+        </div>
+      </li>
+    );
+  }
   return (
     <li>
       <Link

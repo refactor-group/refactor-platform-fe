@@ -20,6 +20,7 @@ import { cn } from "@/components/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateTime } from "ts-luxon";
 import { centerInScrollParent } from "@/lib/utils/center-in-container";
+import { useReplaceSearchParams } from "@/lib/hooks/use-replace-search-params";
 
 // ── Action Section Content ───────────────────────────────────────────
 //
@@ -106,9 +107,17 @@ export function ActionSectionContent({
   onActiveTabChange,
 }: ActionSectionContentProps) {
   const searchParams = useSearchParams();
+  const replaceSearchParams = useReplaceSearchParams();
   const [activeTab, setActiveTab] = useState<ActionTab>(() =>
     searchParams.get("actions") === "due" ? "due" : "new"
   );
+
+  // ?actions applies once; drop it so a later visit or reload opens on New.
+  useEffect(() => {
+    if (!searchParams.has("actions")) return;
+    replaceSearchParams((params) => params.delete("actions"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
+  }, []);
 
   const handleTabChange = useCallback(
     (value: string) => {

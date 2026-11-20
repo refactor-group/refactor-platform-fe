@@ -44,6 +44,11 @@ vi.mock("@/components/ui/coaching-sessions/action-card-parts", async () => {
   };
 });
 
+const replaceSearchParams = vi.fn();
+vi.mock("@/lib/hooks/use-replace-search-params", () => ({
+  useReplaceSearchParams: () => replaceSearchParams,
+}));
+
 function Wrapper({ children }: { children: ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
 }
@@ -166,6 +171,34 @@ describe("ActionSectionContent", () => {
 
       expect(screen.getByTestId("action-tab-due")).toHaveAttribute("aria-selected", "true");
       expect(screen.getByTestId("action-tab-new")).toHaveAttribute("aria-selected", "false");
+    });
+
+    it("drops ?actions from the URL once applied, keeping other params", () => {
+      vi.mocked(useSearchParams).mockReturnValueOnce(
+        new URLSearchParams({ actions: "due" }) as never
+      );
+
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps()} />
+        </Wrapper>
+      );
+
+      expect(replaceSearchParams).toHaveBeenCalledTimes(1);
+      const params = new URLSearchParams("panel=actions&actions=due");
+      replaceSearchParams.mock.calls[0][0](params);
+      expect(params.get("panel")).toBe("actions");
+      expect(params.has("actions")).toBe(false);
+    });
+
+    it("leaves the URL alone without ?actions", () => {
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps()} />
+        </Wrapper>
+      );
+
+      expect(replaceSearchParams).not.toHaveBeenCalled();
     });
 
     it("selects the 'New' tab without ?actions=due", () => {

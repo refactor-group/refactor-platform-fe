@@ -195,9 +195,10 @@ export function getSessionParticipantInfo(
  * whose urgency is not Past. Assumes the list is sorted ascending by date.
  */
 export function selectNextUpcomingSession(
-  sessions: EnrichedCoachingSession[]
+  sessions: EnrichedCoachingSession[],
+  now: DateTime
 ): EnrichedCoachingSession | undefined {
   return sessions.find(
-    (session) => calculateSessionUrgency(session) !== SessionUrgency.Past
+    (session) => calculateSessionUrgency(session, now) !== SessionUrgency.Past
   );
 }

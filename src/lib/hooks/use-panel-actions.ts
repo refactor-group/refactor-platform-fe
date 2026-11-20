@@ -84,8 +84,6 @@ function useActionData({
 interface ReviewWindowParams {
   coachingSessionId: Id;
   coachingRelationshipId: Id;
-  /** May be undefined while the session is still loading from SWR */
-  sessionDate: string | undefined;
 }
 
 /**
@@ -317,8 +315,6 @@ interface UsePanelActionsParams {
   userId: Id;
   coachingSessionId: Id;
   coachingRelationshipId: Id;
-  /** May be undefined while the session is still loading from SWR */
-  sessionDate: string | undefined;
   nameOf: NameLookup;
 }
 

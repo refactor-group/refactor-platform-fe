@@ -1,5 +1,6 @@
 import type { DateTime } from "ts-luxon";
 import { SessionUrgency } from "@/types/session-display";
+import type { Option } from "@/types/option";
 
 /** Calendar days from `now` to `start`, not 24-hour spans. */
 function calendarDaysAhead(start: DateTime, now: DateTime): number {
@@ -14,11 +15,11 @@ function dayLabel(start: DateTime, now: DateTime): string {
   return start.toFormat("cccc");
 }
 
-/** "Today with Justin at 3:05 PM". `start` and `now` must be in the user's zone. An empty first name drops "with". */
-export function nextSessionHeadline(firstName: string, start: DateTime, now: DateTime): string {
+/** "Today with Justin at 3:05 PM". `start` and `now` must be in the user's zone. No first name drops "with". */
+export function nextSessionHeadline(firstName: Option<string>, start: DateTime, now: DateTime): string {
   const day = dayLabel(start, now);
   const time = start.toFormat("h:mm a");
-  return firstName === "" ? `${day} at ${time}` : `${day} with ${firstName} at ${time}`;
+  return firstName.some ? `${day} with ${firstName.val} at ${time}` : `${day} at ${time}`;
 }
 
 export interface NextSessionWhen {
