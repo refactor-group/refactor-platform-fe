@@ -28,7 +28,7 @@ One phase is one commit. A fresh implementer builds each phase, and the overseer
 | 5d | `?actions=due` reports its tab so Add starts disabled | done `5dd00736` |
 | 5e | CI e2e: scroll the week grid into view for drags; subpixel tolerances | done `d43c85e5` |
 | 5f | Code review fixes | done `80971d95` |
-| 5g | On Sunday, the card looks ahead to Monday | pending |
+| 5g | On Sunday, the card looks ahead to Monday | done `f024e303` |
 | 6 | Automated coverage of the manual plan: `__tests__/e2e/next-session-card.spec.ts`, a `?actions=due` case in `action-deep-link.spec.ts`, and the Due-tab parity integration test | done `38bf39b8` |
 | 7 | `.claude/file-organization.md`, the CLAUDE.md row, the coding-standards pointer | done `c1d0d33f` |
 | — | Overseer: real-backend check, light/dark/phone screenshots, draft PR | done: draft PR #574 |
