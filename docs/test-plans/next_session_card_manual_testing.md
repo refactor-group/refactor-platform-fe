@@ -24,6 +24,7 @@ Most cases are also automated: see the Test coverage map in `docs/implementation
    | **G** | Two sessions **today**: one at 9:00 AM (already over) and one later today. One more session with G last week | One action created at today's 9:00 AM session, due today |
    | **D** | One session on a **later day this week**, not tomorrow | |
    | **E** | One session **next Monday** | |
+   | **H** | One session **next Monday** at 9:00 AM, and nothing else | For the Sunday case |
 
    - Run "which session" cases by moving or cancelling earlier sessions so the one under test comes next.
    - Use the week grid's card menu to cancel, and restore by rescheduling. Or seed per case.
@@ -84,7 +85,16 @@ Cancel or move today's remaining sessions.
 
 Leave only E (next Monday) ahead.
 
-**Pass:** the card shows the empty state (Case 7.1), not E.
+**Pass:** the card shows the empty state (Case 7.1), not E. This applies Monday to Saturday; on Sunday, see Case 3.4a.
+
+### Case 3.4a: Sunday looks ahead to Monday
+
+On a Sunday (or with the browser clock moved to Sunday evening), leave only H ahead.
+
+**Pass:**
+- The card reads "Tomorrow with {H} at 9:00 AM", with "Mon, {date}" below it.
+- The goals card follows.
+- With H moved to Tuesday, the card shows "No more sessions this week."
 
 ### Case 3.5: the goals card follows
 

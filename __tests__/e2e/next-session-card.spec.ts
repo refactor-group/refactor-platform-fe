@@ -78,6 +78,8 @@ const JANE_PREV = session('jane-prev', '2026-11-12T20:30:00', COACHING_JANE)
 const SAM_TOMORROW = session('sam-tomorrow', '2026-11-20T16:00:00', COACHING_SAM)
 const SAM_SATURDAY = session('sam-saturday', '2026-11-21T17:00:00', COACHING_SAM)
 const SAM_NEXT_MONDAY = session('sam-next-monday', '2026-11-23T16:00:00', COACHING_SAM)
+const SAM_NEXT_TUESDAY = session('sam-next-tuesday', '2026-11-24T16:00:00', COACHING_SAM)
+const SUNDAY_EVENING = '2026-11-23T02:00:00Z' // Sun 2026-11-22 20:00 Chicago
 const ALL = [JANE_TODAY, SAM_TOMORROW, SAM_SATURDAY, SAM_NEXT_MONDAY]
 
 const action = (id: string, status: string, dueBy: string) => ({
@@ -265,6 +267,17 @@ test.describe('Next session card on a desktop', () => {
     await open(page, context, { sessions: [SAM_NEXT_MONDAY] })
     await expect(nextCard(page).getByText('No more sessions this week.')).toBeVisible()
     await expect(nextCard(page).getByText('Check back on Monday.')).toBeVisible()
+  })
+
+  test("(3.4b) on Sunday, Monday's session shows as tomorrow", async ({ page, context }) => {
+    await open(page, context, { sessions: [SAM_NEXT_MONDAY], clock: { mode: ClockMode.Fixed, at: SUNDAY_EVENING } })
+    await expect(headline(page)).toHaveText('Tomorrow with Sam at 10:00 AM')
+    await expect(nextCard(page).getByText('Mon, Nov 23')).toBeVisible()
+  })
+
+  test("(3.4c) on Sunday, Tuesday's session isn't shown", async ({ page, context }) => {
+    await open(page, context, { sessions: [SAM_NEXT_TUESDAY], clock: { mode: ClockMode.Fixed, at: SUNDAY_EVENING } })
+    await expect(nextCard(page).getByText('No more sessions this week.')).toBeVisible()
   })
 
   test("(3.5) the goals card follows, from the week's one request", async ({ page, context }) => {

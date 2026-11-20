@@ -27,6 +27,8 @@ One phase is one commit. A fresh implementer builds each phase, and the overseer
 | 5c | Folding At a glance keeps the card's height; rows fade over 200ms | done `231575b7` |
 | 5d | `?actions=due` reports its tab so Add starts disabled | done `5dd00736` |
 | 5e | CI e2e: scroll the week grid into view for drags; subpixel tolerances | done `d43c85e5` |
+| 5f | Code review fixes | done `80971d95` |
+| 5g | On Sunday, the card looks ahead to Monday | pending |
 | 6 | Automated coverage of the manual plan: `__tests__/e2e/next-session-card.spec.ts`, a `?actions=due` case in `action-deep-link.spec.ts`, and the Due-tab parity integration test | done `38bf39b8` |
 | 7 | `.claude/file-organization.md`, the CLAUDE.md row, the coding-standards pointer | done `c1d0d33f` |
 | — | Overseer: real-backend check, light/dark/phone screenshots, draft PR | done: draft PR #574 |
@@ -51,7 +53,7 @@ Baseline on main `b60f695` (Node 24): tsc clean, lint 0 errors / 85 warnings, un
 
 | Topic | Decision |
 |---|---|
-| Which session | The next non-past session through Sunday of the current week (Monday to Sunday in the user's zone). `selectNextUpcomingSession` over `useWeekSessions(useWeekAt(0))` |
+| Which session | The next non-past session through Sunday of the current week, plus tomorrow (so Sunday shows Monday). Weeks run Monday to Sunday in the user's zone. `selectNextUpcomingSession` over `useWeekSessions(useWeekAt(0))`, plus next week's sessions on tomorrow's date |
 | Shared selection | `useNextSession()` is read by both cards. When its request fails, the goals card shows "Couldn't load your goals" with Try again rather than the empty state. The goals card drops `useTodaysSessions`, and its organization id comes from `useCurrentOrganization` |
 | Week request | `WEEK_INCLUDES` gains `Goal`. One request is shared by the week panel, the new card and the goals card |
 | Actions due | One module, `lib/actions-due.ts`: `previousSessionOf`, `actionsDueAt` (the Due tab's set), `isOverdue`, `summarizeActionsDue`, and the session-list window constants. `useActionsDue` fetches with the same keys as the session page's Actions panel |
@@ -97,6 +99,7 @@ Manual cases marked "manual only" need the real backend, real data, or human jud
 | 2.2 layout: side by side, stacks at `md`, card first | E2E: bounding boxes at 1280 and 760 wide | 6 |
 | 2.3 entry points still reachable | E2E: the week panel's Schedule session opens the dialog (`new-session-dialog-layout.spec.ts`, updated) | 5 |
 | 3.1 to 3.4 which session: today first, past skipped, tomorrow, weekday, next Monday excluded | Hook: `use-next-session.test.ts` (week bounds); Component: card picks; E2E: `page.clock` fixtures per case, and advancing the clock past a session's end moves the card on without a reload | 2, 5, 6 |
+| 3.4a Sunday shows Monday's session as tomorrow; Tuesday stays hidden | Hook: `use-next-session.test.ts` (Sunday and Thursday candidates; next week's loading and error count only on Sunday); E2E: (3.4b) Monday shows as "Tomorrow", (3.4c) Tuesday isn't shown | 5g |
 | 3.5 goals card follows; one week request, no today request | E2E: both cards name the same person; assert one `coaching_sessions` request with `include=relationship,series,topics,goal` and none with `organization` | 6 |
 | 4.1 to 4.4 headline and when line, countdown | Unit: `next-session-copy.test.ts` (every wording, 1 min, whole hours, Yesterday, DST week); E2E: `page.clock.runFor` ticks "Starts in 30 mins" to "Starts in 29 mins" | 4, 6 |
 | 4.5 no title, duration, Reschedule; "Open session" | Component | 5 |
