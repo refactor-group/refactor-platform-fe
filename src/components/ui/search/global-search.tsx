@@ -4,6 +4,7 @@ import {
   forwardRef,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type FocusEvent,
@@ -13,6 +14,7 @@ import { Command as CommandPrimitive } from "cmdk";
 import {
   Calendar,
   CheckSquare,
+  ChevronDown,
   Handshake,
   MessageSquare,
   Search,
@@ -23,6 +25,7 @@ import {
 import { DateTime } from "ts-luxon";
 
 import { cn } from "@/components/lib/utils";
+import { PersonAvatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { CommandItem, CommandList } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,12 +36,26 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type { MenuPerson } from "@/components/ui/join-session/types";
+import {
+  SearchPeopleStrip,
+  keepEnterOnButton,
+  resultCountLabel,
+} from "@/components/ui/search/search-people-strip";
 import { SearchSnippet } from "@/components/ui/search/search-snippet";
+import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useSearch, type SearchState } from "@/lib/api/search";
+import { otherParticipant } from "@/lib/people";
+import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
+import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { prefersReducedMotion } from "@/lib/utils/motion";
 import { searchHitHref } from "@/lib/utils/search-hit-href";
-import { actionStatusToString } from "@/types/general";
+import {
+  type CoachingRelationshipWithUserNames,
+  getRelationshipsForUser,
+} from "@/types/coaching-relationship";
+import { actionStatusToString, type Id } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
 import {
   SearchHitType,
@@ -163,6 +180,55 @@ export function groupSearchHits(hits: SearchHit[]): SearchHitGroup[] {
   })).filter((group) => group.hits.length > 0);
 }
 
+/** One person's hits, in the server's order. */
+export interface PersonHitGroup {
+  person: MenuPerson;
+  hits: SearchHit[];
+}
+
+export interface HitsByPerson {
+  /** In order of each person's first hit, so the best hit's person leads. */
+  people: PersonHitGroup[];
+  /** Hits with no relationship, or one that isn't in the loaded list. */
+  other: SearchHit[];
+}
+
+/**
+ * Groups hits by the other participant of each hit's relationship. Keyed by
+ * person, not relationship: two people who coach each other are one group.
+ */
+export function groupSearchHitsByPerson(
+  hits: SearchHit[],
+  relationships: CoachingRelationshipWithUserNames[],
+  userId: Id
+): HitsByPerson {
+  // An admin's list holds relationships they aren't part of; those have no "other" person.
+  const relationshipsById = new Map(
+    getRelationshipsForUser(userId, relationships).map((rel) => [rel.id, rel])
+  );
+  const groupsByPerson = new Map<Id, PersonHitGroup>();
+  const other: SearchHit[] = [];
+  for (const hit of hits) {
+    if (!hit.coaching_relationship_id.some) {
+      other.push(hit);
+      continue;
+    }
+    const relationship = relationshipsById.get(hit.coaching_relationship_id.val);
+    if (!relationship) {
+      other.push(hit);
+      continue;
+    }
+    const person = otherParticipant(relationship, userId);
+    const group = groupsByPerson.get(person.userId);
+    if (group) group.hits.push(hit);
+    else groupsByPerson.set(person.userId, { person, hits: [hit] });
+  }
+  return { people: [...groupsByPerson.values()], other };
+}
+
+/** Rows shown per person before the band's count becomes an expander. */
+export const PERSON_GROUP_ROW_CAP = 5;
+
 type FieldState =
   | { kind: "collapsed"; returnFocus: boolean }
   | { kind: "collapsing"; returnFocus: boolean }
@@ -211,6 +277,14 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const { state, loadMore } = useSearch(query);
+  const userId = useAuthStore((store) => store.userId);
+  const currentOrganizationId = useOrganizationStateStore(
+    (store) => store.currentOrganizationId
+  );
+  // Loaded once the field opens, and held through the collapse so groups don't reshuffle.
+  const { relationships } = useCoachingRelationshipList(
+    field.kind === "collapsed" ? null : currentOrganizationId
+  );
 
   const expanded = field.kind === "expanded";
   const collapsing = field.kind === "collapsing";
@@ -370,12 +444,18 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
 
           {showResults && (
             <div
-              className="absolute left-4 right-4 top-full z-50 mt-2 overflow-hidden rounded-popover border bg-popover p-1.5 text-popover-foreground shadow-popover md:left-auto md:right-0 md:w-[420px] md:max-w-[calc(100vw-32px)]"
+              className="absolute left-4 right-4 top-full z-50 mt-2 rounded-popover border bg-popover p-1.5 text-popover-foreground shadow-popover md:left-auto md:right-0 md:w-[420px] md:max-w-[calc(100vw-32px)]"
               // Keep focus in the input: otherwise mousedown blurs it and the
               // dropdown unmounts before the click reaches the item.
               onMouseDown={(event) => event.preventDefault()}
             >
-              <SearchResults state={state} onSelect={handleSelect} onLoadMore={loadMore} />
+              <SearchResults
+                state={state}
+                relationships={relationships}
+                userId={userId}
+                onSelect={handleSelect}
+                onLoadMore={loadMore}
+              />
             </div>
           )}
         </CommandPrimitive>
@@ -418,11 +498,13 @@ const OpenSearchButton = forwardRef<HTMLButtonElement, { onClick: () => void }>(
 
 interface SearchResultsProps {
   state: SearchState;
+  relationships: CoachingRelationshipWithUserNames[];
+  userId: Id;
   onSelect: (hit: SearchHit) => void;
   onLoadMore: () => void;
 }
 
-function SearchResults({ state, onSelect, onLoadMore }: SearchResultsProps) {
+function SearchResults({ state, relationships, userId, onSelect, onLoadMore }: SearchResultsProps) {
   switch (state.kind) {
     case "idle":
       return null;
@@ -444,49 +526,243 @@ function SearchResults({ state, onSelect, onLoadMore }: SearchResultsProps) {
         );
       }
       return (
-        <CommandList className="max-h-[min(24rem,60vh)]">
-          {groupSearchHits(state.hits).map((group) => (
-            <CommandPrimitive.Group
-              key={group.type}
-              heading={group.heading}
-              className="[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground"
-            >
-              {group.hits.map((hit) => (
-                <SearchResultRow key={`${hit.type}:${hit.id}`} hit={hit} onSelect={onSelect} />
-              ))}
-            </CommandPrimitive.Group>
-          ))}
-          {state.loadMoreError.some && (
-            <p role="alert" className="px-3 py-2 text-center text-xs text-destructive">
-              {errorMessage(state.loadMoreError.val)}
-            </p>
-          )}
-          {state.nextCursor.some && (
-            <CommandItem
-              value="__load_more__"
-              onSelect={onLoadMore}
-              disabled={state.isLoadingMore}
-              className="m-1 justify-center text-xs text-muted-foreground"
-            >
-              {state.isLoadingMore ? (
-                <>
-                  <Spinner className="mr-2 h-3.5 w-3.5" />
-                  Loading more…
-                </>
-              ) : state.loadMoreError.some ? (
-                "Try again"
-              ) : (
-                "Show more results"
-              )}
-            </CommandItem>
-          )}
-        </CommandList>
+        // Keyed by query: a new search resets the spotlight and expanded groups; more pages don't.
+        <LoadedResults
+          key={state.query}
+          state={state}
+          relationships={relationships}
+          userId={userId}
+          onSelect={onSelect}
+          onLoadMore={onLoadMore}
+        />
       );
     default: {
       const _exhaustive: never = state;
       throw new Error(`Unhandled search state: ${_exhaustive}`);
     }
   }
+}
+
+const GROUP_HEADING_CLASSES =
+  "[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground";
+
+// A group dims piece by piece, not as a whole: opacity on the group would also fade the
+// highlighted row, and a child can't undo a parent's opacity.
+const DIMMABLE_CLASSES = "transition-opacity duration-150 motion-reduce:transition-none";
+const DIMMED_CLASSES = "opacity-[0.32]";
+const DIMMABLE_ROW_CLASSES =
+  "[&_[cmdk-item]]:transition-opacity [&_[cmdk-item]]:duration-150 motion-reduce:[&_[cmdk-item]]:transition-none";
+const DIMMED_ROW_CLASSES = "[&_[cmdk-item]:not([data-selected=true])]:opacity-[0.32]";
+const DIMMABLE_HEADING_CLASSES =
+  "[&_[cmdk-group-heading]]:transition-opacity [&_[cmdk-group-heading]]:duration-150 motion-reduce:[&_[cmdk-group-heading]]:transition-none";
+const DIMMED_HEADING_CLASSES = "[&_[cmdk-group-heading]]:opacity-[0.32]";
+
+interface LoadedResultsProps extends Omit<SearchResultsProps, "state"> {
+  state: Extract<SearchState, { kind: "loaded" }>;
+}
+
+function LoadedResults({ state, relationships, userId, onSelect, onLoadMore }: LoadedResultsProps) {
+  const [spotlight, setSpotlight] = useState<Option<Id>>(None);
+  const [expanded, setExpanded] = useState<ReadonlySet<Id>>(new Set());
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const { people, other } = useMemo(
+    () => groupSearchHitsByPerson(state.hits, relationships, userId),
+    [state.hits, relationships, userId]
+  );
+  // Bands whenever "who" needs saying: several people, or one person beside unattributed hits.
+  const banded = people.length > 1 || (people.length === 1 && other.length > 0);
+  const soloPerson = people.length === 1 && other.length === 0 ? Some(people[0].person) : None;
+
+  const pickPerson = (personId: Id) => {
+    if (spotlight.some && spotlight.val === personId) {
+      setSpotlight(None);
+      return;
+    }
+    setSpotlight(Some(personId));
+    const list = listRef.current;
+    if (!list) return;
+    const band = Array.from(list.querySelectorAll<HTMLElement>("[data-person-group]")).find(
+      (group) => group.dataset.personGroup === personId
+    );
+    if (!band) return;
+    list.scrollTo({
+      top: band.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop,
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
+  };
+
+  const toggleExpanded = (personId: Id) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (!next.delete(personId)) next.add(personId);
+      return next;
+    });
+
+  const isDimmed = (personId: Option<Id>): boolean =>
+    spotlight.some && !(personId.some && personId.val === spotlight.val);
+
+  return (
+    <>
+      {people.length > 1 && (
+        <SearchPeopleStrip
+          people={people.map(({ person, hits }) => ({ person, count: hits.length }))}
+          spotlight={spotlight}
+          onPick={pickPerson}
+        />
+      )}
+      {soloPerson.some && (
+        <div className="mb-0.5 flex items-center gap-2 border-b border-hairline px-2.5 pb-2 pt-1.5 text-xs text-muted-foreground">
+          <PersonAvatar
+            userId={soloPerson.val.userId}
+            initials={soloPerson.val.initials}
+            size={20}
+          />
+          <span>
+            All results are with{" "}
+            <span className="font-medium text-foreground">{soloPerson.val.fullName}</span>
+          </span>
+        </div>
+      )}
+      <CommandList ref={listRef} className="max-h-[min(24rem,60vh)]">
+        {banded ? (
+          <>
+            {people.map((group) => (
+              <PersonResultGroup
+                key={group.person.userId}
+                group={group}
+                expanded={expanded.has(group.person.userId)}
+                dimmed={isDimmed(Some(group.person.userId))}
+                onToggleExpanded={toggleExpanded}
+                onSelect={onSelect}
+              />
+            ))}
+            {other.length > 0 && (
+              <CommandPrimitive.Group
+                heading="Other results"
+                data-dimmed={isDimmed(None)}
+                className={cn(
+                  GROUP_HEADING_CLASSES,
+                  DIMMABLE_HEADING_CLASSES,
+                  DIMMABLE_ROW_CLASSES,
+                  "pt-2",
+                  isDimmed(None) && [DIMMED_HEADING_CLASSES, DIMMED_ROW_CLASSES]
+                )}
+              >
+                {other.map((hit) => (
+                  <SearchResultRow key={`${hit.type}:${hit.id}`} hit={hit} onSelect={onSelect} />
+                ))}
+              </CommandPrimitive.Group>
+            )}
+          </>
+        ) : (
+          groupSearchHits(state.hits).map((group) => (
+            <CommandPrimitive.Group
+              key={group.type}
+              heading={group.heading}
+              className={GROUP_HEADING_CLASSES}
+            >
+              {group.hits.map((hit) => (
+                <SearchResultRow key={`${hit.type}:${hit.id}`} hit={hit} onSelect={onSelect} />
+              ))}
+            </CommandPrimitive.Group>
+          ))
+        )}
+        {state.loadMoreError.some && (
+          <p role="alert" className="px-3 py-2 text-center text-xs text-destructive">
+            {errorMessage(state.loadMoreError.val)}
+          </p>
+        )}
+        {state.nextCursor.some && (
+          <CommandItem
+            value="__load_more__"
+            onSelect={onLoadMore}
+            disabled={state.isLoadingMore}
+            className="m-1 justify-center text-xs text-muted-foreground"
+          >
+            {state.isLoadingMore ? (
+              <>
+                <Spinner className="mr-2 h-3.5 w-3.5" />
+                Loading more…
+              </>
+            ) : state.loadMoreError.some ? (
+              "Try again"
+            ) : (
+              "Show more results"
+            )}
+          </CommandItem>
+        )}
+      </CommandList>
+    </>
+  );
+}
+
+interface PersonResultGroupProps {
+  group: PersonHitGroup;
+  expanded: boolean;
+  dimmed: boolean;
+  onToggleExpanded: (personId: Id) => void;
+  onSelect: (hit: SearchHit) => void;
+}
+
+// A plain group, not cmdk's: its heading is hidden from assistive tech and can't hold a button.
+function PersonResultGroup({
+  group: { person, hits },
+  expanded,
+  dimmed,
+  onToggleExpanded,
+  onSelect,
+}: PersonResultGroupProps) {
+  const label = resultCountLabel(hits.length);
+  const visibleHits = expanded ? hits : hits.slice(0, PERSON_GROUP_ROW_CAP);
+  return (
+    <div
+      role="group"
+      aria-label={person.fullName}
+      data-person-group={person.userId}
+      data-dimmed={dimmed}
+      className={cn(DIMMABLE_ROW_CLASSES, "pt-2 first:pt-1.5", dimmed && DIMMED_ROW_CLASSES)}
+    >
+      <div
+        className={cn(
+          "mb-0.5 flex h-10 items-center gap-2.5 rounded-input bg-well pl-[7px] pr-1.5",
+          DIMMABLE_CLASSES,
+          // Full strength while the expander holds keyboard focus.
+          dimmed && [DIMMED_CLASSES, "focus-within:opacity-100"]
+        )}
+      >
+        <PersonAvatar userId={person.userId} initials={person.initials} size={26} />
+        <span className="min-w-0 flex-1 truncate text-item font-semibold text-foreground">
+          {person.fullName}
+        </span>
+        {hits.length > PERSON_GROUP_ROW_CAP ? (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            onClick={() => onToggleExpanded(person.userId)}
+            onKeyDown={keepEnterOnButton}
+            className="inline-flex h-7 flex-none items-center gap-1 rounded-full pl-2.5 pr-1.5 text-pill font-medium text-ink-2 tabular-nums transition-colors duration-150 hover:bg-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {label}
+            <ChevronDown
+              className={cn(
+                "h-[13px] w-[13px] transition-transform duration-200 motion-reduce:transition-none",
+                expanded && "rotate-180"
+              )}
+              aria-hidden
+            />
+          </button>
+        ) : (
+          <span className="flex-none pr-1.5 text-pill font-medium text-muted-foreground tabular-nums">
+            {label}
+          </span>
+        )}
+      </div>
+      {visibleHits.map((hit) => (
+        <SearchResultRow key={`${hit.type}:${hit.id}`} hit={hit} onSelect={onSelect} />
+      ))}
+    </div>
+  );
 }
 
 const SKELETON_ROW_COUNT = 3;
