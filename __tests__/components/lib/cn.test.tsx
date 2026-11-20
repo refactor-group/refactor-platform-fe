@@ -11,6 +11,7 @@ describe("cn", () => {
       "text-page-title",
       "text-headline",
       "text-section",
+      "text-subhead",
       "text-card-title",
       "text-item",
       "text-label",
