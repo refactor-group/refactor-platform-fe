@@ -599,6 +599,20 @@ describe("groupSearchHitsByPerson", () => {
     expect(people.map((g) => g.person.userId)).toEqual(["ehab"]);
     expect(other.map((h) => h.id)).toEqual(["none", "unknown"]);
   });
+
+  it("leaves hits from a relationship the user is not part of in other", () => {
+    // An admin's list includes relationships between two other people.
+    const betweenOthers = { ...EHAB, id: "rel-others", coach_id: "caleb" };
+    const { people, other } = groupSearchHitsByPerson(
+      [hitFor("rel-others", "theirs"), hitFor("rel-ehab", "e1")],
+      [...relationships, betweenOthers],
+      ME
+    );
+
+    expect(people.map((g) => g.person.userId)).toEqual(["ehab"]);
+    expect(people[0].hits.map((h) => h.id)).toEqual(["e1"]);
+    expect(other.map((h) => h.id)).toEqual(["theirs"]);
+  });
 });
 
 describe("chipsThatFit", () => {

@@ -51,7 +51,10 @@ import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-rela
 import { useOrganizationStateStore } from "@/lib/providers/organization-state-store-provider";
 import { prefersReducedMotion } from "@/lib/utils/motion";
 import { searchHitHref } from "@/lib/utils/search-hit-href";
-import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
+import {
+  type CoachingRelationshipWithUserNames,
+  getRelationshipsForUser,
+} from "@/types/coaching-relationship";
 import { actionStatusToString, type Id } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
 import {
@@ -199,7 +202,10 @@ export function groupSearchHitsByPerson(
   relationships: CoachingRelationshipWithUserNames[],
   userId: Id
 ): HitsByPerson {
-  const relationshipsById = new Map(relationships.map((rel) => [rel.id, rel]));
+  // An admin's list holds relationships they aren't part of; those have no "other" person.
+  const relationshipsById = new Map(
+    getRelationshipsForUser(userId, relationships).map((rel) => [rel.id, rel])
+  );
   const groupsByPerson = new Map<Id, PersonHitGroup>();
   const other: SearchHit[] = [];
   for (const hit of hits) {
