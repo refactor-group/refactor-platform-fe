@@ -893,6 +893,26 @@ describe("GlobalSearch results by person", () => {
     expect(group("Caleb Ortiz")).not.toHaveClass(DIMMED);
   });
 
+  it("loads relationships only once the field opens", async () => {
+    localStorage.setItem(
+      "organization-state-store",
+      JSON.stringify({ state: { currentOrganizationId: "org-1" }, version: 2 })
+    );
+    try {
+      mockRelationships([]);
+      mockSearch(loaded([]));
+      render(<GlobalSearch />, { wrapper: TestProviders });
+
+      expect(useCoachingRelationshipList).toHaveBeenCalled();
+      expect(useCoachingRelationshipList).not.toHaveBeenCalledWith("org-1");
+
+      await expand();
+      expect(useCoachingRelationshipList).toHaveBeenLastCalledWith("org-1");
+    } finally {
+      localStorage.removeItem("organization-state-store");
+    }
+  });
+
   it("arrows across person groups, dimmed rows included, and Enter opens the row", async () => {
     mockRelationships([EHAB, CALEB]);
     mockSearch(loaded([hitFor("rel-ehab", "e1"), hitFor("rel-caleb", "c1"), hitFor(null, "none")]));

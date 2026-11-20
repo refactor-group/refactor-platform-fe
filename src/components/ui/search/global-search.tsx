@@ -279,7 +279,10 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
   const currentOrganizationId = useOrganizationStateStore(
     (store) => store.currentOrganizationId
   );
-  const { relationships } = useCoachingRelationshipList(currentOrganizationId || null);
+  // Loaded once the field opens, and held through the collapse so groups don't reshuffle.
+  const { relationships } = useCoachingRelationshipList(
+    field.kind === "collapsed" ? null : currentOrganizationId
+  );
 
   const expanded = field.kind === "expanded";
   const collapsing = field.kind === "collapsing";
