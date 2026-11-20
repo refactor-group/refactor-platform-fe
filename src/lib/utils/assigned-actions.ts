@@ -22,6 +22,7 @@ import {
   findLastSessionsByRelationship,
 } from "@/lib/utils/session";
 import { buildRelationshipWithUserNames } from "@/lib/utils/relationship";
+import { isOverdue } from "@/lib/actions-due";
 
 // ============================================================================
 // Types
@@ -251,19 +252,13 @@ export function addContextToAction(
     session.coaching_relationship_id
   );
 
-  // Compare dates only (not times) to avoid marking items due today as overdue
-  const today = DateTime.now().setZone(timezone).startOf("day");
-  const isOverdue = action.due_by.some
-    ? action.due_by.val.setZone(timezone).startOf("day") < today
-    : false;
-
   return {
     action,
     relationship: buildRelationshipWithUserNames(session),
     goal: buildGoalContext(action, session),
     sourceSession: buildSessionContext(session),
     nextSession: nextSession ? buildSessionContext(nextSession) : null,
-    isOverdue,
+    isOverdue: isOverdue(action, DateTime.now().setZone(timezone)),
   };
 }
 

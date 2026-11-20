@@ -70,6 +70,9 @@
     --positive-wash: 135 30.8% 94.9%;
     --warning: 26 90.5% 37.1%;
     --warning-text: 22.7 82.5% 31.4%;
+    --error: 4.2 76.5% 40%;
+    --error-tint: 6.3 82.6% 95.5%;
+    --error-border: 4.9 69% 86.1%;
     --on-hold-ring: 35.7 61.4% 61.4%;
     --on-hold-fill: 39.1 74.2% 93.9%;
     --on-hold-text: 36 76.9% 30.6%;
@@ -157,6 +160,9 @@
     --positive-wash: 137.1 25.9% 10.6%;
     --warning: 34.7 85.4% 65.1%;
     --warning-text: 34.7 85.4% 65.1%;
+    --error: 4.1 92.5% 68.8%;
+    --error-tint: 4.8 38.5% 12.7%;
+    --error-border: 4.1 46% 24.7%;
     --on-hold-ring: 36.9 49.2% 48.6%;
     --on-hold-fill: 33.3 42.9% 12.4%;
     --on-hold-text: 34.7 85.4% 65.1%;

@@ -47,8 +47,7 @@ async function prev(page: Page) {
 }
 
 async function openSchedule(page: Page) {
-  await page.getByRole('button', { name: 'Add New' }).click()
-  await page.getByRole('menuitem', { name: 'Coaching session' }).click()
+  await page.getByRole('button', { name: 'Schedule session' }).click()
   await expect(dialog(page)).toBeVisible()
 }
 
@@ -117,11 +116,11 @@ for (const viewport of VIEWPORTS) {
     })
 
     test('Who: empty', async ({ page, context }) => {
-      // Add New hides for someone who coaches nobody, so the list empties after the
+      // Schedule session hides for someone who coaches nobody, so the list empties after the
       // dashboard loads; the dialog refetches on open, past SWR's 2s dedupe.
       const relationships = serveAll()
       await start(page, context, viewport, relationships)
-      await expect(page.getByRole('button', { name: 'Add New' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Schedule session' })).toBeVisible()
       await page.waitForTimeout(2500)
       relationships.mode = { kind: 'serve', relationships: [] }
       await openSchedule(page)

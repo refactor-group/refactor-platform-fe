@@ -168,7 +168,7 @@ test("e: Ehab schedules a BigTable coaching session with Jim", async ({ page }) 
   await login(page, EHAB);
 
   // The dashboard opens on Refactor Group, where Ehab is only a coachee and so
-  // has no Add New button. Switch to BigTable, where he is admin and Jim's coach.
+  // has no Schedule session button. Switch to BigTable, where he is admin and Jim's coach.
   await page.getByRole("button", { name: "Account menu" }).click();
   await page
     .getByRole("menu")
@@ -179,8 +179,7 @@ test("e: Ehab schedules a BigTable coaching session with Jim", async ({ page }) 
     "BigTable"
   );
 
-  await page.click('button:has-text("Add New")');
-  await page.getByRole("menuitem", { name: /session/i }).click();
+  await page.getByRole("button", { name: "Schedule session" }).click();
 
   const dialog = page.getByRole("dialog", { name: "New session" });
   await dialog.getByRole("button", { name: /Jim Hodapp/ }).click();

@@ -1,6 +1,7 @@
 import type { DateTime } from "ts-luxon";
 import { ItemStatus } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
+import { isOverdue } from "@/lib/actions-due";
 
 export type StatusMeta =
   | { kind: "none" }
@@ -20,9 +21,9 @@ export const OVERDUE_META_CLASS = "font-medium text-warning-text";
 const PAUSED_META_CLASS = "text-on-hold-text";
 const PLAIN_META_CLASS = "text-muted-foreground";
 
-function openMeta(dueBy: Option<DateTime>, now: DateTime): StatusMeta {
+function openMeta(status: ItemStatus, dueBy: Option<DateTime>, now: DateTime): StatusMeta {
   if (dueBy.none) return { kind: "none" };
-  return dueBy.val.startOf("day") < now.startOf("day")
+  return isOverdue({ status, due_by: dueBy }, now)
     ? { kind: "overdue", dueBy: dueBy.val }
     : { kind: "due", dueBy: dueBy.val };
 }
@@ -34,7 +35,7 @@ export function statusMeta(input: StatusMetaInput, now: DateTime): StatusMeta {
   switch (input.status) {
     case ItemStatus.NotStarted:
     case ItemStatus.InProgress:
-      return openMeta(dueBy, now);
+      return openMeta(input.status, dueBy, now);
     case ItemStatus.OnHold:
       return { kind: "paused", dueBy };
     case ItemStatus.Completed:

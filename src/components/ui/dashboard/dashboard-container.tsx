@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { DashboardHeader } from "@/components/ui/dashboard/dashboard-header";
 import { GoalsOverviewCard } from "@/components/ui/dashboard/goals-overview-card";
-import { UpcomingSessionCard } from "@/components/ui/dashboard/upcoming-session-card";
+import { NextSessionCard } from "@/components/ui/dashboard/next-session-card";
+import { TodaysBriefingPanel } from "@/components/ui/dashboard/todays-briefing-panel";
 import { WeekPanel } from "@/components/ui/dashboard/week-grid/week-panel";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
@@ -15,7 +15,7 @@ import { None, Some } from "@/types/option";
 
 export function DashboardContainer() {
   // The dashboard has no relationship selector, so single-relationship users
-  // are auto-selected here for UpcomingSessionCard and GoalsOverviewCard.
+  // are auto-selected here for NextSessionCard and GoalsOverviewCard.
   const { currentOrganizationId } = useCurrentOrganization();
   const {
     relationships,
@@ -43,36 +43,31 @@ export function DashboardContainer() {
 
   const openSchedule = useNewSessionDialogStore((state) => state.openSchedule);
   const openMoveSession = useNewSessionDialogStore((state) => state.openMoveSession);
-  const [refreshUpcomingSession, setRefreshUpcomingSession] = useState<(() => void) | null>(() => null);
+  const [refreshNextSession, setRefreshNextSession] = useState<(() => void) | null>(() => null);
 
   const handleCreateSession = () => openSchedule(None);
 
   // Stable, so the card's onRefreshNeeded effect doesn't refire every render.
-  const handleUpcomingSessionRefreshNeeded = useCallback(
-    (refreshFn: () => void) => setRefreshUpcomingSession(() => refreshFn),
+  const handleNextSessionRefreshNeeded = useCallback(
+    (refreshFn: () => void) => setRefreshNextSession(() => refreshFn),
     [],
   );
 
   const handleSeriesMutated = useCallback(() => {
-    refreshUpcomingSession?.();
-  }, [refreshUpcomingSession]);
+    refreshNextSession?.();
+  }, [refreshNextSession]);
 
   return (
     <>
-      <DashboardHeader onCreateSession={handleCreateSession} />
-
-      {/* Upcoming Session + Goals Overview (2-col grid on md+).
-          Width follows the page's max-w-screen-2xl via PageContainer. */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 mb-8 w-full">
-        <UpcomingSessionCard
-          onReschedule={openMoveSession}
+      <TodaysBriefingPanel>
+        <NextSessionCard
           onCreateSession={handleCreateSession}
-          onRefreshNeeded={handleUpcomingSessionRefreshNeeded}
+          onRefreshNeeded={handleNextSessionRefreshNeeded}
         />
         <GoalsOverviewCard />
-      </div>
+      </TodaysBriefingPanel>
 
-      <div className="w-full">
+      <div className="mt-8 w-full">
         <WeekPanel
           onReschedule={openMoveSession}
           onSeriesMutated={handleSeriesMutated}

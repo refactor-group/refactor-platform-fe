@@ -76,6 +76,7 @@ Auto follows the OS). Tailwind exposes each as a color.
 | `positive-solid` | `#2f6b45` | `#2f6b45` | Completed glyph fill (white check) |
 | `positive-tint` / `positive-wash` | `#e5f0e8` / `#eef6f0` | `#16281d` / `#142218` | Completed pill / row settling after completion |
 | `warning` / `warning-text` | `#b45309` / `#92400e` | `#f2b25a` | Overdue meta (a date condition, not a status) |
+| `error` / `error-tint` / `error-border` | `#b42318` / `#fdecea` / `#f4c7c3` | `#f97066` / `#2d1614` / `#5c2622` | Error states: icon and badge (`CardError`). Not for delete/danger; that stays `destructive` |
 | `on-hold-ring` / `-fill` / `-text` | `#d9a860` / `#fbf3e4` / `#8a5a12` | `#b98a3f` / `#2d2112` / `#f2b25a` | On hold glyph + pill |
 | `status-idle` | `#c4c4c4` | `#4a4a52` | Not started circle |
 | `destructive` | unchanged | unchanged | Delete / danger |
@@ -138,6 +139,7 @@ Inter. Headings are **regular weight** with `-0.01em` tracking (baked into the s
 - Page width comes from `PageContainer` (`max-w-screen-2xl`); don't set your own max width.
 - Loading, empty and error states render inside the **same** card chrome so the grid never
   jumps (`GoalsOverviewCardSkeleton`, `GoalsOverviewCardError`).
+- `CardError` (`components/ui/errors/card-error.tsx`) is the error body for cards.
 
 ---
 

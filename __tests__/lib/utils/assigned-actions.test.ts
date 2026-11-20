@@ -148,4 +148,20 @@ describe("addContextToAction overdue", () => {
     expect(overdueFor("America/Chicago")).toBe(true);
     expect(overdueFor("UTC")).toBe(false);
   });
+
+  const overdueWithStatus = (status: ItemStatus) => {
+    Settings.now = () => pinned;
+    const action = makeAction({ status, due_by: Some(DateTime.fromISO("2026-10-29T12:00:00Z")) });
+    const sessionMap = new Map([["session-1", makeSession()]]);
+    return addContextToAction(action, sessionMap, new Map(), "UTC")?.isOverdue;
+  };
+
+  it("ignores closed and paused actions past their date", () => {
+    expect(overdueWithStatus(ItemStatus.Completed)).toBe(false);
+    expect(overdueWithStatus(ItemStatus.OnHold)).toBe(false);
+  });
+
+  it("flags open actions past their date", () => {
+    expect(overdueWithStatus(ItemStatus.NotStarted)).toBe(true);
+  });
 });

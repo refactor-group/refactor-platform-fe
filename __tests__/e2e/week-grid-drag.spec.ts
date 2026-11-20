@@ -81,6 +81,8 @@ test.describe('Week grid drag to move', () => {
     )
     await page.goto('/dashboard')
     await expect(page.getByTestId('session-card-thursday')).toBeVisible()
+    // The briefing panel above pushes the grid below the fold, and dragTo works in viewport coordinates.
+    await page.getByRole('region', { name: 'This week' }).evaluate((el) => el.scrollIntoView({ block: 'start' }))
   })
 
   test('the narrowest grid shows a card\'s length in full', async ({ page }) => {
