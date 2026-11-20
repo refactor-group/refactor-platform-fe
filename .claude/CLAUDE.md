@@ -4,6 +4,7 @@
 
 **Code Implementation/Editing** → Read `.claude/coding-standards.md` FIRST
 **UI / Component Work** → Read `.claude/style-guide.md` FIRST (visual language, tokens, idioms)
+**Token values, component specs** → `docs/design-system.md`
 **New Files (components, hooks, modules, tests)** → Read `.claude/file-organization.md` FIRST (where each kind of file goes)
 **Pull Request Operations** → Read `.claude/pr-instructions.md` FIRST
 **Manual / Playwright Testing** → Read `docs/test-plans/README.md` FIRST (which plan to run, what it needs)

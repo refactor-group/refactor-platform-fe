@@ -352,6 +352,10 @@ white check; `muted-foreground`, `faint` in dark, with a white ×). Meta-line co
 overdue `font-medium text-warning-text`, paused `text-on-hold-text`, else
 `text-muted-foreground` (`status/status-meta.ts`).
 
+The glyph and the pill both open `StatusMenu` (`status/status-menu.tsx`): 180px wide,
+`rounded-xl p-1.5`, 36px `rounded-input` rows of glyph plus label in `text-item font-medium`,
+with a `text-brand` check on the current status.
+
 ### Avatars and org tiles
 
 `src/components/ui/avatar.tsx`.
@@ -558,13 +562,15 @@ Recorded so the next change can settle each one; the code is current.
 
 **Code vs plan and style guide**
 
-- Session cards: the style guide says they stay flat; upcoming ones carry `shadow-card`.
+- Session cards: the style guide's decisions log says they stay flat; upcoming ones carry
+  `shadow-card`.
 - Menu rows: the style guide gives `rounded-input` and `hover:bg-well`; the shadcn
   DropdownMenu, ContextMenu, Select and Command items are still `rounded-sm` with
   `focus:bg-accent` (`fill`). Hand-built rows follow the guide.
 - `Tooltip`, `HoverCard`, `Dialog`, `AlertDialog`, `Sheet` and `Textarea` keep shadcn
   shapes (`rounded-md`, `shadow-md`/`shadow-lg`, `bg-black/80` overlay).
-- Header destination pills are 34px below `sm` (`site-header.tsx`); the style guide says 36.
+- Header destination pills are 34px below `sm` and 36px from `sm` up (`site-header.tsx`),
+  not the 36px dense height throughout.
 - The avatar menu is 268px (`user-menu.tsx`); the Phase 1 plan says 260.
 - Error toasts use `destructive`, as the Phase 1 plan decided, not the `error` token.
 - Defined but unused: `brand-month`, `error-border`, `chart-1` to `chart-5`,
@@ -576,7 +582,6 @@ Recorded so the next change can settle each one; the code is current.
 - The plan merged ghost into tertiary; the code keeps both (tertiary bare, ghost
   hover-filled) and adds `icon-md` (44) and `icon-lg` (48), and `PersonAvatar` size 20.
 - The plan moved the compact action card highlight to `primary`; the code uses `brand`.
-- The style guide gives `toast-check` dark as `#166534`; the triplet computes to `#166634`.
 - `globals.css` has two `@layer base` blocks applying `border-border` and the `body`
   colors; the first also sets the font.
 
