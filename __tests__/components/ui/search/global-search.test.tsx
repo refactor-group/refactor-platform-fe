@@ -633,7 +633,7 @@ describe("chipsThatFit", () => {
 describe("GlobalSearch results by person", () => {
   const push = vi.fn();
   const scrollTo = vi.fn();
-  const DIMMED = "opacity-[0.32]";
+  const DIMMED_ROWS = "[&_[cmdk-item]:not([data-selected=true])]:opacity-[0.32]";
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -770,17 +770,33 @@ describe("GlobalSearch results by person", () => {
 
     expect(caleb).toHaveAttribute("aria-pressed", "true");
     expect(chip(/^Ehab Bandar,/)).toHaveAttribute("aria-pressed", "false");
-    expect(group("Caleb Ortiz")).not.toHaveClass(DIMMED);
-    expect(group("Ehab Bandar")).toHaveClass(DIMMED);
-    expect(other).toHaveClass(DIMMED);
+    expect(group("Caleb Ortiz")).toHaveAttribute("data-dimmed", "false");
+    expect(group("Ehab Bandar")).toHaveAttribute("data-dimmed", "true");
+    expect(other).toHaveAttribute("data-dimmed", "true");
     expect(scrollTo).toHaveBeenCalledTimes(1);
     expect(input).toHaveFocus();
 
     await userEvent.click(caleb);
     expect(caleb).toHaveAttribute("aria-pressed", "false");
-    expect(group("Ehab Bandar")).not.toHaveClass(DIMMED);
-    expect(other).not.toHaveClass(DIMMED);
+    expect(group("Ehab Bandar")).toHaveAttribute("data-dimmed", "false");
+    expect(other).toHaveAttribute("data-dimmed", "false");
     expect(scrollTo).toHaveBeenCalledTimes(1);
+  });
+
+  it("dims rows, not the group, so the highlighted row in a dimmed group stays readable", async () => {
+    mockRelationships([EHAB, CALEB]);
+    mockSearch(loaded([hitFor("rel-ehab", "e1"), hitFor("rel-caleb", "c1")]));
+    render(<GlobalSearch />, { wrapper: TestProviders });
+    await typeQuery("weekly");
+    await userEvent.click(chip(/^Caleb Ortiz,/));
+
+    const ehab = group("Ehab Bandar");
+    // Opacity on the group itself would fade the highlighted row with it.
+    expect(ehab.className).not.toMatch(/(^|\s)opacity-/);
+    expect(ehab).toHaveClass(DIMMED_ROWS);
+    expect(group("Caleb Ortiz")).not.toHaveClass(DIMMED_ROWS);
+    // The dim rule skips rows carrying data-selected, which cmdk sets on the highlighted one.
+    expect(within(ehab).getByRole("option")).toHaveAttribute("data-selected", "true");
   });
 
   it("still navigates from a dimmed row", async () => {
@@ -831,8 +847,8 @@ describe("GlobalSearch results by person", () => {
 
     await userEvent.click(within(menu).getByRole("button", { name: /^Lena Torres,/ }));
     expect(screen.queryByRole("group", { name: "More people" })).not.toBeInTheDocument();
-    expect(group("Lena Torres")).not.toHaveClass(DIMMED);
-    expect(group("Ehab Bandar")).toHaveClass(DIMMED);
+    expect(group("Lena Torres")).toHaveAttribute("data-dimmed", "false");
+    expect(group("Ehab Bandar")).toHaveAttribute("data-dimmed", "true");
     expect(more).toHaveClass("bg-brand-tint");
     expect(input).toHaveFocus();
   });
@@ -870,10 +886,10 @@ describe("GlobalSearch results by person", () => {
 
     expect(chip(/^Ehab Bandar, 8 results/)).toHaveAttribute("aria-pressed", "true");
     expect(rowsIn("Ehab Bandar")).toHaveLength(8);
-    expect(group("Caleb Ortiz")).toHaveClass(DIMMED);
+    expect(group("Caleb Ortiz")).toHaveAttribute("data-dimmed", "true");
     // A person first seen on the new page joins the end of the strip and the list.
     expect(chip(/^Priya Raman, 1 result/)).toBeInTheDocument();
-    expect(group("Priya Raman")).toHaveClass(DIMMED);
+    expect(group("Priya Raman")).toHaveAttribute("data-dimmed", "true");
   });
 
   it("resets the spotlight and expanded groups for a new query", async () => {
@@ -890,7 +906,7 @@ describe("GlobalSearch results by person", () => {
 
     expect(chip(/^Ehab Bandar,/)).toHaveAttribute("aria-pressed", "false");
     expect(rowsIn("Ehab Bandar")).toHaveLength(5);
-    expect(group("Caleb Ortiz")).not.toHaveClass(DIMMED);
+    expect(group("Caleb Ortiz")).toHaveAttribute("data-dimmed", "false");
   });
 
   it("loads relationships only once the field opens", async () => {

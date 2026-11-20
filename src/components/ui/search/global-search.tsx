@@ -546,8 +546,16 @@ function SearchResults({ state, relationships, userId, onSelect, onLoadMore }: S
 const GROUP_HEADING_CLASSES =
   "[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground";
 
+// A group dims piece by piece, not as a whole: opacity on the group would also fade the
+// highlighted row, and a child can't undo a parent's opacity.
 const DIMMABLE_CLASSES = "transition-opacity duration-150 motion-reduce:transition-none";
 const DIMMED_CLASSES = "opacity-[0.32]";
+const DIMMABLE_ROW_CLASSES =
+  "[&_[cmdk-item]]:transition-opacity [&_[cmdk-item]]:duration-150 motion-reduce:[&_[cmdk-item]]:transition-none";
+const DIMMED_ROW_CLASSES = "[&_[cmdk-item]:not([data-selected=true])]:opacity-[0.32]";
+const DIMMABLE_HEADING_CLASSES =
+  "[&_[cmdk-group-heading]]:transition-opacity [&_[cmdk-group-heading]]:duration-150 motion-reduce:[&_[cmdk-group-heading]]:transition-none";
+const DIMMED_HEADING_CLASSES = "[&_[cmdk-group-heading]]:opacity-[0.32]";
 
 interface LoadedResultsProps extends Omit<SearchResultsProps, "state"> {
   state: Extract<SearchState, { kind: "loaded" }>;
@@ -632,11 +640,13 @@ function LoadedResults({ state, relationships, userId, onSelect, onLoadMore }: L
             {other.length > 0 && (
               <CommandPrimitive.Group
                 heading="Other results"
+                data-dimmed={isDimmed(None)}
                 className={cn(
                   GROUP_HEADING_CLASSES,
-                  DIMMABLE_CLASSES,
+                  DIMMABLE_HEADING_CLASSES,
+                  DIMMABLE_ROW_CLASSES,
                   "pt-2",
-                  isDimmed(None) && DIMMED_CLASSES
+                  isDimmed(None) && [DIMMED_HEADING_CLASSES, DIMMED_ROW_CLASSES]
                 )}
               >
                 {other.map((hit) => (
@@ -710,9 +720,17 @@ function PersonResultGroup({
       role="group"
       aria-label={person.fullName}
       data-person-group={person.userId}
-      className={cn(DIMMABLE_CLASSES, "pt-2 first:pt-1.5", dimmed && DIMMED_CLASSES)}
+      data-dimmed={dimmed}
+      className={cn(DIMMABLE_ROW_CLASSES, "pt-2 first:pt-1.5", dimmed && DIMMED_ROW_CLASSES)}
     >
-      <div className="mb-0.5 flex h-10 items-center gap-2.5 rounded-input bg-well pl-[7px] pr-1.5">
+      <div
+        className={cn(
+          "mb-0.5 flex h-10 items-center gap-2.5 rounded-input bg-well pl-[7px] pr-1.5",
+          DIMMABLE_CLASSES,
+          // Full strength while the expander holds keyboard focus.
+          dimmed && [DIMMED_CLASSES, "focus-within:opacity-100"]
+        )}
+      >
         <PersonAvatar userId={person.userId} initials={person.initials} size={26} />
         <span className="min-w-0 flex-1 truncate text-item font-semibold text-foreground">
           {person.fullName}
