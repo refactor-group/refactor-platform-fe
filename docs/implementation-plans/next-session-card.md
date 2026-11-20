@@ -24,6 +24,9 @@ One phase is one commit. A fresh implementer builds each phase, and the overseer
 | 4 | `lib/next-session-copy.ts` (headline, when line) | done `c4066b43` |
 | 5 | `TodaysBriefingPanel`, `NextSessionCard` and its parts; swap them into the container; delete the old files; update existing test plans that name Add New, the Upcoming session card or "Schedule a coaching session" | done `9e44933f` |
 | 5b | Real-backend fixes: the loading placeholder mirrors the populated layout (no panel jump); the goals card shows the week request's error with Try again | done `024ec93c` |
+| 5c | Folding At a glance keeps the card's height; rows fade over 200ms | done `231575b7` |
+| 5d | `?actions=due` reports its tab so Add starts disabled | done `5dd00736` |
+| 5e | CI e2e: scroll the week grid into view for drags; subpixel tolerances | done `d43c85e5` |
 | 6 | Automated coverage of the manual plan: `__tests__/e2e/next-session-card.spec.ts`, a `?actions=due` case in `action-deep-link.spec.ts`, and the Due-tab parity integration test | done `38bf39b8` |
 | 7 | `.claude/file-organization.md`, the CLAUDE.md row, the coding-standards pointer | done `c1d0d33f` |
 | — | Overseer: real-backend check, light/dark/phone screenshots, draft PR | done: draft PR #574 |
