@@ -155,6 +155,7 @@ const config = {
   			'page-title': ['32px', { lineHeight: '1.2', letterSpacing: '-0.01em' }],
   			headline: ['28px', { lineHeight: '1.2', letterSpacing: '-0.01em' }],
   			section: ['26px', { lineHeight: '1.25', letterSpacing: '-0.01em' }],
+  			subhead: ['22px', { lineHeight: '1.2', letterSpacing: '-0.01em' }],
   			'card-title': ['17px', { lineHeight: '1.35', letterSpacing: '-0.01em' }],
   			item: ['13.5px', '1.4'],
   			label: ['12.5px', '1.4'],

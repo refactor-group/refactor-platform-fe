@@ -11,6 +11,7 @@ const twMerge = extendTailwindMerge({
             "page-title",
             "headline",
             "section",
+            "subhead",
             "card-title",
             "item",
             "label",

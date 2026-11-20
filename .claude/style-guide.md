@@ -97,8 +97,9 @@ Inter. Headings are **regular weight** with `-0.01em` tracking (baked into the s
 | Role | Classes |
 |---|---|
 | Page title | `text-page-title` (32/400) |
-| Card headline | `text-headline` (28/400) |
+| Dialog headline | `text-headline` (28/400) |
 | Section | `text-section` (26/400) |
+| Subhead | `text-subhead` (22/400), e.g. the Next session card title |
 | Card title | `text-card-title font-medium` (17/500); modal title adds `font-semibold` |
 | Body | `text-sm` (14) |
 | List item | `text-item font-medium` (13.5/500) |

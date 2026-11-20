@@ -84,7 +84,7 @@ function NextSessionCardLoading() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <NextSessionLabel />
-            <div className="mt-2.5 text-headline leading-[1.12]">
+            <div className="mt-2.5 text-subhead leading-[1.12]">
               <PlaceholderBar className="h-[1.12em] w-4/5" />
               <PlaceholderBar className="h-[1.12em] w-3/5" />
             </div>
@@ -210,7 +210,7 @@ function NextSessionBody({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <NextSessionLabel />
-          <h3 className="mt-2.5 text-headline leading-[1.12] break-words">{headline}</h3>
+          <h3 className="mt-2.5 text-subhead leading-[1.12] break-words">{headline}</h3>
         </div>
         {other.some && (
           <PersonAvatar
