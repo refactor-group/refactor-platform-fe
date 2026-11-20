@@ -13,9 +13,10 @@ import { useSearch, type SearchState } from "@/lib/api/search";
 import { TestProviders } from "@/test-utils/providers";
 import { Some, None } from "@/types/option";
 import { ItemStatus } from "@/types/general";
-import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { SearchHitType, TranscriptSuggestionTarget, type SearchHit } from "@/types/search";
 import { TopicStatus } from "@/types/coaching-session-topic";
+import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
+import { createMockRelationship } from "../../../test-utils";
 
 vi.mock("@/lib/api/search", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/search")>();
@@ -520,18 +521,18 @@ describe("groupSearchHits", () => {
 
 const ME = "me";
 
+const JIM = { first_name: "Jim", last_name: "Hodapp", email: "jim@example.com" };
+const seat = (first: string, last: string) => ({
+  first_name: first,
+  last_name: last,
+  email: `${first.toLowerCase()}@example.com`,
+});
+
 const coachedByMe = (id: string, personId: string, first: string, last: string) =>
-  ({
-    id,
-    coach_id: ME,
-    coach_first_name: "Jim",
-    coach_last_name: "Hodapp",
-    coach_email: "jim@example.com",
-    coachee_id: personId,
-    coachee_first_name: first,
-    coachee_last_name: last,
-    coachee_email: `${first.toLowerCase()}@example.com`,
-  }) as CoachingRelationshipWithUserNames;
+  createMockRelationship(
+    { id, coach_id: ME, coachee_id: personId },
+    { coach: JIM, coachee: seat(first, last) }
+  );
 
 const EHAB = coachedByMe("rel-ehab", "ehab", "Ehab", "Bandar");
 const CALEB = coachedByMe("rel-caleb", "caleb", "Caleb", "Ortiz");
@@ -540,18 +541,10 @@ const SARAH = coachedByMe("rel-sarah", "sarah", "Sarah", "Kim");
 const ALEX = coachedByMe("rel-alex", "alex", "Alex", "Chen");
 const LENA = coachedByMe("rel-lena", "lena", "Lena", "Torres");
 // Ehab also coaches the signed-in user: a second relationship with the same person.
-const EHAB_COACHES_ME = {
-  ...EHAB,
-  id: "rel-ehab-reverse",
-  coach_id: "ehab",
-  coach_first_name: "Ehab",
-  coach_last_name: "Bandar",
-  coach_email: "ehab@example.com",
-  coachee_id: ME,
-  coachee_first_name: "Jim",
-  coachee_last_name: "Hodapp",
-  coachee_email: "jim@example.com",
-} as CoachingRelationshipWithUserNames;
+const EHAB_COACHES_ME = createMockRelationship(
+  { id: "rel-ehab-reverse", coach_id: "ehab", coachee_id: ME },
+  { coach: seat("Ehab", "Bandar"), coachee: JIM }
+);
 
 const hitFor = (relationshipId: string | null, id: string): SearchHit => ({
   ...goalHit,
@@ -602,7 +595,10 @@ describe("groupSearchHitsByPerson", () => {
 
   it("leaves hits from a relationship the user is not part of in other", () => {
     // An admin's list includes relationships between two other people.
-    const betweenOthers = { ...EHAB, id: "rel-others", coach_id: "caleb" };
+    const betweenOthers = createMockRelationship(
+      { id: "rel-others", coach_id: "caleb", coachee_id: "ehab" },
+      { coach: seat("Caleb", "Ortiz"), coachee: seat("Ehab", "Bandar") }
+    );
     const { people, other } = groupSearchHitsByPerson(
       [hitFor("rel-others", "theirs"), hitFor("rel-ehab", "e1")],
       [...relationships, betweenOthers],
