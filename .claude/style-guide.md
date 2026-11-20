@@ -2,8 +2,8 @@
 
 The project's visual language for building UI. It follows the **Refactor design system**
 (the Phase 1 design handoff: indigo accent, pill controls, soft card shadows, Inter at regular
-heading weight). Tokens live in `src/styles/globals.css` + `tailwind.config.ts`; this doc says
-which token to reach for and why.
+heading weight). Tokens live in `src/styles/globals.css` + `tailwind.config.ts`, and their
+values are documented in `docs/design-system.md`; this doc says which token to reach for and why.
 
 > This is a **living document**: keep it accurate and grow it as the UI grows. When you add a
 > durable pattern, cite the file it lives in so it stays verifiable.
@@ -29,114 +29,101 @@ which token to reach for and why.
 
 ## 1. Foundations
 
+Values: see `docs/design-system.md` › [Color](../docs/design-system.md#color) /
+[Typography](../docs/design-system.md#typography) /
+[Spacing, radius and elevation](../docs/design-system.md#spacing-radius-and-elevation).
+This section says which token to reach for.
+
 ### Color tokens
 
-HSL triplets in `globals.css` (`:root` light, `.dark` dark; next-themes sets the class, and
-Auto follows the OS). Tailwind exposes each as a color.
+Every token has a light (`:root`) and a dark (`.dark`) value; next-themes sets the class,
+and Auto follows the OS. Tailwind exposes each as a color.
 
 **Neutrals**
+- `background`: the page. `card` / `popover`: cards, menus, popovers.
+- Ink, strongest first: `foreground` (primary text), `ink-2` (tertiary buttons, body in
+  rows), `muted-foreground` (labels, meta, done-item titles), `faint` (glyphs, chevrons,
+  hairline-level text only; it fails body contrast).
+- `fill` / `fill-hover`: secondary buttons, chips, icon buttons. `well`: row hover inside
+  menus, the modal's right pane. `disabled-icon`: disabled icon buttons.
+- `border` / `input`: borders. `border-hover`: card border on hover. `hairline`: row
+  separators inside a card.
+- `secondary`, `muted` and shadcn's `accent` all alias `fill`. shadcn's `accent` is the
+  **neutral hover fill**, not the brand accent.
 
-| Class | Light | Dark | Use |
-|---|---|---|---|
-| `background` | `#fff` | `#121214` | Page |
-| `card` / `popover` | `#fff` | `#1b1b1f` | Cards, menus, popovers |
-| `foreground` | `#0a0a0a` | `#f4f4f5` | Ink: primary text |
-| `ink-2` | `#525252` | `#c4c4cb` | Secondary ink: tertiary buttons, body in rows |
-| `muted-foreground` | `#737373` | `#8e8e98` | Labels, meta, done-item titles |
-| `faint` | `#a3a3a3` | `#5f5f69` | Glyphs, chevrons, hairline-level text only (fails body contrast) |
-| `disabled-icon` | `#d4d4d8` | `#3f3f46` | Disabled icon buttons |
-| `fill` / `fill-hover` | `#f2f3f5` / `#e4e6ee` | `#26262c` / `#303037` | Secondary buttons, chips, icon buttons |
-| `well` | `#f7f7f8` | `#19191c` | Row hover inside menus, modal right pane |
-| `border` / `input` | `#e5e7eb` | `#2c2c33` | Borders |
-| `border-hover` | `#d4d4d8` | `#3f3f46` | Card border on hover (full action card) |
-| `hairline` | `#f0f0f0` | `#232328` | Row separators inside a card |
-
-`secondary`, `muted` and shadcn's `accent` all alias `fill`. Note shadcn's `accent` is the
-**neutral hover fill**, not the brand accent.
-
-**Brand accent**
-
-| Class | Light | Dark | Use |
-|---|---|---|---|
-| `primary` / `primary-foreground` | `#5b5fe8` / `#fff` | same | Primary pill fill + its text |
-| `primary-disabled` | `#c7cbf3` | `#3a3c6b` | Disabled primary pill |
-| `brand` | `#5b5fe8` | `#7b7ff0` | Accent **text**, dots, rings, checks. Use this, not `text-primary` |
-| `brand-strong` | `#4b4fd0` | `#7b7ff0` | Text on `brand-tint` (In progress pill) |
-| `brand-tint` / `brand-tint-2` | `#eef0fc` / `#eceefc` | `#22233a` / `#262747` | Selected rows, open trigger, today halo |
-| `brand-border` | `#dcdff6` | `#34366a` | Hero card and "Current" chip border |
-| `brand-elapsed` | `#f8f9fe` | `#2e3060` | Elapsed fill on a session card under way |
-| `brand-dot` / `brand-month` | `#c7c9f5` / `#8f92ee` | `#3d3f7a` / `#6a6ee6` | Past session dots / selected-month dots |
-| `bg-hero-wash` | radial accent wash | dark wash | The one hero card per screen |
+**Brand accent** (scarce, see the hard rules)
+- `primary` / `primary-foreground`: the primary pill's fill and text. `primary-disabled`:
+  the disabled primary pill.
+- `brand`: accent **text**, dots, rings, checks. Use it, not `text-primary`; only `brand`
+  lightens in dark mode.
+- `brand-strong`: text on `brand-tint`. `brand-tint` / `brand-tint-2`: selected rows, open
+  trigger, today. `brand-border`: hero card and "Current" chip border.
+- `brand-elapsed`: elapsed fill on a session card under way. `brand-dot` / `brand-month`:
+  past session dots / selected-month dots.
+- `bg-hero-wash`: the one hero card per screen.
 
 **Status**
-
-| Class | Light | Dark | Use |
-|---|---|---|---|
-| `positive` | `#2f6b45` | `#7fc79a` | Ready / done text |
-| `positive-solid` | `#2f6b45` | `#2f6b45` | Completed glyph fill (white check) |
-| `positive-tint` / `positive-wash` | `#e5f0e8` / `#eef6f0` | `#16281d` / `#142218` | Completed pill / row settling after completion |
-| `warning` / `warning-text` | `#b45309` / `#92400e` | `#f2b25a` | Overdue meta (a date condition, not a status) |
-| `error` / `error-tint` / `error-border` | `#b42318` / `#fdecea` / `#f4c7c3` | `#f97066` / `#2d1614` / `#5c2622` | Error states: icon and badge (`CardError`). Not for delete/danger; that stays `destructive` |
-| `on-hold-ring` / `-fill` / `-text` | `#d9a860` / `#fbf3e4` / `#8a5a12` | `#b98a3f` / `#2d2112` / `#f2b25a` | On hold glyph + pill |
-| `status-idle` | `#c4c4c4` | `#4a4a52` | Not started circle |
-| `destructive` | unchanged | unchanged | Delete / danger |
+- `positive`: Ready and done text. `positive-solid`: completed glyph fill (white check).
+  `positive-tint` / `positive-wash`: Ready and Completed pill, and its hover.
+- `warning` / `warning-text`: overdue meta (a date condition, not a status).
+- `error` / `error-tint` / `error-border`: error states (`CardError`). Not for delete or
+  danger; that stays `destructive`.
+- `on-hold-ring` / `-fill` / `-text`: On hold glyph and pill. `status-idle`: Not started.
+- `destructive`: delete and danger.
 
 **Inverse and avatars**
-
-| Class | Light | Dark | Use |
-|---|---|---|---|
-| `inverse` / `inverse-foreground` | `#171717` / `#fafafa` | `#f4f4f5` / `#121214` | Toast and dot tooltip: the only surface that flips |
-| `toast-check` | `#86efac` | `#166534` | Leading check on confirmation toasts |
-| `toast-warning` | `#f2b25a` | `#b45309` | Leading icon on warning toasts |
-| `avatar` / `avatar-foreground` | `fill` / `#3f3f46` | `#26262c` / `#e4e4e7` | Org tile; all avatars in dark mode |
+- `inverse` / `inverse-foreground`: toast and dot tooltip, the only surface that flips.
+- `toast-check` / `toast-warning`: leading icons on confirmation and warning toasts.
+- `avatar` / `avatar-foreground`: the org tile, and every avatar in dark mode.
+  `avatar-1` to `avatar-8`: per-person pastels in light mode, picked by `avatarToneFor`.
 
 ### Typography
 
-Inter. Headings are **regular weight** with `-0.01em` tracking (baked into the size tokens).
+Inter. Headings are **regular weight**; tracking is baked into the size tokens.
 
 | Role | Classes |
 |---|---|
-| Page title | `text-page-title` (32/400) |
-| Dialog headline | `text-headline` (28/400) |
-| Section | `text-section` (26/400) |
-| Subhead | `text-subhead` (22/400), e.g. the Next session card title |
-| Card title | `text-card-title font-medium` (17/500); modal title adds `font-semibold` |
-| Body | `text-sm` (14) |
-| List item | `text-item font-medium` (13.5/500) |
-| Label | `text-label font-medium text-muted-foreground` (12.5/500) |
-| Meta | `text-xs text-muted-foreground` (12) |
-| Pill text | `text-pill font-medium` (11.5/500) |
-| Tiny | `text-tiny font-medium` (11/500) |
+| Page title | `text-page-title` |
+| Dialog headline | `text-headline` |
+| Section | `text-section` |
+| Subhead | `text-subhead`, e.g. the Next session card title |
+| Card title | `text-card-title font-medium`; modal title adds `font-semibold` |
+| Body | `text-sm` |
+| List item | `text-item font-medium` |
+| Label | `text-label font-medium text-muted-foreground` |
+| Meta | `text-xs text-muted-foreground` |
+| Pill text | `text-pill font-medium` |
+| Tiny | `text-tiny font-medium` |
 
 ### Spacing, radius, shadow
 
-- 8px grid. Card padding 22–28, grid gap `gap-4`, page padding 40.
-- Radii: `rounded-full` pills, chips, avatars, icon buttons · `rounded-card` 16 cards and
-  modals · `rounded-popover` 14 menus and popovers · `rounded-xl` 12 small cards · `rounded-input`
-  10 inputs and menu rows · `rounded-lg` 8 list rows and the org tile.
-- Shadows: `shadow-card` on cards, `shadow-popover` on menus, `shadow-toast` on toasts. Outer
-  panels and session cards stay flat. Dark menus also carry a 1px `border`.
+- 8px grid; grid gap `gap-4`.
+- Radius by shape: `rounded-full` pills, chips, avatars, icon buttons · `rounded-card` cards
+  and modals · `rounded-popover` menus and popovers · `rounded-xl` small cards ·
+  `rounded-input` inputs and menu rows · `rounded-lg` list rows and the org tile.
+- Shadows: `shadow-card` on cards, `shadow-popover` on menus, `shadow-toast` on toasts,
+  `shadow-modal` on the stepped modal. Outer panels stay flat. Menus also carry a 1px
+  `border`.
 
 ---
 
 ## 2. Surfaces & layout
 
-- **Card:** `bg-card border rounded-card shadow-card`, padding 22–28. Rows inside separate with
+Looks and values: `docs/design-system.md` › [Surfaces](../docs/design-system.md#surfaces).
+
+- **Card:** `bg-card border rounded-card shadow-card`. Rows inside separate with
   `border-hairline`; no boxes nested in boxes.
 - **Hero card** (one per screen, e.g. next session): `bg-hero-wash border-brand-border`.
-- **Toast:** `bg-inverse text-inverse-foreground rounded-full shadow-toast`, bottom center.
-  The only dark surface in light mode (and the only light one in dark mode).
-- **Stepped modal (`StepDialog`, `ui/step-dialog.tsx`):** use it for every stepped or sectioned
-  modal. Desktop is 860 × 560 (`Tall`) or 520 (`Standard`), height fixed across steps; a 300px
-  `bg-card` rail (title, steps with the current row `bg-rail-current`, optional footer) beside a
-  `bg-well` pane whose body is the only scroll region and whose footer is pinned. `bg-scrim`
-  overlay, `shadow-modal`, dark adds a 1px `border`. Below 900px (`modal` screen) it becomes a
-  full-screen step view: 56px top bar ("Title · n of m" + 44px close), 26px step title, scrolling
-  body, sticky footer with a 48px back circle and a Next or confirm pill. Step arrows always
-  show, disabled at the ends, except `StepDialogVariant.Single` (a read-only view) shows no
-  position, arrows, footer or step list (`series-detail-dialog.tsx`). While an on-screen keyboard
-  is up, the phone view shrinks to the visible area and scrolls the focused field into it
-  (`useVisibleViewport`).
+- **Toast:** bottom center. The only dark surface in light mode (and the only light one in
+  dark mode). Look: [Toasts](../docs/design-system.md#toasts).
+- **Stepped modal (`StepDialog`, `ui/step-dialog.tsx`):** use it for every stepped or
+  sectioned modal. Height stays fixed across steps. Step arrows always show, disabled at the
+  ends, except `StepDialogVariant.Single` (a read-only view) shows no position, arrows,
+  footer or step list (`series-detail-dialog.tsx`). While an on-screen keyboard is up, the
+  phone view shrinks to the visible area and scrolls the focused field into it
+  (`useVisibleViewport`). Layout and sizes:
+  [Stepped modal](../docs/design-system.md#stepped-modal) and
+  [Full-screen step view](../docs/design-system.md#full-screen-step-view).
 - Page width comes from `PageContainer` (`max-w-screen-2xl`); don't set your own max width.
 - Loading, empty and error states render inside the **same** card chrome so the grid never
   jumps (`GoalsOverviewCardSkeleton`, `GoalsOverviewCardError`).
@@ -148,20 +135,23 @@ Inter. Headings are **regular weight** with `-0.01em` tracking (baked into the s
 
 ### Buttons (Target)
 
-Pills, `text-item font-medium`, no border, icon + label `gap-2`, 16px lucide icons.
+Pills with lucide icons, no border. Variants, sizes and classes:
+[Buttons](../docs/design-system.md#buttons).
 
 - **Primary:** `bg-primary text-primary-foreground`, disabled `bg-primary-disabled`. One per view.
 - **Secondary:** `bg-fill hover:bg-fill-hover text-foreground`.
 - **Tertiary:** `variant="tertiary"`, bare text + icon, `text-ink-2 hover:text-foreground`, no
   background. Not `ghost`: ghost hover-fills and is for icon buttons in menus.
-- Heights: 40 default · 36 dense (header) · 44 modal confirm · 48 mobile footer.
+- Sizes by place: `default` in content, `sm` dense (header), `lg` modal confirm, `xl` mobile
+  footer.
 - **Icon-sizing gotcha:** `buttonVariants` forces `[&_svg]:size-4`; override with the important
   prefix (e.g. `!h-6 !w-6`).
 
 ### Icon buttons (Target)
 
-Circles, 36–40px, `bg-fill hover:bg-fill-hover text-ink-2`. Inside menus: 28px, transparent,
-hover `bg-fill`, disabled `text-disabled-icon`. Always set `aria-label`.
+Circles, `bg-fill hover:bg-fill-hover text-ink-2` (`secondary` with an `icon` size). Inside
+menus: `ghost` + `icon-menu`, transparent, hover `bg-fill`, disabled `text-disabled-icon`.
+Always set `aria-label`. Sizes: [Buttons](../docs/design-system.md#buttons).
 
 ### Info buttons (i)
 
@@ -186,9 +176,9 @@ Examples: the role cards in Pair with…, Add member and Change relationship…;
 
 ### Chips (Target)
 
-`rounded-full text-xs font-medium`, height 22–26. Selected `bg-primary text-primary-foreground`;
-unselected `bg-fill`. Filter chip: `bg-card border` with a trailing `text-faint` × that clears it.
-Dialog chips (`Chip size="md"`): 36px tall, 44 below 900px (the `modal` screen), `px-4 text-[13px]`.
+Use `Chip`: selected `bg-primary text-primary-foreground`, unselected `bg-fill`. Filter chip
+(`FilterChip`): `bg-card border` with a trailing `text-faint` × that clears it. Dialogs use
+`Chip size="md"`. Sizes: [Chips and pills](../docs/design-system.md#chips-and-pills).
 
 ### Rows & quiet affordances
 
@@ -208,19 +198,14 @@ className={cn(
 
 ### Status (`ItemStatus`)
 
-20px glyph left of the row, 24px pill right; both open the 180px status menu (check on current).
-
-| Status | Glyph | Pill |
-|---|---|---|
-| Not started | hollow `status-idle` circle | `bg-fill text-ink-2` |
-| In progress | `brand` ring, half-filled disc | `bg-brand-tint text-brand-strong` |
-| On hold | `on-hold-ring` ring, `on-hold-fill`, pause | `bg-on-hold-fill text-on-hold-text` |
-| Completed | solid `positive-solid`, white check; title muted | `bg-positive-tint text-positive` |
-| Won't do | solid `muted-foreground` (`faint` in dark), white ×; title muted | — |
+`StatusGlyph` left of the row, `StatusPill` right; both open `StatusMenu` (check on the
+current status). Completed and Won't do titles go muted. Glyph, pill and menu per status:
+[Status chips](../docs/design-system.md#status-chips).
 
 ### Menus
 
-`rounded-popover shadow-popover border`. Destructive items:
+Shape: [Popovers, menus and tooltips](../docs/design-system.md#popovers-menus-and-tooltips).
+Destructive items:
 `text-destructive focus:text-destructive focus:bg-destructive/10`.
 
 ### Collapsible cards
