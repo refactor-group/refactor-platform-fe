@@ -113,7 +113,7 @@ open it for R1 as COACH and COACHEE and check the coaching words are unchanged.
 | COL-21 | New session dialog **Who** list, week filter (group "Active"), join session menu | The other colleague by name, no role word | REL-01 |
 | COL-22 | Actions page relationship filter and kanban card header | "You and {Other}" for RC; "You → {Coachee}" for R1 | ACT-08 |
 | COL-23 | Session page: header presence slots, goals card heading, action assignee picker | Goals heading "Active goals with {Other}"; both colleagues offered as assignees, named without a role | ACT-36 |
-| COL-24 | Actions page My/Coachee toggle | MEMBER (colleague-only, not a coach): no toggle. COACH: shown, as a coach of R1 | ACT-01 |
+| COL-24 | Actions page view toggle | MEMBER (colleague only): My Actions \| Colleagues' Actions. COACH (coach of R1, colleague in RC): My Actions \| Coachee Actions \| Colleagues' Actions. COACHEE: no toggle | ACT-01 |
 | COL-25 | Dashboard upcoming card, no session today | MEMBER: the scheduling button, not "Your coach will schedule" | SES-27 |
 | COL-26 | Cancel and remove toasts, Pair with… and Add member toasts | Name the other person; no coach or coachee word | |
 | COL-27 | Open an RC session URL as ADMIN (not a participant) | Denial copy names no role ("Only the people meeting in it can view this session.") | SES-05 |
@@ -127,13 +127,17 @@ dashboard open in the second context.
 
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
-| COL-30 | New session with the other colleague | COACH, MEMBER | Both have the entry points (Add New, Schedule session, Schedule on {day}); Who lists the other colleague. It saves, and the other sees it after a refresh | SES-09 |
+| COL-30 | New session with the other colleague | COACH, MEMBER | Both have the entry points (Schedule session, Schedule on {day}); Who lists the other colleague. It saves, and the other sees it after a refresh | SES-09 |
 | COL-31 | New series with the other colleague | COACH, MEMBER | Saves; the other sees the sessions after a refresh | SER-01 |
 | COL-32 | Edit title, reschedule one session (dialog and week grid drag) | COACH, MEMBER | Saves. The title reaches the other live; the move after a refresh | SES-15, SES-19 |
 | COL-33 | Reschedule this and following, from a session the other colleague created | COACH, MEMBER | Saves; the other sees the change after a refresh | SER-26 |
 | COL-34 | Cancel session, cancel series | COACH, MEMBER | Both work for either colleague; after a refresh they're gone for the other | SES-21, SER-12 |
 | COL-35 | Resend invite, resend series invite | COACH, MEMBER | Both offered and succeed | SES-24, SER-14 |
 | COL-36 | Join with transcription, stop recording | COACH, MEMBER | Both get the recording controls (either participant may record, both kinds) | TRN-18 to TRN-20 |
+| COL-36b | One bot per session (needs the phase 4b backend): COACH clicks **Join with transcription**; then MEMBER, in a second context, does too before their button refreshes | COACH, MEMBER | Only one Refactor Coach bot joins. MEMBER's meeting opens with no error toast; their POST gets 409 `recording_already_active`, and their button then shows the active view (**Open meeting**, **Stop recording**; the recording dot once the bot is in the meeting) | TRN-18 |
+| COL-36c | MEMBER opens the session after COACH started transcription, and stays on it while it starts | MEMBER | The button shows the active view, with no **Join with transcription**, from the claim (status pending, no bot yet) on; it changes live on `meeting_recording_updated` without a refresh | TRN-18 |
+| COL-36d | Any other start failure: archive the organization after the session page loads (409 `organization_archived`), or stub the POST with a 500 | COACH | Still "Couldn't start transcription", and the meeting still opens; only `recording_already_active` is silent | TRN-19 |
+| COL-36e | Stop a recording before its bot is in the meeting (status pending, joining or waiting room; locally a start stays pending) | COACH, MEMBER | **Stop recording** is offered and asks to confirm; confirming ends it (cancelled), the other participant's button returns to **Join with transcription** without a refresh, and a new start works | TRN-20 |
 | COL-37 | Delete the other colleague's topic | COACH, MEMBER | Offered and works for both | TOP-09 |
 | COL-38 | A past RC session: add or edit goals and agreements, delete actions | COACH, MEMBER | No after-session lock for either colleague | |
 | COL-39 | Settings: Meetings and default session length | MEMBER | Shown: a colleague schedules, so needs both | SCHED-17 |
@@ -144,11 +148,11 @@ KID is coached by COACH and a colleague of OTHER_COACH in RC2.
 
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
-| COL-30a | Add New, Schedule session; the New session **Who** list | KID | Entry points shown; Who lists OTHER_COACH only, never COACH | SES-09 |
+| COL-30a | Schedule session; the New session **Who** list | KID | Entry points shown; Who lists OTHER_COACH only, never COACH | SES-09 |
 | COL-31a | KID's coaching session: card menu, upcoming card, week grid drag | KID | Open session only; no Reschedule or drag, as before phase 4 | SES-16 |
 | COL-32a | A past coaching session of KID's | KID | The after-session lock still applies | |
 | COL-33a | RC2 session | KID | Reschedule, cancel, resend, recording controls; no lock | SES-15 |
-| COL-34a | Actions page | KID | No My/Coachee toggle (not a coach) | ACT-01 |
+| COL-34a | Actions page | KID | My Actions \| Colleagues' Actions; no Coachee Actions (not a coach) | ACT-01 |
 
 ### 3.5 Actions (`COL-4x`)
 
@@ -158,10 +162,11 @@ KID is coached by COACH and a colleague of OTHER_COACH in RC2.
 | COL-41 | Actions page, Assignment **Assigned**, **Unassigned**, **All** (seed RC with one action each: MEMBER only, COACH only, both, nobody) | MEMBER | Assigned: MEMBER-only and both, never COACH-only; the request sends `assignee=<MEMBER's id>&assignee_filter=assigned`. Unassigned: only the unassigned one. All: Assigned's list plus the unassigned one, from two requests (the Assigned one and `assignee_filter=unassigned`). No two options show the same list | ACT-02 |
 | COL-42 | Actions page, My Actions, then Assignment All | COACH | The batch request sends `assignee=<COACH's id>`; the board shows COACH's actions from R1 and RC alike. All adds the unassigned R1 and RC actions, as in COL-41 | contract v5 section 4 |
 | COL-43 | Coachee Actions view (`assignee=coachee`) | COACH | R1 actions only; no RC action; no error toast or denial page | contract v5 section 4 |
-| COL-44 | Coachee Actions with the relationship filter on RC | COACH | The request has no `assignee`; no error | contract v5 section 4 |
-| COL-45 | `/actions?view=coachee_actions` typed by hand | MEMBER | An empty result, not a 403 or the denial page | contract v5 section 4 |
+| COL-44 | Coachee Actions' relationship filter; then `/actions?view=coachee_actions&rel=<RC id>` typed by hand | COACH | The filter offers R1, never RC. The typed URL shows Coachee Actions across R1 with no relationship picked; no request carries RC's id, and no error | contract v5 section 4 |
+| COL-45 | `/actions?view=coachee_actions` typed by hand | MEMBER | My Actions is shown and selected, not an empty board, a 403 or the denial page | contract v5 section 4 |
 | COL-46 | Dashboard goals card for an upcoming RC session | COACH, MEMBER | The goal progress request has no `assignee`; no error card | contract v5 section 4 |
 | COL-47 | Header **Actions** badge, with COL-41's seed | MEMBER, COACH | Counts only the viewer's own open actions, shared ones included: MEMBER's badge says 2. Adding a COACH-only RC action leaves MEMBER's badge unchanged | |
+| COL-48 | Colleagues' Actions, Assignment **Assigned**, **Unassigned**, **All**, with COL-41's seed | MEMBER, COACH | MEMBER: COACH-only and both, never MEMBER-only; the request sends `assignee=colleague`. COACH: MEMBER-only and both, and no R1 action. Unassigned: every unassigned action, R1's included (`assignee_filter=unassigned`, no `assignee`). The relationship filter offers RC only; switching to Coachee Actions with RC picked clears the pick | AssigneeScopeColleague v1 |
 
 ### 3.6 Removed colleague (`COL-5x`)
 
@@ -216,6 +221,23 @@ as ADMIN. Keep the other participant in a second browser context for the live ro
 | COL-A4 | Refusals: a participant left (stale dialog), the pair is already related the other way, the relationship was deleted, an archived organization | ADMIN | Toasts: who left, with Add back; "{A} is already {B}'s coach" (or colleagues); "This relationship no longer exists"; "This organization is archived · It can't be changed", which closes the dialog whether it comes from the review or from confirming. Nothing changes. After "who left", the members list drops them at once, and Add back, clicked on the Members page itself, opens Add member on "Has an account", where Find locates them; re-adding works, and the URL loses `?addMember` once the dialog closes | KIND-33, KIND-36, KIND-44 |
 | COL-A5 | The other participant's open tabs during COL-A2 | COACH, MEMBER | Members page, session page and Actions page update without a refresh | KIND-43 |
 | COL-A6 | Mock Resend capture after COL-A2 | | Upcoming sessions' invites are resent to both, worded for the new kind | KIND-38 |
+
+### 3.10a Role-neutral keys (`COL-Bx`)
+
+Needs the phase 6 backend (contract `Phase6RoleNeutralKeys` v2): relationships and session lists
+carry `participants` instead of the coach/coachee name, email and membership keys. Check each row
+in DevTools that the responses have `participants` and none of the removed keys.
+
+| ID | Control | Viewer | Expected | BE |
+|---|---|---|---|---|
+| COL-B0 | Members page, Roles and Coaches / Colleagues lines | ADMIN | Same roles, names and emails per person as before phase 6; MEMBER is "Colleague" only, KID "Coachee" and "Colleague" | |
+| COL-B1 | Dashboard week grid, upcoming card, join session menu, New session **Who** list | COACH, COACHEE, MEMBER | The other person named on every R1 and RC session; COACHEE never offered scheduling | |
+| COL-B2 | Session page header, goals heading, assignee picker | COACH, MEMBER | Names as in COL-23; both colleagues offered on RC | |
+| COL-B3 | Actions page, every view, with COL-41's seed | COACH, COACHEE, MEMBER | Same lists as COL-41 to COL-48; the batch response's key is `actions_by_relationship` | |
+| COL-B4 | Remove COACHEE from O1 (`ORG-04`), then as COACH: new session with COACHEE from a stale dialog, resend an R1 invite | COACH | 409 `participant_not_a_member` (was `coachee_not_a_member`); the toast names COACHEE, with Add back for an admin. Restore COACHEE after. Then the same for MEMBER on RC, as COL-50 | SES-46 |
+| COL-B5 | Kanban card and session panel assignee picker after COL-B4's removal | COACH | COACHEE shown but can't be newly assigned (from `participants[].is_member`) | |
+| COL-B6 | A tab opened before the deploy, used after it without a reload | COACH | The relationship list shows the error state, not a crash; a reload fixes it | |
+| COL-B7 | User menu, Settings | MEMBER | Opens on **Scheduling** (`/settings/preferences`), not Meetings; no "coaching" in the page's copy | |
 
 ### 3.11 Regression (`COL-9x`)
 

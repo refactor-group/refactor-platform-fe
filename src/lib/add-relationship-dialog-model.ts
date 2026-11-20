@@ -1,3 +1,4 @@
+import { roleIn } from "@/lib/participants";
 import type { PickerPerson } from "@/components/ui/person-picker";
 import type { StepDialogLead, StepRailItem } from "@/components/ui/step-dialog";
 import { initialsOf } from "@/lib/people";
@@ -98,8 +99,19 @@ export function alreadyPaired(
 
 /** What the other person is to the member: "Ada's coach", "coached by Ada" or "Ada's colleague". */
 export function relationLine(member: Member, existing: CoachingRelationshipWithUserNames): string {
-  if (existing.kind === RelationshipKind.Colleague) return `${member.firstName}'s colleague`;
-  return existing.coachee_id === member.userId ? `${member.firstName}'s coach` : `coached by ${member.firstName}`;
+  const role = roleIn(existing, member.userId);
+  switch (role) {
+    case RelationshipRole.Colleague:
+      return `${member.firstName}'s colleague`;
+    case RelationshipRole.Coachee:
+      return `${member.firstName}'s coach`;
+    case RelationshipRole.Coach:
+      return `coached by ${member.firstName}`;
+    default: {
+      const _exhaustive: never = role;
+      throw new Error(`Unhandled relationship role: ${_exhaustive}`);
+    }
+  }
 }
 
 const pairedLine = (member: Member, existing: CoachingRelationshipWithUserNames): string =>

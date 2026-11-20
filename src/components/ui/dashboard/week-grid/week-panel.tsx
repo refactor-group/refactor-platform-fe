@@ -13,7 +13,8 @@ import { useWeekGridStore } from "@/lib/providers/week-grid-store-provider";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { useMoveSession } from "@/lib/hooks/use-move-session";
 import { useNow } from "@/lib/hooks/use-now";
-import { useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
+import { useWeekAt } from "@/lib/hooks/use-week-at";
 import { useRefreshCoachingSessions } from "@/lib/hooks/use-sse-cache-invalidation";
 import { useWeekEdges } from "@/lib/hooks/use-week-edges";
 import { useWeekFilter } from "@/lib/hooks/use-week-filter";
@@ -34,9 +35,9 @@ import { moveChoices, type MoveChoicesContext } from "@/lib/week-grid/move-choic
 import { slotsForMove } from "@/lib/week-grid/slots";
 import {
   agendaDay,
+  CURRENT_WEEK,
   groupByDay,
   nowLineOn,
-  weekOf,
   weekRange,
   weekSubline,
   weekTitle,
@@ -56,17 +57,6 @@ export interface WeekPanelProps {
   onReschedule: (session: EnrichedCoachingSession, scope?: MoveScope, target?: Option<DateTime>) => void;
   onSeriesMutated: () => void;
   onSchedule: (date: Option<DateTime>) => void;
-}
-
-const CURRENT_WEEK = 0;
-
-// Keyed on the local date so the fetch key holds steady across clock ticks.
-function useWeekAt(offset: number, now: DateTime, timezone: string): Week {
-  const today = now.setZone(timezone).startOf("day").toMillis();
-  return useMemo(
-    () => weekOf(offset, DateTime.fromMillis(today, { zone: timezone }), timezone),
-    [offset, today, timezone]
-  );
 }
 
 function useWeekNavigation(isCurrentWeek: boolean, week: Week): WeekNavigation {
@@ -92,7 +82,7 @@ function moveSheetModel(view: CardView, days: DayGroup<GridCard>[], context: Mov
 }
 
 export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPanelProps) {
-  const timezone = useScheduleTimezone();
+  const timezone = useUserTimezone();
   const now = useNow(30_000);
   const weekOffset = useWeekGridStore((s) => s.weekOffset);
   const week = useWeekAt(weekOffset, now, timezone);

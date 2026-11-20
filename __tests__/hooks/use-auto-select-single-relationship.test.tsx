@@ -1,25 +1,15 @@
 import { renderHook } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { useAutoSelectSingleRelationship } from '@/lib/hooks/use-auto-select-single-relationship'
-import { CoachingRelationshipWithUserNames } from '@/types/coaching_relationship'
+import type { CoachingRelationshipWithUserNames } from '@/types/coaching-relationship'
+import { createMockRelationship } from '../test-utils'
 
 describe('useAutoSelectSingleRelationship', () => {
   it('should not auto-select when loading', () => {
     const mockSetCurrentId = vi.fn()
     const mockOnSelect = vi.fn()
     const relationships: CoachingRelationshipWithUserNames[] = [
-      {
-        id: 'rel-1',
-        coach_id: 'coach-1',
-        coachee_id: 'coachee-1',
-        organization_id: 'org-1',
-        coach_first_name: 'John',
-        coach_last_name: 'Doe',
-        coachee_first_name: 'Jane',
-        coachee_last_name: 'Smith',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z'
-      }
+      createMockRelationship({ id: 'rel-1', coach_id: 'coach-1', coachee_id: 'coachee-1' })
     ]
 
     renderHook(() =>
@@ -58,30 +48,8 @@ describe('useAutoSelectSingleRelationship', () => {
     const mockSetCurrentId = vi.fn()
     const mockOnSelect = vi.fn()
     const relationships: CoachingRelationshipWithUserNames[] = [
-      {
-        id: 'rel-1',
-        coach_id: 'coach-1',
-        coachee_id: 'coachee-1',
-        organization_id: 'org-1',
-        coach_first_name: 'John',
-        coach_last_name: 'Doe',
-        coachee_first_name: 'Jane',
-        coachee_last_name: 'Smith',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z'
-      },
-      {
-        id: 'rel-2',
-        coach_id: 'coach-2',
-        coachee_id: 'coachee-2',
-        organization_id: 'org-1',
-        coach_first_name: 'Bob',
-        coach_last_name: 'Johnson',
-        coachee_first_name: 'Alice',
-        coachee_last_name: 'Brown',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z'
-      }
+      createMockRelationship({ id: 'rel-1', coach_id: 'coach-1', coachee_id: 'coachee-1' }),
+      createMockRelationship({ id: 'rel-2', coach_id: 'coach-2', coachee_id: 'coachee-2' })
     ]
 
     renderHook(() =>
@@ -102,18 +70,7 @@ describe('useAutoSelectSingleRelationship', () => {
     const mockSetCurrentId = vi.fn()
     const mockOnSelect = vi.fn()
     const relationships: CoachingRelationshipWithUserNames[] = [
-      {
-        id: 'rel-1',
-        coach_id: 'coach-1',
-        coachee_id: 'coachee-1',
-        organization_id: 'org-1',
-        coach_first_name: 'John',
-        coach_last_name: 'Doe',
-        coachee_first_name: 'Jane',
-        coachee_last_name: 'Smith',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z'
-      }
+      createMockRelationship({ id: 'rel-1', coach_id: 'coach-1', coachee_id: 'coachee-1' })
     ]
 
     renderHook(() =>
@@ -134,18 +91,7 @@ describe('useAutoSelectSingleRelationship', () => {
     const mockSetCurrentId = vi.fn()
     const mockOnSelect = vi.fn()
     const relationships: CoachingRelationshipWithUserNames[] = [
-      {
-        id: 'rel-1',
-        coach_id: 'coach-1',
-        coachee_id: 'coachee-1',
-        organization_id: 'org-1',
-        coach_first_name: 'John',
-        coach_last_name: 'Doe',
-        coachee_first_name: 'Jane',
-        coachee_last_name: 'Smith',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z'
-      }
+      createMockRelationship({ id: 'rel-1', coach_id: 'coach-1', coachee_id: 'coachee-1' })
     ]
 
     renderHook(() =>
@@ -165,18 +111,7 @@ describe('useAutoSelectSingleRelationship', () => {
   it('should work without onSelect callback', () => {
     const mockSetCurrentId = vi.fn()
     const relationships: CoachingRelationshipWithUserNames[] = [
-      {
-        id: 'rel-1',
-        coach_id: 'coach-1',
-        coachee_id: 'coachee-1',
-        organization_id: 'org-1',
-        coach_first_name: 'John',
-        coach_last_name: 'Doe',
-        coachee_first_name: 'Jane',
-        coachee_last_name: 'Smith',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z'
-      }
+      createMockRelationship({ id: 'rel-1', coach_id: 'coach-1', coachee_id: 'coachee-1' })
     ]
 
     renderHook(() =>
@@ -200,18 +135,7 @@ describe('useAutoSelectSingleRelationship', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     
     const relationships: CoachingRelationshipWithUserNames[] = [
-      {
-        id: 'rel-1',
-        coach_id: 'coach-1',
-        coachee_id: 'coachee-1',
-        organization_id: 'org-1',
-        coach_first_name: 'John',
-        coach_last_name: 'Doe',
-        coachee_first_name: 'Jane',
-        coachee_last_name: 'Smith',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z'
-      }
+      createMockRelationship({ id: 'rel-1', coach_id: 'coach-1', coachee_id: 'coachee-1' })
     ]
 
     renderHook(() =>
@@ -260,18 +184,7 @@ describe('useAutoSelectSingleRelationship', () => {
 
     // Change to single relationship and not loading
     const newRelationships: CoachingRelationshipWithUserNames[] = [
-      {
-        id: 'rel-1',
-        coach_id: 'coach-1',
-        coachee_id: 'coachee-1',
-        organization_id: 'org-1',
-        coach_first_name: 'John',
-        coach_last_name: 'Doe',
-        coachee_first_name: 'Jane',
-        coachee_last_name: 'Smith',
-        created_at: '2023-01-01T00:00:00Z',
-        updated_at: '2023-01-01T00:00:00Z'
-      }
+      createMockRelationship({ id: 'rel-1', coach_id: 'coach-1', coachee_id: 'coachee-1' })
     ]
 
     rerender({

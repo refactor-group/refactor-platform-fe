@@ -13,13 +13,14 @@ import { notAMemberRefusalOf } from "@/types/membership";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
-import { sortRelationshipsByParticipantName } from "@/types/coaching-relationship";
+import { getRelationshipsForUser, sortRelationshipsByParticipantName } from "@/types/coaching-relationship";
+import { actionsViewsFor, relationshipsInView } from "@/lib/actions-views";
 import { useActionMutation } from "@/lib/api/actions";
 import { Some, None } from "@/types/option";
 import { DEFAULT_ACTIONS_VIEW, useActionsView } from "@/lib/hooks/use-actions-view";
 import {
   AssignmentFilter,
-  CoachViewMode,
+  ActionsViewMode,
   StatusVisibility,
   TimeRange,
 } from "@/types/assigned-actions";
@@ -59,8 +60,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   // Auth + org context
   // ---------------------------------------------------------------------------
 
-  const { isACoach, userSession } = useAuthStore((state) => ({
-    isACoach: state.isACoach,
+  const { userSession } = useAuthStore((state) => ({
     userSession: state.userSession,
   }));
   const userId = userSession?.id ?? null;
@@ -97,7 +97,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   // ---------------------------------------------------------------------------
 
   const [viewMode, setViewMode] = useState(() =>
-    parseEnum(CoachViewMode, searchParams.get("view"), DEFAULT_VIEW)
+    parseEnum(ActionsViewMode, searchParams.get("view"), DEFAULT_VIEW)
   );
   const [statusVisibility, setStatusVisibility] = useState(() =>
     parseEnum(StatusVisibility, searchParams.get("status"), DEFAULT_STATUS)
@@ -112,13 +112,34 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
     () => searchParams.get("rel") ?? undefined
   );
 
+  // The URL's view and relationship stay as asked; what's shown is what the viewer's roles allow.
+  const { relationships } = useCoachingRelationshipList(currentOrganizationId);
+  const userRelationships = useMemo(
+    () => (userId ? getRelationshipsForUser(userId, relationships) : []),
+    [relationships, userId]
+  );
+  const views = useMemo(() => actionsViewsFor(userRelationships), [userRelationships]);
+  const effectiveView = views.includes(viewMode) ? viewMode : DEFAULT_VIEW;
+  const viewRelationships = useMemo(
+    () => relationshipsInView(effectiveView, userRelationships),
+    [effectiveView, userRelationships]
+  );
+  // A relationship outside the view would 422 on the single-relationship route.
+  const effectiveRelationshipId = viewRelationships.some((r) => r.id === relationshipId)
+    ? relationshipId
+    : undefined;
+
   // Wrap setters to also update the URL
   const handleViewModeChange = useCallback(
-    (mode: CoachViewMode) => {
+    (mode: ActionsViewMode) => {
       setViewMode(mode);
-      updateQueryParams({ view: mode });
+      const keepsRelationship = relationshipsInView(mode, userRelationships).some(
+        (r) => r.id === relationshipId
+      );
+      if (!keepsRelationship) setRelationshipId(undefined);
+      updateQueryParams({ view: mode, ...(keepsRelationship ? {} : { rel: undefined }) });
     },
-    [updateQueryParams]
+    [updateQueryParams, userRelationships, relationshipId]
   );
 
   const handleStatusVisibilityChange = useCallback(
@@ -159,21 +180,20 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
 
   // The header's open action count reads the same view with the defaults.
   const { actionsWithContext, filteredActions, isLoading, isError, refresh } =
-    useActionsView({ viewMode, relationshipId, assignmentFilter, timeRange, statusVisibility });
-
-  const { relationships } = useCoachingRelationshipList(
-    currentOrganizationId
-  );
+    useActionsView({
+      viewMode: effectiveView,
+      relationshipId: effectiveRelationshipId,
+      assignmentFilter,
+      timeRange,
+      statusVisibility,
+    });
 
   const relationshipOptions = useMemo(() => {
-    if (!relationships || !userId) return [];
-    const userRelationships = relationships.filter(
-      (r) => r.coach_id === userId || r.coachee_id === userId
-    );
-    return sortRelationshipsByParticipantName(userRelationships, userId).map(
+    if (!userId) return [];
+    return sortRelationshipsByParticipantName(viewRelationships, userId).map(
       (r) => ({ id: r.id, label: relationshipPairLabel(r, userId) })
     );
-  }, [relationships, userId]);
+  }, [viewRelationships, userId]);
 
   // ---------------------------------------------------------------------------
   // Mutations
@@ -310,8 +330,8 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
   return (
     <div className="flex flex-col gap-6">
       <ActionsPageHeader
-        isCoach={isACoach}
-        viewMode={viewMode}
+        views={views}
+        viewMode={effectiveView}
         onViewModeChange={handleViewModeChange}
         statusVisibility={statusVisibility}
         onStatusVisibilityChange={handleStatusVisibilityChange}
@@ -319,7 +339,7 @@ export function ActionsPageContainer({ locale }: ActionsPageContainerProps) {
         onTimeRangeChange={handleTimeRangeChange}
         assignmentFilter={assignmentFilter}
         onAssignmentFilterChange={handleAssignmentFilterChange}
-        relationshipId={relationshipId}
+        relationshipId={effectiveRelationshipId}
         onRelationshipChange={handleRelationshipChange}
         relationships={relationshipOptions}
       />

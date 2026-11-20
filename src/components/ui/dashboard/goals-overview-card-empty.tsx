@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
  */
 export function GoalsOverviewCardEmpty() {
   return (
-    <Card className="border shadow-none h-full flex flex-col">
+    <Card data-testid="goals-overview-card" className="border shadow-none h-full flex flex-col">
       <CardContent className="p-4 sm:p-6 flex flex-col flex-1">
         <div className="flex flex-col items-center justify-center flex-1 text-center gap-3 py-4">
           <Target

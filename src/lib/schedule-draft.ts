@@ -1,3 +1,4 @@
+import { otherParticipantInSession, participantName } from "@/lib/participants";
 import { DateTime } from "ts-luxon";
 import type { PickerPerson } from "@/components/ui/person-picker";
 import type { StepRailItem } from "@/components/ui/step-dialog";
@@ -42,7 +43,6 @@ import {
   untilDateToUtcDateTime,
   weekdayFromLuxon,
 } from "@/types/recurrence";
-import type { User } from "@/types/user";
 
 /** How the user settles an overlap with another session. */
 export type Resolution =
@@ -87,13 +87,9 @@ function place(session: EnrichedCoachingSession, now: DateTime, timezone: string
   };
 }
 
-function fullName(user: User): string {
-  return `${user.first_name} ${user.last_name}`.trim();
-}
-
 function otherName(session: EnrichedCoachingSession, userId: Id): string {
-  const other = session.relationship?.coach_id === userId ? session.coachee : session.coach;
-  return other ? fullName(other) : coachingSessionTitle(enrichedTitleSource(session));
+  const other = otherParticipantInSession(session, userId);
+  return other.some ? participantName(other.val) : coachingSessionTitle(enrichedTitleSource(session));
 }
 
 export function busySessions(

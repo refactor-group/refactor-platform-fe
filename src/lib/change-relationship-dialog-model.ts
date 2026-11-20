@@ -1,3 +1,4 @@
+import { isMember } from "@/lib/participants";
 import type { MenuPerson } from "@/components/ui/join-session/types";
 import type { PickerPerson } from "@/components/ui/person-picker";
 import type { StepDialogLead, StepRailItem } from "@/components/ui/step-dialog";
@@ -8,7 +9,6 @@ import { otherParticipant } from "@/lib/people";
 import {
   type CoachingRelationshipWithUserNames,
   type RelationshipKindChange,
-  isMember,
   isPairOf,
   RelationshipKind,
 } from "@/types/coaching-relationship";
@@ -96,12 +96,6 @@ export function hasChangeableRelationship(
   relationships: readonly CoachingRelationshipWithUserNames[]
 ): boolean {
   return relationshipChoices(member, relationships).some((choice) => choice.selectable);
-}
-
-/** The member's role in the relationship. */
-export function roleIn(relationship: CoachingRelationshipWithUserNames, member: Id): MemberRole {
-  if (relationship.kind === RelationshipKind.Colleague) return RelationshipRole.Colleague;
-  return relationship.coach_id === member ? RelationshipRole.Coach : RelationshipRole.Coachee;
 }
 
 export function kindChange(member: Id, partner: Id, role: MemberRole, confirmed: boolean): RelationshipKindChange {

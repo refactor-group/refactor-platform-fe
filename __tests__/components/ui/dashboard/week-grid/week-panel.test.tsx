@@ -87,7 +87,7 @@ vi.mock("@/lib/hooks/use-media-query", () => ({
 
 const toast = vi.fn();
 vi.mock("@/lib/toast", () => ({ toast: (...args: unknown[]) => toast(...args) }));
-vi.mock("@/lib/hooks/use-schedule-data", () => ({ useScheduleTimezone: () => TZ }));
+vi.mock("@/lib/hooks/use-user-timezone", () => ({ useUserTimezone: () => TZ }));
 
 let actionsInput: Record<string, unknown> = {};
 const run = vi.fn();

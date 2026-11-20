@@ -1,14 +1,16 @@
-import { describe, it, expect } from "vitest";
-import { DateTime } from "ts-luxon";
+import { describe, it, expect, afterEach } from "vitest";
+import { DateTime, Settings } from "ts-luxon";
 import { Some, None } from "@/types/option";
 import { ItemStatus } from "@/types/general";
 import type { Action } from "@/types/action";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import type { Goal } from "@/types/goal";
 import {
+  addContextToAction,
   resolveGoalContext,
   buildGoalContext,
 } from "@/lib/utils/assigned-actions";
+import { createMockEnrichedSession } from "../../test-utils";
 
 // ---------------------------------------------------------------------------
 // Factories
@@ -50,27 +52,8 @@ function makeAction(overrides: Partial<Action> = {}): Action {
   };
 }
 
-function makeSession(
-  goals: Goal[] = []
-): EnrichedCoachingSession {
-  return {
-    id: "session-1",
-    coaching_relationship_id: "rel-1",
-    date: now.toISO()!,
-    created_at: now.toISO()!,
-    updated_at: now.toISO()!,
-    goals,
-    relationship: {
-      id: "rel-1",
-      coach_id: "coach-1",
-      coachee_id: "coachee-1",
-      organization_id: "org-1",
-      created_at: now,
-      updated_at: now,
-      coach: { id: "coach-1", email: "c@test.com", first_name: "Alice", last_name: "Coach", display_name: null, created_at: now, updated_at: now },
-      coachee: { id: "coachee-1", email: "e@test.com", first_name: "Bob", last_name: "Coachee", display_name: null, created_at: now, updated_at: now },
-    },
-  };
+function makeSession(goals: Goal[] = []): EnrichedCoachingSession {
+  return createMockEnrichedSession({ date: now.toISO()!, goals });
 }
 
 // ---------------------------------------------------------------------------
@@ -139,5 +122,46 @@ describe("buildGoalContext", () => {
 
     const result = buildGoalContext(action, session);
     expect(result).toEqual({ goalId: "goal-1", title: "Improve communication" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// addContextToAction: overdue
+// ---------------------------------------------------------------------------
+
+describe("addContextToAction overdue", () => {
+  const originalNow = Settings.now;
+  afterEach(() => {
+    Settings.now = originalNow;
+  });
+
+  // At 06:00 UTC it's Oct 30 everywhere here; the action was due 03:00 UTC, which is still Oct 29 in Chicago.
+  const pinned = DateTime.fromISO("2026-10-30T06:00:00Z").toMillis();
+  const overdueFor = (timezone: string) => {
+    Settings.now = () => pinned;
+    const action = makeAction({ due_by: Some(DateTime.fromISO("2026-10-30T03:00:00Z")) });
+    const sessionMap = new Map([["session-1", makeSession()]]);
+    return addContextToAction(action, sessionMap, new Map(), timezone)?.isOverdue;
+  };
+
+  it("counts calendar days in the profile zone", () => {
+    expect(overdueFor("America/Chicago")).toBe(true);
+    expect(overdueFor("UTC")).toBe(false);
+  });
+
+  const overdueWithStatus = (status: ItemStatus) => {
+    Settings.now = () => pinned;
+    const action = makeAction({ status, due_by: Some(DateTime.fromISO("2026-10-29T12:00:00Z")) });
+    const sessionMap = new Map([["session-1", makeSession()]]);
+    return addContextToAction(action, sessionMap, new Map(), "UTC")?.isOverdue;
+  };
+
+  it("ignores closed and paused actions past their date", () => {
+    expect(overdueWithStatus(ItemStatus.Completed)).toBe(false);
+    expect(overdueWithStatus(ItemStatus.OnHold)).toBe(false);
+  });
+
+  it("flags open actions past their date", () => {
+    expect(overdueWithStatus(ItemStatus.NotStarted)).toBe(true);
   });
 });

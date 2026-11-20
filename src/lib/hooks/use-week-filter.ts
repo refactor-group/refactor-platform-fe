@@ -5,7 +5,7 @@ import { DateTime } from "ts-luxon";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
 import { useCurrentOrganization } from "@/lib/hooks/use-current-organization";
 import { usePeopleActivity } from "@/lib/hooks/use-people-activity";
-import { useScheduleTimezone } from "@/lib/hooks/use-schedule-data";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import { schedulablePeople } from "@/lib/people";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useWeekGridStore } from "@/lib/providers/week-grid-store-provider";
@@ -35,7 +35,7 @@ export function useWeekFilter(): WeekFilterState {
   const { currentOrganizationId } = useCurrentOrganization();
   const { relationships, isLoading, isError } = useCoachingRelationshipList(currentOrganizationId);
   const entries = useMemo(() => schedulablePeople(userId, relationships), [userId, relationships]);
-  const timezone = useScheduleTimezone();
+  const timezone = useUserTimezone();
   const [around, setAround] = useState<Option<DateTime>>(None);
   const load = useCallback(
     () => setAround((prev) => (prev.some ? prev : Some(DateTime.now().setZone(timezone)))),

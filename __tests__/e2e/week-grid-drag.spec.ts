@@ -1,10 +1,15 @@
 import { test, expect, type Page, type Locator } from '@playwright/test'
-import { setupAuthentication, mockCommonApiRoutes, MOCK_USER_ID, SINGLE_RELATIONSHIP } from './helpers'
+import {
+  setupAuthentication,
+  mockCommonApiRoutes,
+  mockRelationship,
+  sessionParticipants,
+  MOCK_USER_ID,
+} from './helpers'
 
 test.use({ timezoneId: 'America/Chicago', locale: 'en-US', viewport: { width: 1440, height: 900 } })
 
-const RELATIONSHIP = { ...SINGLE_RELATIONSHIP[0], coach_id: MOCK_USER_ID }
-const COACHEE = { id: RELATIONSHIP.coachee_id, first_name: 'Jane', last_name: 'Smith', display_name: 'Jane Smith' }
+const RELATIONSHIP = mockRelationship('rel-1', { coach_id: MOCK_USER_ID })
 
 const session = (id: string, date: string) => ({
   id,
@@ -16,7 +21,7 @@ const session = (id: string, date: string) => ({
   created_at: '2026-10-01T12:00:00Z',
   updated_at: '2026-10-01T12:00:00Z',
   relationship: RELATIONSHIP,
-  coachee: COACHEE,
+  participants: sessionParticipants(RELATIONSHIP),
   topics: [],
 })
 
@@ -76,6 +81,8 @@ test.describe('Week grid drag to move', () => {
     )
     await page.goto('/dashboard')
     await expect(page.getByTestId('session-card-thursday')).toBeVisible()
+    // The briefing panel above pushes the grid below the fold, and dragTo works in viewport coordinates.
+    await page.getByRole('region', { name: 'This week' }).evaluate((el) => el.scrollIntoView({ block: 'start' }))
   })
 
   test('the narrowest grid shows a card\'s length in full', async ({ page }) => {

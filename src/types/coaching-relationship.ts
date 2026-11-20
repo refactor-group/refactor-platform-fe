@@ -1,8 +1,9 @@
 import { DateTime } from "ts-luxon";
 import { Id } from "@/types/general";
-import { User } from "@/types/user";
+import { isParticipants, type Participant, type Participants } from "@/types/participant";
 import { type Option, None, Some } from "@/types/option";
 import { RelationshipRole } from "@/types/relationship-role";
+import { otherParticipantOf, participantName, roleOf } from "@/lib/participants";
 
 export enum RelationshipKind {
   Coaching = "coaching",
@@ -18,9 +19,6 @@ export interface CoachingRelationship {
   kind: RelationshipKind;
   created_at: DateTime;
   updated_at: DateTime;
-  /** False once they leave the organization: nothing new can be scheduled with or assigned to them. */
-  coach_is_member: boolean;
-  coachee_is_member: boolean;
   /** What the signed-in user may do here, computed by the backend. Null for a non-participant. */
   viewer: RelationshipViewer | null;
   /** Its sessions get suggested actions. */
@@ -95,27 +93,7 @@ export function seesAllActionsIn(relationship: CoachingRelationship): boolean {
 // This must always reflect the Rust struct on the backend
 // entity_api::coaching_relationship::CoachingRelationshipWithUserNames
 export type CoachingRelationshipWithUserNames = CoachingRelationship & {
-  coach_first_name: string;
-  coach_last_name: string;
-  coachee_first_name: string;
-  coachee_last_name: string;
-  coach_email: string;
-  coachee_email: string;
-};
-
-/**
- * Relationship with embedded coach and coachee user data
- * Matches backend RelationshipWithUsers response from the enhanced endpoint
- *
- * This must always reflect the Rust struct on the backend
- * web::response::coaching_session::RelationshipWithUsers
- *
- * Note: This is different from CoachingRelationshipWithUserNames which only
- * contains name fields. This type contains full User objects.
- */
-export type CoachingRelationshipWithUsers = CoachingRelationship & {
-  coach: User;
-  coachee: User;
+  participants: Participants;
 };
 
 export interface NewCoachingRelationship {
@@ -138,108 +116,68 @@ export function isPairOf(relationship: CoachingRelationshipWithUserNames, a: Id,
   );
 }
 
-export function isCoachingRelationshipWithUserNames(
-  value: unknown
-): value is CoachingRelationshipWithUserNames {
-  if (!value || typeof value !== "object") {
-    return false;
+/**
+ * Checks a relationship read at the fetch boundary, so a response in another shape fails the
+ * fetch instead of a render.
+ */
+export function parseCoachingRelationship(value: unknown): CoachingRelationshipWithUserNames {
+  const object = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  if (
+    typeof object.id !== "string" ||
+    typeof object.coach_id !== "string" ||
+    typeof object.coachee_id !== "string" ||
+    !isParticipants(object.participants) ||
+    !object.participants.some((p) => p.id === object.coach_id) ||
+    !object.participants.some((p) => p.id === object.coachee_id)
+  ) {
+    throw new Error("Unexpected coaching relationship shape");
   }
-  const object = value as Record<string, unknown>;
-
-  return (
-    typeof object.id === "string" &&
-    typeof object.coach_id === "string" &&
-    typeof object.coachee_id === "string" &&
-    typeof object.coach_first_name === "string" &&
-    typeof object.coach_last_name === "string" &&
-    typeof object.coachee_first_name === "string" &&
-    typeof object.coachee_last_name === "string" &&
-    typeof object.created_at === "string" &&
-    typeof object.updated_at === "string"
-  );
+  return value as CoachingRelationshipWithUserNames;
 }
 
-export function isCoachingRelationshipWithUserNamesArray(
-  value: unknown
-): value is CoachingRelationshipWithUserNames[] {
-  return (
-    Array.isArray(value) && value.every(isCoachingRelationshipWithUserNames)
-  );
-}
-
-export function getCoachingRelationshipById(
-  id: string,
-  relationships: CoachingRelationshipWithUserNames[]
-): CoachingRelationshipWithUserNames {
-  const relationship = relationships.find(
-    (relationship) => relationship.id === id
-  );
-  return relationship
-    ? relationship
-    : defaultCoachingRelationshipWithUserNames();
-}
-
+/** Placeholder until a relationship loads; its empty ids match no one. */
 export function defaultCoachingRelationshipWithUserNames(): CoachingRelationshipWithUserNames {
-  var now = DateTime.now();
+  const now = DateTime.now();
   return {
     id: "",
     coach_id: "",
     coachee_id: "",
-    coach_first_name: "",
-    coach_last_name: "",
     organization_id: "",
     kind: RelationshipKind.Coaching,
-    coachee_first_name: "",
-    coachee_last_name: "",
-    coach_email: "",
-    coachee_email: "",
     created_at: now,
     updated_at: now,
-    coach_is_member: true,
-    coachee_is_member: true,
     viewer: null,
     suggests_actions: true,
     scheduling_blocked_by: null,
+    participants: [
+      placeholderParticipant(RelationshipRole.Coach),
+      placeholderParticipant(RelationshipRole.Coachee),
+    ],
   };
 }
 
-export function defaultCoachingRelationshipsWithUserNames(): CoachingRelationshipWithUserNames[] {
-  return [defaultCoachingRelationshipWithUserNames()];
+function placeholderParticipant(role: RelationshipRole): Participant {
+  return { id: "", first_name: "", last_name: "", email: "", role, is_member: true };
 }
 
-export function coachingRelationshipWithUserNamesToString(
-  relationship: CoachingRelationshipWithUserNames | undefined
-): string {
-  return JSON.stringify(relationship);
+function hasRole(userId: Id, role: RelationshipRole) {
+  return (r: CoachingRelationshipWithUserNames): boolean => {
+    const own = roleOf(r, userId);
+    return own.some && own.val === role;
+  };
 }
-
-export function coachingRelationshipsWithUserNamesToString(
-  relationships: CoachingRelationshipWithUserNames[] | undefined
-): string {
-  return JSON.stringify(relationships);
-}
-
-const isCoaching = (r: CoachingRelationship): boolean => r.kind !== RelationshipKind.Colleague;
 
 /**
  * Checks if a user coaches anyone in the provided relationships. Describes the
  * relationships; for what the signed-in user may do, read `viewer`.
  */
-export function isUserCoach(
-  userId: Id,
-  relationships: CoachingRelationshipWithUserNames[]
-): boolean {
-  return relationships.some(r => isCoaching(r) && r.coach_id === userId);
+export function isUserCoach(userId: Id, relationships: CoachingRelationshipWithUserNames[]): boolean {
+  return relationships.some(hasRole(userId, RelationshipRole.Coach));
 }
 
-/**
- * Checks if anyone coaches the user in the provided relationships
- */
-export function isUserCoachee(
-  userId: Id,
-  relationships: CoachingRelationshipWithUserNames[]
-): boolean {
-  return relationships.some(r => isCoaching(r) && r.coachee_id === userId);
+/** Checks if anyone coaches the user in the provided relationships. */
+export function isUserCoachee(userId: Id, relationships: CoachingRelationshipWithUserNames[]): boolean {
+  return relationships.some(hasRole(userId, RelationshipRole.Coachee));
 }
 
 /** The user's colleague relationships. */
@@ -247,47 +185,21 @@ export function getColleagueRelationships(
   userId: Id,
   relationships: CoachingRelationshipWithUserNames[]
 ): CoachingRelationshipWithUserNames[] {
-  return relationships.filter(r => !isCoaching(r) && (r.coach_id === userId || r.coachee_id === userId));
+  return relationships.filter(hasRole(userId, RelationshipRole.Colleague));
 }
 
-/**
- * Checks if a user is the coach in a single relationship
- */
-export function isUserCoachInRelationship(
-  userId: Id,
-  relationship: CoachingRelationshipWithUserNames
-): boolean {
-  return relationship.coach_id === userId;
-}
-
-/**
- * Checks if a user is the coachee in a single relationship
- */
-export function isUserCoacheeInRelationship(
-  userId: Id,
-  relationship: CoachingRelationshipWithUserNames
-): boolean {
-  return relationship.coachee_id === userId;
-}
-
-/**
- * Returns all relationships where the user is the coach
- */
 export function getRelationshipsAsCoach(
   userId: Id,
   relationships: CoachingRelationshipWithUserNames[]
 ): CoachingRelationshipWithUserNames[] {
-  return relationships.filter(r => isCoaching(r) && r.coach_id === userId);
+  return relationships.filter(hasRole(userId, RelationshipRole.Coach));
 }
 
-/**
- * Returns all relationships where the user is the coachee
- */
 export function getRelationshipsAsCoachee(
   userId: Id,
   relationships: CoachingRelationshipWithUserNames[]
 ): CoachingRelationshipWithUserNames[] {
-  return relationships.filter(r => isCoaching(r) && r.coachee_id === userId);
+  return relationships.filter(hasRole(userId, RelationshipRole.Coachee));
 }
 
 /**
@@ -300,18 +212,8 @@ export function getRelationshipsForUser(
   return relationships.filter((r) => r.coach_id === userId || r.coachee_id === userId);
 }
 
-/**
- * Returns the display name of the other participant in a relationship
- * relative to the given user.
- */
-function getOtherPersonName(
-  rel: CoachingRelationshipWithUserNames,
-  userId: Id
-): string {
-  if (rel.coach_id === userId) {
-    return `${rel.coachee_first_name} ${rel.coachee_last_name}`.trim();
-  }
-  return `${rel.coach_first_name} ${rel.coach_last_name}`.trim();
+function otherPersonName(rel: CoachingRelationshipWithUserNames, userId: Id): string {
+  return participantName(otherParticipantOf(rel, userId));
 }
 
 /**
@@ -323,18 +225,6 @@ export function sortRelationshipsByParticipantName(
   userId: Id
 ): CoachingRelationshipWithUserNames[] {
   return [...relationships].sort((a, b) =>
-    getOtherPersonName(a, userId).localeCompare(getOtherPersonName(b, userId))
+    otherPersonName(a, userId).localeCompare(otherPersonName(b, userId))
   );
-}
-
-/** Whether a participant of the relationship is still a member of its organization. */
-export function isMember(relationship: CoachingRelationship, userId: Id): boolean {
-  if (userId === relationship.coach_id) return relationship.coach_is_member;
-  if (userId === relationship.coachee_id) return relationship.coachee_is_member;
-  return false;
-}
-
-/** The participants no longer in the organization: they keep existing assignments but can't be newly assigned. */
-export function nonMemberIdsOf(relationship: CoachingRelationship): Id[] {
-  return [relationship.coach_id, relationship.coachee_id].filter((id) => !isMember(relationship, id));
 }

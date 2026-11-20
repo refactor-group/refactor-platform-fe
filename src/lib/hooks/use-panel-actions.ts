@@ -19,12 +19,14 @@ import type { Id } from "@/types/general";
 import { ItemStatus } from "@/types/general";
 import { SortOrder } from "@/types/sorting";
 import { DateTime } from "ts-luxon";
-import { filterReviewActions } from "@/lib/utils/session";
-import { selectReviewActionsForSession } from "@/lib/utils/select-review-actions-for-session";
-
-// Re-export so existing imports from use-panel-actions keep working. The
-// canonical definition lives in @/lib/utils/session.
-export { filterReviewActions };
+import {
+  SESSION_LIST_LOOKAHEAD,
+  SESSION_LIST_LOOKBACK,
+  actionsDueAt,
+  previousSessionOf,
+} from "@/lib/actions-due";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
+import { sessionStartIn } from "@/lib/session-window";
 
 // ── Pure helpers ───────────────────────────────────────────────────
 
@@ -41,10 +43,6 @@ function findActionById(
 }
 
 // ── Sub-hooks ─────────────────────────────────────────────────────
-
-/** Wide date range for fetching all sessions in this relationship */
-const SESSION_LOOKBACK = { years: 5 };
-const SESSION_LOOKAHEAD = { years: 1 };
 
 interface ActionDataParams {
   userId: Id;
@@ -86,8 +84,6 @@ function useActionData({
 interface ReviewWindowParams {
   coachingSessionId: Id;
   coachingRelationshipId: Id;
-  /** May be undefined while the session is still loading from SWR */
-  sessionDate: string | undefined;
 }
 
 /**
@@ -96,18 +92,15 @@ interface ReviewWindowParams {
  * and builds a session-id → date lookup map.
  */
 function useReviewWindow(
-  { coachingSessionId, coachingRelationshipId, sessionDate }: ReviewWindowParams,
+  { coachingSessionId, coachingRelationshipId }: ReviewWindowParams,
   allRelationshipActions: Action[]
 ) {
-  const currentSessionDate = useMemo(
-    () => sessionDate ? DateTime.fromISO(sessionDate) : null,
-    [sessionDate]
-  );
+  const timezone = useUserTimezone();
 
   // Intentionally frozen at mount time — the 5-year window is wide enough
   // that recalculating on every render would add no value.
-  const fromDate = useMemo(() => DateTime.now().minus(SESSION_LOOKBACK), []);
-  const toDate = useMemo(() => DateTime.now().plus(SESSION_LOOKAHEAD), []);
+  const fromDate = useMemo(() => DateTime.now().minus(SESSION_LIST_LOOKBACK), []);
+  const toDate = useMemo(() => DateTime.now().plus(SESSION_LIST_LOOKAHEAD), []);
 
   const { coachingSessions } = useCoachingSessionList(
     coachingRelationshipId,
@@ -117,44 +110,28 @@ function useReviewWindow(
     "asc"
   );
 
-  // Derive the previous session date once, only for the sticky-IDs effect
-  // below. The actual review-actions calculation now delegates to the shared
-  // `selectReviewActionsForSession` helper to keep the panel and dashboard
-  // in lockstep on prev-session semantics + filterReviewActions invocation.
+  // Previous session via the shared helper, for the sticky-IDs effect below.
   const previousSessionDate = useMemo(() => {
-    if (!currentSessionDate || coachingSessions.length === 0) return null;
-    const currentDateStr = currentSessionDate.toISODate();
-    if (!currentDateStr) return null;
-
-    let prev: DateTime | null = null;
-    for (const session of coachingSessions) {
-      if (session.date < currentDateStr) {
-        prev = DateTime.fromISO(session.date);
-      }
-    }
-    return prev;
-  }, [coachingSessions, currentSessionDate]);
+    const prev = previousSessionOf(coachingSessions, coachingSessionId);
+    return prev.some ? sessionStartIn(prev.val.date, timezone) : null;
+  }, [coachingSessions, coachingSessionId, timezone]);
 
   const sessionDateMap = useMemo(() => {
     const map = new Map<Id, DateTime>();
     for (const s of coachingSessions) {
-      map.set(s.id, DateTime.fromISO(s.date));
+      map.set(s.id, sessionStartIn(s.date, timezone));
     }
     return map;
-  }, [coachingSessions]);
+  }, [coachingSessions, timezone]);
 
   const [stickyIds, setStickyIds] = useState<Set<Id>>(() => new Set());
 
   const reviewActions = useMemo(
     () =>
-      selectReviewActionsForSession(
-        allRelationshipActions,
-        coachingSessions,
-        coachingSessionId,
-        undefined, // no fallback — panel uses a 5-year session window already
-        stickyIds.size > 0 ? stickyIds : undefined
-      ),
-    [allRelationshipActions, coachingSessions, coachingSessionId, stickyIds]
+      actionsDueAt(allRelationshipActions, coachingSessions, coachingSessionId, timezone, {
+        stickyIds: stickyIds.size > 0 ? stickyIds : undefined,
+      }),
+    [allRelationshipActions, coachingSessions, coachingSessionId, timezone, stickyIds]
   );
 
   // Accumulate sticky IDs after render so that previously-visible review
@@ -338,8 +315,6 @@ interface UsePanelActionsParams {
   userId: Id;
   coachingSessionId: Id;
   coachingRelationshipId: Id;
-  /** May be undefined while the session is still loading from SWR */
-  sessionDate: string | undefined;
   nameOf: NameLookup;
 }
 

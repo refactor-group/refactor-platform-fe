@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { DateTime } from "ts-luxon";
-import { selectReviewActionsForSession } from "@/lib/utils/select-review-actions-for-session";
+import {
+  ActionsDueKind,
+  actionsDueAt,
+  isOverdue,
+  previousSessionOf,
+  summarizeActionsDue,
+} from "@/lib/actions-due";
 import type { Action } from "@/types/action";
 import type { CoachingSession } from "@/types/coaching-session";
 import { ItemStatus } from "@/types/general";
@@ -40,7 +46,7 @@ function makeSession(id: string, isoDate: string): CoachingSession {
   } as CoachingSession;
 }
 
-describe("selectReviewActionsForSession", () => {
+describe("actionsDueAt", () => {
   const s1 = makeSession("s1", "2026-02-01T14:00:00Z");
   const s2 = makeSession("s2", "2026-02-08T14:00:00Z");
   const s3 = makeSession("s3", "2026-02-15T14:00:00Z");
@@ -68,7 +74,7 @@ describe("selectReviewActionsForSession", () => {
       }),
     ];
 
-    const result = selectReviewActionsForSession(actions, sessionsAsc, "s2");
+    const result = actionsDueAt(actions, sessionsAsc, "s2", "UTC");
     expect(result.map((a) => a.id)).toEqual(["a-due"]);
   });
 
@@ -86,7 +92,7 @@ describe("selectReviewActionsForSession", () => {
       }),
     ];
 
-    const result = selectReviewActionsForSession(actions, sessionsAsc, "s1");
+    const result = actionsDueAt(actions, sessionsAsc, "s1", "UTC");
     expect(result.map((a) => a.id).sort()).toEqual(["a-recent", "a-very-old"]);
   });
 
@@ -99,7 +105,7 @@ describe("selectReviewActionsForSession", () => {
       }),
     ];
 
-    expect(selectReviewActionsForSession(actions, sessionsAsc, "missing")).toEqual([]);
+    expect(actionsDueAt(actions, sessionsAsc, "missing", "UTC")).toEqual([]);
   });
 
   it("treats sessions in a different relationship as if absent when picking the previous session", () => {
@@ -120,7 +126,7 @@ describe("selectReviewActionsForSession", () => {
       }),
     ];
 
-    const result = selectReviewActionsForSession(actions, sessions, "a2");
+    const result = actionsDueAt(actions, sessions, "a2", "UTC");
     expect(result.map((a) => a.id)).toEqual(["a-rel-a-window"]);
   });
 
@@ -138,7 +144,7 @@ describe("selectReviewActionsForSession", () => {
       }),
     ];
 
-    const result = selectReviewActionsForSession(actions, sessionsAsc, "s2");
+    const result = actionsDueAt(actions, sessionsAsc, "s2", "UTC");
     expect(result.map((a) => a.id)).toEqual(["a-later", "a-earlier"]);
   });
 
@@ -160,12 +166,111 @@ describe("selectReviewActionsForSession", () => {
       }),
     ];
 
-    const result = selectReviewActionsForSession(
-      actions,
-      sessionsAsc,
-      "s1",
-      fallback
-    );
+    const result = actionsDueAt(actions, sessionsAsc, "s1", "UTC", {
+      fallbackPriorDate: fallback,
+    });
     expect(result.map((a) => a.id)).toEqual(["a-within-fallback"]);
+  });
+});
+
+describe("previousSessionOf", () => {
+  const inRel = (id: string, isoDate: string, rel: string): CoachingSession => ({
+    ...makeSession(id, isoDate),
+    coaching_relationship_id: rel,
+  });
+
+  it("picks the prior session in the same relationship", () => {
+    const nov10 = inRel("a-10", "2026-11-10T14:00:00Z", "rel-a");
+    const nov15 = inRel("b-15", "2026-11-15T14:00:00Z", "rel-b");
+    const nov17 = inRel("a-17", "2026-11-17T14:00:00Z", "rel-a");
+    expect(previousSessionOf([nov10, nov15, nov17], "a-17")).toEqual(Some(nov10));
+  });
+
+  it("counts an earlier session on the same day", () => {
+    const morning = inRel("a-am", "2026-11-19T09:00:00", "rel-a");
+    const afternoon = inRel("a-pm", "2026-11-19T15:00:00", "rel-a");
+    expect(previousSessionOf([morning, afternoon], "a-pm")).toEqual(Some(morning));
+  });
+
+  it("sorts unsorted input by date", () => {
+    const nov17 = inRel("a-17", "2026-11-17T14:00:00Z", "rel-a");
+    const nov3 = inRel("a-3", "2026-11-03T14:00:00Z", "rel-a");
+    const nov10 = inRel("a-10", "2026-11-10T14:00:00Z", "rel-a");
+    expect(previousSessionOf([nov17, nov3, nov10], "a-17")).toEqual(Some(nov10));
+  });
+
+  it("returns None for the first session or an unknown id", () => {
+    const nov10 = inRel("a-10", "2026-11-10T14:00:00Z", "rel-a");
+    const nov17 = inRel("a-17", "2026-11-17T14:00:00Z", "rel-a");
+    expect(previousSessionOf([nov10, nov17], "a-10")).toEqual(None);
+    expect(previousSessionOf([nov10, nov17], "missing")).toEqual(None);
+  });
+});
+
+const CHICAGO = "America/Chicago";
+const chicagoNow = DateTime.fromISO("2026-11-19T12:00:00", { zone: CHICAGO });
+const chicago = (iso: string) => DateTime.fromISO(iso, { zone: CHICAGO });
+const dueAction = (id: string, status: ItemStatus, due: DateTime | null) =>
+  makeAction({ id, coaching_session_id: "s1", status, due_by: due });
+
+describe("isOverdue", () => {
+  it("is true for open actions due before today", () => {
+    const due = chicago("2026-11-18T10:00");
+    expect(isOverdue(dueAction("a", ItemStatus.NotStarted, due), chicagoNow)).toBe(true);
+    expect(isOverdue(dueAction("a", ItemStatus.InProgress, due), chicagoNow)).toBe(true);
+  });
+
+  it("is false for an action due today", () => {
+    const due = chicago("2026-11-19T08:00");
+    expect(isOverdue(dueAction("a", ItemStatus.NotStarted, due), chicagoNow)).toBe(false);
+  });
+
+  it("is false for on-hold, completed and won't-do actions", () => {
+    const due = chicago("2026-11-18");
+    for (const status of [ItemStatus.OnHold, ItemStatus.Completed, ItemStatus.WontDo]) {
+      expect(isOverdue(dueAction("a", status, due), chicagoNow)).toBe(false);
+    }
+  });
+
+  it("is false without a due date", () => {
+    expect(isOverdue(dueAction("a", ItemStatus.NotStarted, null), chicagoNow)).toBe(false);
+  });
+
+  it("counts calendar days in now's zone", () => {
+    const action = dueAction("a", ItemStatus.NotStarted, DateTime.fromISO("2026-11-19T03:00:00Z"));
+    const instant = DateTime.fromISO("2026-11-19T06:00:00Z");
+    expect(isOverdue(action, instant.setZone(CHICAGO))).toBe(true);
+    expect(isOverdue(action, instant.setZone("UTC"))).toBe(false);
+  });
+});
+
+describe("summarizeActionsDue", () => {
+  it("is None for no actions", () => {
+    expect(summarizeActionsDue([], chicagoNow)).toEqual({ kind: ActionsDueKind.None });
+  });
+
+  it("is a Count when nothing is overdue", () => {
+    const due = [
+      dueAction("a", ItemStatus.NotStarted, chicago("2026-11-19T08:00")),
+      dueAction("b", ItemStatus.InProgress, chicago("2026-11-20")),
+      dueAction("c", ItemStatus.NotStarted, chicago("2026-11-25")),
+    ];
+    expect(summarizeActionsDue(due, chicagoNow)).toEqual({
+      kind: ActionsDueKind.Count,
+      count: 3,
+    });
+  });
+
+  it("is Overdue with the open past-due count", () => {
+    const due = [
+      dueAction("a", ItemStatus.NotStarted, chicago("2026-11-18")),
+      dueAction("b", ItemStatus.Completed, chicago("2026-11-18")),
+      dueAction("c", ItemStatus.NotStarted, chicago("2026-11-20")),
+    ];
+    expect(summarizeActionsDue(due, chicagoNow)).toEqual({
+      kind: ActionsDueKind.Overdue,
+      count: 3,
+      overdue: 1,
+    });
   });
 });

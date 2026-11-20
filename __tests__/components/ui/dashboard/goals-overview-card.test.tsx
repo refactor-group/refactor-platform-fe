@@ -8,6 +8,7 @@ import type { GoalWithProgress } from "@/types/goal-progress";
 import { ItemStatus } from "@/types/general";
 import { EntityApiError } from "@/types/entity-api-error";
 import { Some, None } from "@/types/option";
+import { DateTime } from "ts-luxon";
 
 // A real EntityApiError carrying the given status, so the card's real
 // isForbiddenError (instanceof + status) narrows correctly.
@@ -26,9 +27,14 @@ vi.mock("@/lib/api/goal-progress", () => ({
   useGoalProgressList: (...args: unknown[]) => mockUseGoalProgressList(...args),
 }));
 
-const mockUseTodaysSessions = vi.fn();
-vi.mock("@/lib/hooks/use-todays-sessions", () => ({
-  useTodaysSessions: () => mockUseTodaysSessions(),
+const mockUseNextSession = vi.fn();
+vi.mock("@/lib/hooks/use-next-session", () => ({
+  useNextSession: () => mockUseNextSession(),
+}));
+
+const mockUseCurrentOrganization = vi.fn();
+vi.mock("@/lib/hooks/use-current-organization", () => ({
+  useCurrentOrganization: () => mockUseCurrentOrganization(),
 }));
 
 const mockAuthStore = vi.fn();
@@ -39,16 +45,23 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
 
 // Session utilities are pure; we mock them to isolate the card's behavior
 // (their own tests cover participant-info resolution).
-const mockSelectNextUpcomingSession = vi.fn();
 const mockGetSessionParticipantInfo = vi.fn();
 vi.mock("@/lib/utils/session", () => ({
-  selectNextUpcomingSession: (...args: unknown[]) =>
-    mockSelectNextUpcomingSession(...args),
   getSessionParticipantInfo: (...args: unknown[]) =>
     mockGetSessionParticipantInfo(...args),
 }));
 
 // ── Fixtures ───────────────────────────────────────────────────────────
+function nextSession(session: unknown, isLoading = false) {
+  return {
+    session: session ? Some(session) : None,
+    isLoading,
+    isError: false,
+    refresh: vi.fn(),
+    now: DateTime.fromISO("2026-11-19T12:00:00", { zone: "America/Chicago" }),
+  };
+}
+
 function makeGoalWithProgress(
   overrides: Partial<GoalWithProgress> = {}
 ): GoalWithProgress {
@@ -92,13 +105,7 @@ function makeUpcomingSession() {
 function setupDefault() {
   const session = makeUpcomingSession();
   mockAuthStore.mockReturnValue({ userId: "user-1" });
-  mockUseTodaysSessions.mockReturnValue({
-    sessions: [session],
-    isLoading: false,
-    error: undefined,
-    refresh: vi.fn(),
-  });
-  mockSelectNextUpcomingSession.mockReturnValue(session);
+  mockUseNextSession.mockReturnValue(nextSession(session));
   mockGetSessionParticipantInfo.mockReturnValue({
     participantName: "Alex Chen",
     firstName: "Alex",
@@ -112,17 +119,12 @@ function setupDefault() {
 describe("GoalsOverviewCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseCurrentOrganization.mockReturnValue({ currentOrganizationId: "org-1" });
   });
 
   it("renders loading skeleton while today's sessions are loading", () => {
     mockAuthStore.mockReturnValue({ userId: "user-1" });
-    mockUseTodaysSessions.mockReturnValue({
-      sessions: [],
-      isLoading: true,
-      error: undefined,
-      refresh: vi.fn(),
-    });
-    mockSelectNextUpcomingSession.mockReturnValue(undefined);
+    mockUseNextSession.mockReturnValue(nextSession(undefined, true));
     mockUseGoalProgressList.mockReturnValue({
       goalsWithProgress: [],
       isLoading: false,
@@ -140,13 +142,7 @@ describe("GoalsOverviewCard", () => {
     // for users who are never a coach) and never "your" (wrong for users who
     // are only coaches).
     mockAuthStore.mockReturnValue({ userId: "user-1" });
-    mockUseTodaysSessions.mockReturnValue({
-      sessions: [],
-      isLoading: false,
-      error: undefined,
-      refresh: vi.fn(),
-    });
-    mockSelectNextUpcomingSession.mockReturnValue(undefined);
+    mockUseNextSession.mockReturnValue(nextSession(undefined));
     mockUseGoalProgressList.mockReturnValue({
       goalsWithProgress: [],
       isLoading: false,
@@ -164,19 +160,39 @@ describe("GoalsOverviewCard", () => {
     expect(screen.queryByText(/coachee['’]s/i)).not.toBeInTheDocument();
   });
 
-  it("renders an inline error message when goal_progress fails", () => {
-    setupDefault();
+  it("shows an error with Try again when the week request fails", async () => {
+    const refresh = vi.fn();
+    mockAuthStore.mockReturnValue({ userId: "user-1" });
+    mockUseNextSession.mockReturnValue({ ...nextSession(undefined), isError: true, refresh });
     mockUseGoalProgressList.mockReturnValue({
       goalsWithProgress: [],
       isLoading: false,
-      isError: new Error("fetch failed"),
+      isError: undefined,
       refresh: vi.fn(),
     });
 
     render(<GoalsOverviewCard />);
-    expect(
-      screen.getByText(/couldn[’']t load active goals\. please refresh/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText("Couldn't load your goals")).toBeInTheDocument();
+    expect(screen.queryByText("No active goals to show")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders an inline error message when goal_progress fails", async () => {
+    setupDefault();
+    const refresh = vi.fn();
+    mockUseGoalProgressList.mockReturnValue({
+      goalsWithProgress: [],
+      isLoading: false,
+      isError: new Error("fetch failed"),
+      refresh,
+    });
+
+    render(<GoalsOverviewCard />);
+    expect(screen.getByText("Couldn't load your goals")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/please refresh/i)).not.toBeInTheDocument();
   });
 
   it("renders the permission-denied message when goal_progress returns 403", () => {
@@ -195,6 +211,21 @@ describe("GoalsOverviewCard", () => {
     // The generic fetch-failure copy must not also appear.
     expect(
       screen.queryByText(/couldn[’']t load active goals/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers no Try again when goal_progress returns 403", () => {
+    setupDefault();
+    mockUseGoalProgressList.mockReturnValue({
+      goalsWithProgress: [],
+      isLoading: false,
+      isError: apiError(403),
+      refresh: vi.fn(),
+    });
+
+    render(<GoalsOverviewCard />);
+    expect(
+      screen.queryByRole("button", { name: "Try again" })
     ).not.toBeInTheDocument();
   });
 
@@ -426,13 +457,8 @@ describe("GoalsOverviewCard", () => {
     // the hook skips the fetch rather than blowing up.
     mockAuthStore.mockReturnValue({ userId: "user-1" });
     const partial = { id: "sess-1" }; // no organization, no coaching_relationship_id
-    mockUseTodaysSessions.mockReturnValue({
-      sessions: [partial],
-      isLoading: false,
-      error: undefined,
-      refresh: vi.fn(),
-    });
-    mockSelectNextUpcomingSession.mockReturnValue(partial);
+    mockUseNextSession.mockReturnValue(nextSession(partial));
+    mockUseCurrentOrganization.mockReturnValue({ currentOrganizationId: null });
     mockGetSessionParticipantInfo.mockReturnValue({
       participantName: "Alex Chen",
       firstName: "Alex",
@@ -453,5 +479,25 @@ describe("GoalsOverviewCard", () => {
       coaching_session_id: "sess-1",
       assignee: AssigneeScope.Coachee,
     });
+  });
+
+  it("scopes goal progress to the current organization, not the session's", () => {
+    setupDefault();
+    const { organization: _, ...withoutOrganization } = makeUpcomingSession();
+    mockUseNextSession.mockReturnValue(nextSession(withoutOrganization));
+    mockUseCurrentOrganization.mockReturnValue({ currentOrganizationId: "org-42" });
+    mockUseGoalProgressList.mockReturnValue({
+      goalsWithProgress: [],
+      isLoading: false,
+      isError: undefined,
+      refresh: vi.fn(),
+    });
+
+    render(<GoalsOverviewCard />);
+    expect(mockUseGoalProgressList).toHaveBeenCalledWith(
+      Some("org-42"),
+      Some("rel-1"),
+      expect.anything()
+    );
   });
 });

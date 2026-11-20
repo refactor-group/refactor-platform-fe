@@ -4,6 +4,8 @@ import {
   mockCommonApiRoutes,
   MOCK_USER_ID,
   MULTIPLE_RELATIONSHIPS,
+  mockRelationship,
+  sessionParticipants,
 } from './helpers'
 
 const ORGANIZATIONS = [
@@ -51,7 +53,9 @@ async function mockOrganizations(page: Page) {
 }
 
 // Coaching in two relationships is what shows the Join session trigger.
-const COACHING_TWO = MULTIPLE_RELATIONSHIPS.map((rel) => ({ ...rel, coach_id: MOCK_USER_ID }))
+const COACHING_TWO = MULTIPLE_RELATIONSHIPS.map(({ id, coachee_id, participants: [coach, coachee] }) =>
+  mockRelationship(id, { coach_id: MOCK_USER_ID, coachee_id }, { coach, coachee })
+)
 
 async function setup(page: Page, context: Parameters<typeof setupAuthentication>[1]) {
   await setupAuthentication(page, context)
@@ -97,7 +101,7 @@ async function mockActions(page: Page) {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: { coachee_actions: { [MOCK_USER_ID]: actions } } }),
+      body: JSON.stringify({ data: { actions_by_relationship: { [MOCK_USER_ID]: actions } } }),
     })
   })
   await page.route('**/actions/action-*', async (route) => {
@@ -127,6 +131,7 @@ async function mockActions(page: Page) {
               created_at: RECENT,
               updated_at: RECENT,
               relationship: COACHING_TWO[0],
+              participants: sessionParticipants(COACHING_TWO[0]),
             },
           ],
         }),
@@ -383,11 +388,19 @@ const SEARCH_HITS = [
 ]
 
 type WidthSample = { t: number; width: number }
-type WidthWindow = { collapseWidths: Promise<WidthSample[]> }
+type Collapse = { widths: WidthSample[]; widthTransitionRan: boolean }
+type WidthWindow = { collapse: Promise<Collapse> }
 
-// Runs in the page: records the root's width each frame for 300ms after the next Escape.
+// Runs in the page: after the next Escape, records the root's width each frame for 300ms and
+// whether a width transition ran. Frames can arrive late on a busy runner; the transition
+// events fire either way, so they prove the collapse animates rather than snaps.
 function recordWidthAfterEscape(root: Element) {
-  ;(window as unknown as WidthWindow).collapseWidths = new Promise((resolve) => {
+  let widthTransitionRan = false
+  root.addEventListener('transitionrun', (event) => {
+    const e = event as TransitionEvent
+    if (e.target === root && e.propertyName === 'width') widthTransitionRan = true
+  })
+  ;(window as unknown as WidthWindow).collapse = new Promise((resolve) => {
     document.addEventListener(
       'keydown',
       (event) => {
@@ -398,7 +411,7 @@ function recordWidthAfterEscape(root: Element) {
           const t = performance.now() - start
           widths.push({ t: Math.round(t), width: Math.round(root.getBoundingClientRect().width) })
           if (t < 300) requestAnimationFrame(tick)
-          else resolve(widths)
+          else resolve({ widths, widthTransitionRan })
         }
         requestAnimationFrame(tick)
       },
@@ -483,11 +496,16 @@ for (const viewport of [
     await page.locator('[cmdk-root]').locator('..').evaluate(recordWidthAfterEscape)
     await page.keyboard.press('Escape')
     if (viewport.width >= 768) {
-      const widths = await page.evaluate(() => (window as unknown as WidthWindow).collapseWidths)
-      const at80 = widths.reduce((a, b) => (Math.abs(b.t - 80) < Math.abs(a.t - 80) ? b : a))
+      const { widths, widthTransitionRan } = await page.evaluate(() => (window as unknown as WidthWindow).collapse)
       console.log('search root width during collapse', JSON.stringify(widths))
-      expect(at80.width).toBeGreaterThan(36)
-      expect(at80.width).toBeLessThan(340)
+      expect(widthTransitionRan, 'the collapse animates its width').toBe(true)
+      // Only judge the mid-collapse width when a frame landed inside the 200ms transition.
+      const mid = widths.filter((w) => w.t >= 20 && w.t <= 160)
+      if (mid.length > 0) {
+        const at80 = mid.reduce((a, b) => (Math.abs(b.t - 80) < Math.abs(a.t - 80) ? b : a))
+        expect(at80.width).toBeGreaterThan(36)
+        expect(at80.width).toBeLessThan(340)
+      }
     }
     await expect(input).toBeHidden()
     await expect(openSearch).toBeVisible()

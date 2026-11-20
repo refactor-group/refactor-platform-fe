@@ -18,9 +18,8 @@ import {
 import { Some, None, type Option } from "@/types/option";
 import {
   formatDateInUserTimezoneWithTZ,
-  getBrowserTimezone,
 } from "@/lib/timezone-utils";
-import { useAuthStore } from "@/lib/providers/auth-store-provider";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 import { getCoachName, getCoacheeName } from "@/lib/utils/relationship";
 import { toast as sonnerToast } from "@/lib/toast";
 import { useEditorCache } from "./editor-cache-context";
@@ -30,7 +29,7 @@ import { UserPresence } from "@/types/presence";
 import { type Id, isForbiddenError, PERMISSION_DENIED_MESSAGE } from "@/types/general";
 
 const CoachingSessionTitle: FC = () => {
-  const { userSession } = useAuthStore((state) => state);
+  const timezone = useUserTimezone();
 
   const { currentCoachingSession, refresh } = useCurrentCoachingSession();
   const { currentCoachingRelationship } = useCurrentCoachingRelationship();
@@ -88,7 +87,6 @@ const CoachingSessionTitle: FC = () => {
 
   const coachName = getCoachName(relationship);
   const coacheeName = getCoacheeName(relationship);
-  const timezone = userSession?.timezone || getBrowserTimezone();
 
   return (
     <div>

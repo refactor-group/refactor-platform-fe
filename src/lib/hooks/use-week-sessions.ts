@@ -20,6 +20,7 @@ const WEEK_INCLUDES = [
   CoachingSessionInclude.Relationship,
   CoachingSessionInclude.Series,
   CoachingSessionInclude.Topics,
+  CoachingSessionInclude.Goal,
 ];
 
 /** The viewer's sessions for one week, Monday through Sunday in the week's zone. */

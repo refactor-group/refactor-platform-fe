@@ -20,16 +20,19 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   AssignmentFilter,
-  CoachViewMode,
+  ActionsViewMode,
   StatusVisibility,
   TimeRange,
 } from "@/types/assigned-actions";
 import type { Id, SelectOption } from "@/types/general";
+import { cn } from "@/components/lib/utils";
+import { actionsViewLabel } from "@/lib/actions-views";
 
 interface ActionsPageHeaderProps {
-  isCoach: boolean;
-  viewMode: CoachViewMode;
-  onViewModeChange: (mode: CoachViewMode) => void;
+  /** The viewer's views; the toggle shows when there's a choice. */
+  views: ActionsViewMode[];
+  viewMode: ActionsViewMode;
+  onViewModeChange: (mode: ActionsViewMode) => void;
   statusVisibility: StatusVisibility;
   onStatusVisibilityChange: (vis: StatusVisibility) => void;
   timeRange: TimeRange;
@@ -42,7 +45,7 @@ interface ActionsPageHeaderProps {
 }
 
 export function ActionsPageHeader({
-  isCoach,
+  views,
   viewMode,
   onViewModeChange,
   statusVisibility,
@@ -65,29 +68,30 @@ export function ActionsPageHeader({
       <h1 className="text-2xl font-semibold tracking-tight">Actions</h1>
 
       <div className="flex flex-wrap items-center gap-3">
-        {isCoach && (
+        {views.length > 1 && (
           <ToggleGroup
             type="single"
             value={viewMode}
             onValueChange={(v) => {
-              if (v) onViewModeChange(v as CoachViewMode);
+              if (v) onViewModeChange(v as ActionsViewMode);
             }}
             variant="outline"
             size="sm"
             className="gap-0"
           >
-            <ToggleGroupItem
-              value={CoachViewMode.MyActions}
-              className="whitespace-nowrap text-xs px-2 h-7 rounded-r-none border-r-0"
-            >
-              My Actions
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value={CoachViewMode.CoacheeActions}
-              className="whitespace-nowrap text-xs px-2 h-7 rounded-l-none"
-            >
-              Coachee Actions
-            </ToggleGroupItem>
+            {views.map((view, i) => (
+              <ToggleGroupItem
+                key={view}
+                value={view}
+                className={cn(
+                  "whitespace-nowrap text-xs px-2 h-7",
+                  i > 0 && "rounded-l-none",
+                  i < views.length - 1 && "rounded-r-none border-r-0"
+                )}
+              >
+                {actionsViewLabel(view)}
+              </ToggleGroupItem>
+            ))}
           </ToggleGroup>
         )}
 

@@ -89,7 +89,6 @@ const PARAMS = {
   userId: "user-1",
   coachingSessionId: "session-1",
   coachingRelationshipId: "rel-1",
-  sessionDate: "2026-03-30T12:00:00Z",
 };
 
 beforeEach(() => {

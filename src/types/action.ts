@@ -143,8 +143,8 @@ export interface ActionWithAssigneesWire extends ActionWire {
 }
 
 /** Response from GET /organizations/{org_id}/coaching_relationships/actions?assignee=... */
-export interface BatchCoacheeActionsResponse {
-  coachee_actions: Record<Id, ActionWithAssigneesWire[]>;
+export interface BatchRelationshipActionsResponse {
+  actions_by_relationship: Record<Id, ActionWithAssigneesWire[]>;
 }
 
 /** Transforms a flat ActionWithAssigneesWire into a domain Action. */

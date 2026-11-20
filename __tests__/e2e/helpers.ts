@@ -8,30 +8,36 @@ import type { Page, BrowserContext } from '@playwright/test'
 // ---------------------------------------------------------------------------
 
 /** Mirrors CoachingRelationshipWithUserNames (src/types/coaching-relationship.ts) */
-interface MockCoachingRelationship {
+export interface MockCoachingRelationship {
   id: string
   coach_id: string
   coachee_id: string
   organization_id: string
-  coach_first_name: string
-  coach_last_name: string
-  coachee_first_name: string
-  coachee_last_name: string
-  coach_email: string
-  coachee_email: string
   created_at: string
   updated_at: string
   kind: string
-  coach_is_member: boolean
-  coachee_is_member: boolean
+  /** Always [coach seat, coachee seat]. */
+  participants: MockParticipant[]
   viewer: MockRelationshipViewer | null
   suggests_actions: boolean
   scheduling_blocked_by: string | null
 }
 
+type MockRole = 'coach' | 'coachee' | 'colleague'
+
+/** Mirrors Participant (src/types/participant.ts) */
+export interface MockParticipant {
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  role: MockRole
+  is_member: boolean
+}
+
 /** Mirrors RelationshipViewer: what the backend says the signed-in user may do. */
 interface MockRelationshipViewer {
-  role: 'coach' | 'coachee' | 'colleague'
+  role: MockRole
   can_schedule_sessions: boolean
   sees_all_actions: boolean
 }
@@ -46,6 +52,12 @@ export const COACHEE_VIEWER: MockRelationshipViewer = {
   role: 'coachee',
   can_schedule_sessions: false,
   sees_all_actions: false,
+}
+
+export const COLLEAGUE_VIEWER: MockRelationshipViewer = {
+  role: 'colleague',
+  can_schedule_sessions: true,
+  sees_all_actions: true,
 }
 
 /** Mirrors CoachingSession (src/types/coaching-session.ts) */
@@ -128,48 +140,78 @@ export const MOCK_ORGANIZATIONS: MockOrganization[] = [
   },
 ]
 
+type MockSeat = Partial<Omit<MockParticipant, 'id' | 'role'>>
+
+/** Names, emails and membership for each seat; ids and roles come from the relationship. */
+export interface MockSeats {
+  coach?: MockSeat
+  coachee?: MockSeat
+}
+
 /** Build a mock coaching relationship with sensible defaults. */
 export function mockRelationship(
   id: string,
-  overrides: Partial<MockCoachingRelationship> = {}
+  overrides: Partial<Omit<MockCoachingRelationship, 'participants'>> = {},
+  seats: MockSeats = {}
 ): MockCoachingRelationship {
-  return {
+  const base = {
     id,
     coach_id: `coach-${id}`,
     coachee_id: `coachee-${id}`,
     organization_id: 'org-1',
-    coach_first_name: 'John',
-    coach_last_name: 'Doe',
-    coachee_first_name: 'Jane',
-    coachee_last_name: 'Smith',
-    coach_email: 'john@example.com',
-    coachee_email: 'jane@example.com',
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z',
     kind: 'coaching',
-    coach_is_member: true,
-    coachee_is_member: true,
     viewer: COACH_VIEWER,
     suggests_actions: true,
     scheduling_blocked_by: null,
     ...overrides,
   }
+  const colleague = base.kind === 'colleague'
+  return {
+    ...base,
+    participants: [
+      {
+        first_name: 'John',
+        last_name: 'Doe',
+        email: 'john@example.com',
+        is_member: true,
+        ...seats.coach,
+        id: base.coach_id,
+        role: colleague ? 'colleague' : 'coach',
+      },
+      {
+        first_name: 'Jane',
+        last_name: 'Smith',
+        email: 'jane@example.com',
+        is_member: true,
+        ...seats.coachee,
+        id: base.coachee_id,
+        role: colleague ? 'colleague' : 'coachee',
+      },
+    ],
+  }
+}
+
+/** The top-level `participants` of an include=relationship session. */
+export function sessionParticipants(
+  relationship: MockCoachingRelationship
+): MockParticipant[] {
+  return relationship.participants
 }
 
 export const SINGLE_RELATIONSHIP = [mockRelationship('rel-1')]
 
 export const MULTIPLE_RELATIONSHIPS = [
   mockRelationship('rel-1'),
-  mockRelationship('rel-2', {
-    coach_id: 'coach-2',
-    coachee_id: 'coachee-2',
-    coach_first_name: 'Bob',
-    coach_last_name: 'Johnson',
-    coachee_first_name: 'Alice',
-    coachee_last_name: 'Brown',
-    coach_email: 'bob@example.com',
-    coachee_email: 'alice@example.com',
-  }),
+  mockRelationship(
+    'rel-2',
+    { coach_id: 'coach-2', coachee_id: 'coachee-2' },
+    {
+      coach: { first_name: 'Bob', last_name: 'Johnson', email: 'bob@example.com' },
+      coachee: { first_name: 'Alice', last_name: 'Brown', email: 'alice@example.com' },
+    }
+  ),
 ]
 
 // ---------------------------------------------------------------------------

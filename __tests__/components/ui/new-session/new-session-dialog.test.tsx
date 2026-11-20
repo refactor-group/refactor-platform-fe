@@ -21,8 +21,8 @@ import { toast } from "@/lib/toast";
 import { EntityApiError } from "@/types/entity-api-error";
 import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
 import { None, Some } from "@/types/option";
-import { COACHEE_VIEWER, createMockSession } from "../../../test-utils";
-import { ALL, NEAREST, NOW, RELATIONSHIPS, ZONE, at } from "../../../lib/scheduling/roster";
+import { createMockSession } from "../../../test-utils";
+import { ALL, coachedBySomeoneElse, NEAREST, NOW, RELATIONSHIPS, ZONE, at } from "../../../lib/scheduling/roster";
 
 vi.mock("@/lib/providers/auth-store-provider", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
@@ -183,17 +183,39 @@ describe("NewSessionDialog: Who", () => {
     expect(screen.getByText("Google Meet link included")).toBeInTheDocument();
   });
 
-  it("leaves out the meeting line without a connected provider", () => {
+  function serveConnections(connections: { provider: string }[] | null) {
     vi.mocked(useOAuthConnections).mockReturnValue({
-      connections: [],
-      isLoading: false,
+      connections,
+      isLoading: connections === null,
       isError: undefined,
       refresh: vi.fn(),
     } as unknown as ReturnType<typeof useOAuthConnections>);
+  }
+
+  it("warns without a connected provider and links to Settings in a new tab", () => {
+    serveConnections([]);
     renderDialog();
     fireEvent.click(person("Sara Lin"));
     expect(screen.getByText("1 session with Sara")).toBeInTheDocument();
     expect(screen.queryByText(/link included/)).not.toBeInTheDocument();
+    expect(screen.getByText(/No meeting link\. Connect Google Meet or Zoom in/)).toBeInTheDocument();
+    const settings = screen.getByRole("link", { name: "Settings (opens in a new tab)" });
+    expect(settings).toHaveAttribute("href", "/settings/integrations");
+    expect(settings).toHaveAttribute("target", "_blank");
+  });
+
+  it("says nothing about the meeting link while connections load", () => {
+    serveConnections(null);
+    renderDialog();
+    fireEvent.click(person("Sara Lin"));
+    expect(screen.getByText("1 session with Sara")).toBeInTheDocument();
+    expect(screen.queryByText(/link included/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No meeting link/)).not.toBeInTheDocument();
+  });
+
+  it("rereads connections on open and when the user returns to the tab", () => {
+    renderDialog();
+    expect(useOAuthConnections).toHaveBeenCalledWith({ fresh: true });
   });
 
   it("says so when there's no one to schedule with", () => {
@@ -444,7 +466,7 @@ describe("NewSessionDialog: Resolve overlap", () => {
   it("only keeps both when the other session isn't mine to move", () => {
     vi.mocked(useEnrichedCoachingSessionsForUser).mockReturnValue({
       enrichedSessions: ALL.map((s) =>
-        s.id === "e-18" ? { ...s, relationship: { ...s.relationship!, coach_id: "someone-else", viewer: COACHEE_VIEWER } } : s
+        s.id === "e-18" ? coachedBySomeoneElse(s) : s
       ),
       isLoading: false,
       isError: undefined,

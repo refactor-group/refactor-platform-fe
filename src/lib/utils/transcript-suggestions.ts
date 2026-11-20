@@ -58,9 +58,9 @@ function heardHead(phrase: string, reason: Option<UndatedReason>): string {
   }
 }
 
-export function suggestionDue(s: ActionSuggestion, locale: string): SuggestionDue {
+export function suggestionDue(s: ActionSuggestion, locale: string, timezone: string): SuggestionDue {
   const { due_by, due_phrase } = s.proposal;
-  const at = due_by.some ? due_by.val : s.default_due.at;
+  const at = (due_by.some ? due_by.val : s.default_due.at).setZone(timezone);
   const label = at.setLocale(locale).toLocaleString(DateTime.DATE_MED);
 
   if (due_by.some) {

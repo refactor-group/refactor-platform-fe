@@ -20,6 +20,7 @@ import { cn } from "@/components/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DateTime } from "ts-luxon";
 import { centerInScrollParent } from "@/lib/utils/center-in-container";
+import { useReplaceSearchParams } from "@/lib/hooks/use-replace-search-params";
 
 // ── Action Section Content ───────────────────────────────────────────
 //
@@ -105,19 +106,33 @@ export function ActionSectionContent({
   readOnly = false,
   onActiveTabChange,
 }: ActionSectionContentProps) {
-  const [activeTab, setActiveTab] = useState<ActionTab>("new");
+  const searchParams = useSearchParams();
+  const replaceSearchParams = useReplaceSearchParams();
+  const [activeTab, setActiveTab] = useState<ActionTab>(() =>
+    searchParams.get("actions") === "due" ? "due" : "new"
+  );
+
+  // ?actions applies once; drop it so a later visit or reload opens on New.
+  useEffect(() => {
+    if (!searchParams.has("actions")) return;
+    replaceSearchParams((params) => params.delete("actions"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
+  }, []);
 
   const handleTabChange = useCallback(
     (value: string) => {
       if (value !== "due" && value !== "new") return;
       setActiveTab(value);
-      onActiveTabChange?.(value);
     },
-    [onActiveTabChange]
+    []
   );
 
+  // Report every tab change, including the initial one from ?actions=due.
+  useEffect(() => {
+    onActiveTabChange?.(activeTab);
+  }, [activeTab, onActiveTabChange]);
+
   // ── Highlight & scroll-to for deep-linked or in-page requested actions ─
-  const searchParams = useSearchParams();
   const [highlightRequest, setHighlightRequest] = useState<Option<{ id: Id; nonce: number }>>(None);
   const highlightId = highlightRequest.some
     ? highlightRequest.val.id
@@ -170,13 +185,6 @@ export function ActionSectionContent({
   if (requiredTab !== null && activeTab !== requiredTab) {
     setActiveTab(requiredTab);
   }
-
-  // Notify parent asynchronously to avoid mid-render parent updates
-  useEffect(() => {
-    if (requiredTab !== null) {
-      onActiveTabChange?.(requiredTab);
-    }
-  }, [requiredTab, onActiveTabChange]);
 
   // Derive activeHighlight from the highlight target, cleared after animation.
   // When clearedHighlightKey matches the current key, the highlight is off.

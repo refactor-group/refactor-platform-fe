@@ -34,7 +34,7 @@ export type CoachingSessionTitleSource = {
  *
  * This is the fallback path used on the single-session page and whenever the
  * backend's `display_title` isn't on the read; list/preview surfaces prefer
- * `display_title` (see `CoachingSessionTitleText`).
+ * `display_title`.
  */
 export function coachingSessionTitle(
   session: CoachingSessionTitleSource,

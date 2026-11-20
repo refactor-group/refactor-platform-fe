@@ -225,9 +225,7 @@ enum connectionState {
 ```
 
 ### File Organization
-- Keep React components in `src/components/`
-- Place tests in `__tests__/` directories mirroring the source structure
-- Group related components in feature-specific subdirectories
+See `.claude/file-organization.md` for where components, logic, hooks and tests go.
 
 ### UI Component Libraries
 
@@ -371,12 +369,11 @@ laptop in another timezone, or on DST transition days.
        Settings.now = originalNow;
      });
 
-     it("treats a session 24h later as tomorrow", () => {
+     it("treats a session 24h later as later", () => {
        // Both createSessionAt and the code under test now see the same
        // fixed "now", so the assertion is stable.
        const session = createSessionAt(24 * 60);
-       expect(getUrgencyMessage(session, calculateSessionUrgency(session)))
-         .toContain("tomorrow");
+       expect(calculateSessionUrgency(session)).toBe(SessionUrgency.Later);
      });
    });
    ```

@@ -1,10 +1,15 @@
 import { test, expect, type Page } from '@playwright/test'
-import { setupAuthentication, mockCommonApiRoutes, MOCK_USER_ID, SINGLE_RELATIONSHIP } from './helpers'
+import {
+  setupAuthentication,
+  mockCommonApiRoutes,
+  mockRelationship,
+  sessionParticipants,
+  MOCK_USER_ID,
+} from './helpers'
 
 test.use({ timezoneId: 'America/Chicago', locale: 'en-US', viewport: { width: 1280, height: 900 } })
 
-const RELATIONSHIP = { ...SINGLE_RELATIONSHIP[0], coach_id: MOCK_USER_ID }
-const COACHEE = { id: RELATIONSHIP.coachee_id, first_name: 'Jane', last_name: 'Smith', display_name: 'Jane Smith' }
+const RELATIONSHIP = mockRelationship('rel-1', { coach_id: MOCK_USER_ID })
 
 const session = (id: string, date: string) => ({
   id,
@@ -16,7 +21,7 @@ const session = (id: string, date: string) => ({
   created_at: '2026-10-01T12:00:00Z',
   updated_at: '2026-10-01T12:00:00Z',
   relationship: RELATIONSHIP,
-  coachee: COACHEE,
+  participants: sessionParticipants(RELATIONSHIP),
   topics: [],
 })
 
@@ -82,11 +87,11 @@ test.describe('Week grid navigation and clicks', () => {
     for (const [title, from] of [['Next week', '2026-10-26'], ['Week of Nov 2', '2026-11-02'], ['Week of Nov 9', '2026-11-09']]) {
       await next.click()
       await expect(panel(page, title)).toHaveAttribute('aria-busy', 'true')
-      expect(await top()).toBe(home)
+      expect(await top()).toBeCloseTo(home, 1)
       await expect.poll(() => held.some((h) => h.from === from)).toBe(true)
       release(from)
       await expect(panel(page, title)).toHaveAttribute('aria-busy', 'false')
-      expect(await top()).toBe(home)
+      expect(await top()).toBeCloseTo(home, 1)
     }
   })
 

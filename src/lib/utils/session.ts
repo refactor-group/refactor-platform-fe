@@ -1,13 +1,10 @@
+import { otherParticipantInSession, participantName as participantNameOf } from "@/lib/participants";
 import { DateTime } from "ts-luxon";
 import { CoachingSession, EnrichedCoachingSession } from "@/types/coaching-session";
 import { Id } from "@/types/general";
 import { schedulingBlockedBy, viewerOf } from "@/types/coaching-relationship";
 import { SessionUrgency } from "@/types/session-display";
-import { getBrowserTimezone } from "@/lib/timezone-utils";
 import { RelationshipRole } from "@/types/relationship-role";
-import type { Action } from "@/types/action";
-import { sortActionArray } from "@/types/action";
-import { SortOrder } from "@/types/sorting";
 
 /**
  * Session Utility Functions
@@ -25,12 +22,6 @@ export const UNDERWAY_THRESHOLD_MINUTES = 5;
 
 /** Threshold in minutes for sessions starting soon */
 export const SOON_SESSION_THRESHOLD_MINUTES = 120;
-
-/** Hour when afternoon begins (12:00 PM) */
-export const AFTERNOON_START_HOUR = 12;
-
-/** Hour when evening begins (5:00 PM) */
-export const EVENING_START_HOUR = 17;
 
 /**
  * Calculate urgency level based on session timing
@@ -65,115 +56,6 @@ export function calculateSessionUrgency(
   }
 
   return SessionUrgency.Later;
-}
-
-/**
- * Generate human-friendly urgency message
- * Story: "Tell users when their session is happening in natural language"
- */
-export function getUrgencyMessage(
-  session: CoachingSession,
-  urgency: SessionUrgency,
-  userTimezone?: string
-): string {
-  const now = DateTime.now();
-  // Parse session date as UTC (backend stores in UTC)
-  const sessionTimeUTC = DateTime.fromISO(session.date, { zone: 'utc' });
-  // Convert to user's timezone for display
-  const timezone = userTimezone || getBrowserTimezone();
-  const sessionTime = sessionTimeUTC.setZone(timezone);
-
-  switch (urgency) {
-    case SessionUrgency.Past: {
-      const sessionEndTimeUTC = sessionTimeUTC.plus({ minutes: session.duration_minutes });
-      const minutesSinceEnd = Math.abs(
-        sessionEndTimeUTC.diff(now, "minutes").minutes
-      );
-      const hoursSinceEnd = Math.floor(minutesSinceEnd / 60);
-
-      if (hoursSinceEnd >= 1) {
-        return `Ended ${hoursSinceEnd} ${hoursSinceEnd === 1 ? "hour" : "hours"} ago`;
-      }
-      return `Ended ${Math.floor(minutesSinceEnd)} minutes ago`;
-    }
-
-    case SessionUrgency.Underway:
-      return "Under way";
-
-    case SessionUrgency.Imminent: {
-      const minutesUntil = Math.round(
-        sessionTimeUTC.diff(now, "minutes").minutes
-      );
-
-      if (minutesUntil <= 0) {
-        return "Starting now!";
-      }
-
-      return `Starting in ${minutesUntil} ${minutesUntil === 1 ? "minute" : "minutes"}`;
-    }
-
-    case SessionUrgency.Soon: {
-      const minutesUntil = sessionTimeUTC.diff(now, "minutes").minutes;
-      const hoursUntil = minutesUntil / 60;
-
-      if (hoursUntil < 2) {
-        const hours = Math.floor(hoursUntil);
-        const minutes = Math.floor(minutesUntil % 60);
-
-        if (minutes === 0) {
-          return `Next session in ${hours} ${hours === 1 ? "hour" : "hours"}`;
-        }
-
-        return `Next session in ${hours} ${hours === 1 ? "hour" : "hours"} ${minutes} minutes`;
-      }
-
-      return "Next session in 2 hours";
-    }
-
-    case SessionUrgency.Later: {
-      // The absolute time is shown separately in the UI (card header, popover
-      // row); keep this message relative so it doesn't duplicate that info.
-      const period = getPeriodOfDay(sessionTime);
-      return `Scheduled for ${period}`;
-    }
-  }
-}
-
-/**
- * Get period of day for natural language
- * Story: "Describe time of day in friendly terms"
- *
- * Accounts for whether the session is today, tomorrow, or yesterday
- * to generate appropriate relative time phrases.
- */
-function getPeriodOfDay(time: DateTime): string {
-  const now = DateTime.now().setZone(time.zone);
-  const hour = time.hour;
-
-  // Determine the time period (morning, afternoon, evening)
-  let period: string;
-  if (hour < AFTERNOON_START_HOUR) {
-    period = "morning";
-  } else if (hour < EVENING_START_HOUR) {
-    period = "afternoon";
-  } else {
-    period = "evening";
-  }
-
-  // Check if it's today, tomorrow, or yesterday
-  const daysDiff = Math.round(time.startOf('day').diff(now.startOf('day'), 'days').days);
-
-  if (daysDiff === 0) {
-    return `this ${period}`;
-  } else if (daysDiff === 1) {
-    return `tomorrow ${period}`;
-  } else if (daysDiff === -1) {
-    return `yesterday ${period}`;
-  } else {
-    // For dates beyond tomorrow/yesterday, include the day name
-    const dayName = time.toFormat('EEEE'); // e.g., "Monday"
-    return `${dayName} ${period}`;
-  }
 }
 
 /**
@@ -238,21 +120,6 @@ export function findLastSessionsByRelationship<
 }
 
 /**
- * Format a session's time for compact display (e.g. "2:30 PM CST")
- *
- * Converts a UTC date string to the user's timezone and formats it.
- */
-export function formatSessionTime(
-  dateString: string,
-  timezone: string
-): string {
-  const sessionTime = DateTime.fromISO(dateString, { zone: "utc" }).setZone(
-    timezone
-  );
-  return sessionTime.toFormat("h:mm a ZZZZ");
-}
-
-/**
  * Information about the other participant in a coaching session, from the
  * perspective of the viewing user. `null` when relationship data is missing.
  */
@@ -295,9 +162,9 @@ export function getSessionParticipantInfo(
   const canSchedule = viewer.val.can_schedule_sessions;
   const schedulingOpen = schedulingBlockedBy(relationship).none;
   // Identity, not permission: the other person is whoever isn't the viewer.
-  const participant = relationship.coach_id === userId ? session.coachee : session.coach;
+  const other = otherParticipantInSession(session, userId);
 
-  if (!participant) {
+  if (other.none) {
     return {
       participantName: "(data not loaded)",
       firstName: "",
@@ -309,9 +176,8 @@ export function getSessionParticipantInfo(
     };
   }
 
-  const participantName =
-    `${participant.first_name} ${participant.last_name}`.trim() ||
-    participant.display_name;
+  const participant = other.val;
+  const participantName = participantNameOf(participant);
 
   return {
     participantName,
@@ -329,52 +195,10 @@ export function getSessionParticipantInfo(
  * whose urgency is not Past. Assumes the list is sorted ascending by date.
  */
 export function selectNextUpcomingSession(
-  sessions: EnrichedCoachingSession[]
+  sessions: EnrichedCoachingSession[],
+  now: DateTime
 ): EnrichedCoachingSession | undefined {
   return sessions.find(
-    (session) => calculateSessionUrgency(session) !== SessionUrgency.Past
+    (session) => calculateSessionUrgency(session, now) !== SessionUrgency.Past
   );
-}
-
-/**
- * Pure filter matching the coaching-session Actions panel's "Due" tab
- * semantics: which actions from a given relationship should surface as
- * "due for review" at a given session.
- *
- * Pre-condition: `allActions` must already be scoped to the session's
- * coaching relationship (e.g. via the `coaching_relationship_id` query param).
- *
- * Rules:
- * 1. Exclude actions that were created in the current session (they belong
- *    to the session's own "New" tab, not the carry-forward review window).
- * 2. Include sticky actions (previously visible in the panel) regardless of
- *    current state. Dashboard callers typically pass no sticky set.
- * 3. Include only actions due within `[previousSessionDate, currentSessionDate]`
- *    — of any status. The panel's Due tab shows Completed actions too so
- *    they're visible for review; the count mirrors that.
- *
- * Results are sorted reverse-chronologically by due_by.
- */
-export function filterReviewActions(
-  allActions: Action[],
-  currentSessionId: Id,
-  currentSessionDate: DateTime,
-  previousSessionDate: DateTime | null,
-  stickyIds?: Set<Id>,
-): Action[] {
-  const endOfCurrentDate = currentSessionDate.endOf("day");
-  const startOfPrevDate = previousSessionDate?.startOf("day") ?? null;
-
-  const filtered = allActions.filter((a) => {
-    if (a.coaching_session_id === currentSessionId) return false;
-    if (stickyIds?.has(a.id)) return true;
-
-    if (a.due_by.none) return false;
-    const dueBy = a.due_by.val;
-    if (dueBy > endOfCurrentDate) return false;
-    if (!startOfPrevDate || dueBy >= startOfPrevDate) return true;
-    return false;
-  });
-
-  return sortActionArray(filtered, SortOrder.Desc, "due_by");
 }

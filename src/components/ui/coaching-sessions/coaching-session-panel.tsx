@@ -38,12 +38,11 @@ import { useRefreshActionLists } from "@/lib/api/actions";
 import { useSuggestionReview } from "@/lib/hooks/use-suggestion-review";
 import { useSuggestionScan } from "@/lib/hooks/use-suggestion-scan";
 import { CoachingSessionViewApi } from "@/lib/api/coaching-session-views";
-import { useCurrentCoachingSession } from "@/lib/hooks/use-current-coaching-session";
 import { useCurrentCoachingRelationship } from "@/lib/hooks/use-current-coaching-relationship";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { getCoachName, getCoacheeName, participantNameOf } from "@/lib/utils/relationship";
 import { noName } from "@/types/membership";
-import { nonMemberIdsOf } from "@/types/coaching-relationship";
+import { nonMemberIds } from "@/lib/participants";
 import type { Goal } from "@/types/goal";
 import type { Action } from "@/types/action";
 import type { Agreement } from "@/types/agreement";
@@ -385,10 +384,8 @@ export function CoachingSessionPanel({
 }: CoachingSessionPanelProps) {
   // ── Resolve user/relationship context for actions ───────────────
   const userId = useAuthStore((state) => state.userId);
-  const { currentCoachingSession } = useCurrentCoachingSession();
   const { currentCoachingRelationship } = useCurrentCoachingRelationship();
 
-  const sessionDate = currentCoachingSession?.date;
   const nameOf = useMemo(
     () => (currentCoachingRelationship ? participantNameOf(currentCoachingRelationship) : noName),
     [currentCoachingRelationship]
@@ -798,7 +795,6 @@ export function CoachingSessionPanel({
     userId,
     coachingSessionId,
     coachingRelationshipId,
-    sessionDate,
     nameOf,
   });
   const { suggestions: actionSuggestions, refresh: refreshPending } =
@@ -1179,7 +1175,7 @@ export function CoachingSessionPanel({
   };
 
   return (
-    <NonMemberIdsProvider ids={currentCoachingRelationship ? nonMemberIdsOf(currentCoachingRelationship) : []}>
+    <NonMemberIdsProvider ids={currentCoachingRelationship ? nonMemberIds(currentCoachingRelationship) : []}>
       <CoachingSessionPanelDesktop
         {...sharedProps}
         collapsed={collapsed}

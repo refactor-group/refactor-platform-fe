@@ -3,7 +3,7 @@
  *
  * This module provides reusable factories and utilities for testing
  * action filtering, counting, and display logic across multiple components:
- * - UpcomingSessionCard (actions due by session)
+ * - NextSessionCard (actions due by session)
  * - useAssignedActions hook
  *
  * Centralizing these utilities ensures consistency and reduces duplication.
@@ -16,8 +16,7 @@ import type {
   GoalContext,
   SessionContext,
 } from "@/types/assigned-actions";
-import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
-import type { EnrichedCoachingSession } from "@/types/coaching-session";
+import { createMockRelationship } from "../test-utils";
 import { ItemStatus } from "@/types/general";
 import { Some, None } from "@/types/option";
 
@@ -162,19 +161,18 @@ export function createMockAssignedAction(
 ): AssignedActionWithContext {
   const action = createMockAction(options);
 
-  const now = DateTime.now();
-  const relationship: CoachingRelationshipWithUserNames = {
-    id: options.relationshipId,
-    coach_id: options.coachId ?? TEST_USER_IDS.COACH,
-    coachee_id: options.coacheeId ?? TEST_USER_IDS.COACHEE,
-    organization_id: "org-test",
-    created_at: now,
-    updated_at: now,
-    coach_first_name: options.coachFirstName ?? "Coach",
-    coach_last_name: options.coachLastName ?? "Name",
-    coachee_first_name: options.coacheeFirstName ?? "Coachee",
-    coachee_last_name: options.coacheeLastName ?? "Name",
-  };
+  const relationship = createMockRelationship(
+    {
+      id: options.relationshipId,
+      coach_id: options.coachId ?? TEST_USER_IDS.COACH,
+      coachee_id: options.coacheeId ?? TEST_USER_IDS.COACHEE,
+      organization_id: "org-test",
+    },
+    {
+      coach: { first_name: options.coachFirstName ?? "Coach", last_name: options.coachLastName ?? "Name" },
+      coachee: { first_name: options.coacheeFirstName ?? "Coachee", last_name: options.coacheeLastName ?? "Name" },
+    }
+  );
 
   const goal: GoalContext = {
     goalId: options.goalId ?? TEST_GOAL_IDS.GOAL_1,
@@ -191,67 +189,6 @@ export function createMockAssignedAction(
     },
     nextSession: options.nextSession ?? null,
     isOverdue: options.isOverdue ?? false,
-  };
-}
-
-/**
- * Options for creating a mock EnrichedCoachingSession
- */
-export interface MockSessionOptions {
-  id?: string;
-  date: DateTime;
-  relationshipId: string;
-  coachId?: string;
-  coacheeId?: string;
-  goalId?: string;
-  goalTitle?: string;
-}
-
-/**
- * Creates a mock EnrichedCoachingSession for testing.
- *
- * @param options - Configuration for the mock session
- * @returns A partial EnrichedCoachingSession suitable for testing
- */
-export function createMockSession(
-  options: MockSessionOptions
-): Partial<EnrichedCoachingSession> {
-  return {
-    id: options.id ?? generateTestUUID(),
-    date: options.date.toISO() ?? "",
-    coaching_relationship_id: options.relationshipId,
-    relationship: {
-      id: options.relationshipId,
-      coach_id: options.coachId ?? TEST_USER_IDS.COACH,
-      coachee_id: options.coacheeId ?? TEST_USER_IDS.COACHEE,
-      organization_id: generateTestUUID(),
-    },
-    coach: {
-      id: options.coachId ?? TEST_USER_IDS.COACH,
-      first_name: "Coach",
-      last_name: "Name",
-      email: "coach@test.com",
-      display_name: "Coach Name",
-    },
-    coachee: {
-      id: options.coacheeId ?? TEST_USER_IDS.COACHEE,
-      first_name: "Coachee",
-      last_name: "Name",
-      email: "coachee@test.com",
-      display_name: "Coachee Name",
-    },
-    goal: options.goalId
-      ? {
-          id: options.goalId,
-          title: options.goalTitle ?? "Test Goal",
-          user_id: options.coacheeId ?? TEST_USER_IDS.COACHEE,
-          coaching_session_id: options.id ?? TEST_SESSION_IDS.SESSION_1,
-          status: ItemStatus.InProgress,
-          status_changed_at: DateTime.now(),
-          created_at: DateTime.now(),
-          updated_at: DateTime.now(),
-        }
-      : undefined,
   };
 }
 

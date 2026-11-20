@@ -1,5 +1,11 @@
 import { test, expect, type Page, type Route } from '@playwright/test'
-import { setupAuthentication, mockCommonApiRoutes, MOCK_USER_ID, SINGLE_RELATIONSHIP } from './helpers'
+import {
+  setupAuthentication,
+  mockCommonApiRoutes,
+  mockRelationship,
+  sessionParticipants,
+  MOCK_USER_ID,
+} from './helpers'
 
 // Chromium only: run with --project=chromium.
 test.use({ timezoneId: 'America/Chicago', locale: 'en-US' })
@@ -17,14 +23,13 @@ const PEOPLE = [
   ['rel-s', 'sarah', 'Sarah', 'Kim'],
 ] as const
 
-const RELATIONSHIPS = PEOPLE.map(([id, coacheeId, first, last]) => ({
-  ...SINGLE_RELATIONSHIP[0],
-  id,
-  coach_id: MOCK_USER_ID,
-  coachee_id: coacheeId,
-  coachee_first_name: first,
-  coachee_last_name: last,
-}))
+const RELATIONSHIPS = PEOPLE.map(([id, coacheeId, first, last]) =>
+  mockRelationship(
+    id,
+    { coach_id: MOCK_USER_ID, coachee_id: coacheeId },
+    { coachee: { first_name: first, last_name: last } }
+  )
+)
 
 const relationship = (id: string) => RELATIONSHIPS.find((rel) => rel.id === id)!
 
@@ -41,12 +46,7 @@ const session = (id: string, relId: string, date: string, title: string) => {
     created_at: '2026-08-01T00:00:00Z',
     updated_at: '2026-08-01T00:00:00Z',
     relationship: rel,
-    coachee: {
-      id: rel.coachee_id,
-      first_name: rel.coachee_first_name,
-      last_name: rel.coachee_last_name,
-      display_name: `${rel.coachee_first_name} ${rel.coachee_last_name}`,
-    },
+    participants: sessionParticipants(rel),
   }
 }
 

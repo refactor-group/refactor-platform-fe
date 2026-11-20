@@ -118,10 +118,7 @@ vi.mock("@/lib/hooks/use-current-coaching-relationship", () => ({
       coach_id: "coach-1",
       coachee_id: "coachee-1",
       organization_id: "org-1",
-      coach_first_name: "Jim",
-      coach_last_name: "Hodapp",
-      coachee_first_name: "Caleb",
-      coachee_last_name: "Bourg",
+      participants: mockParticipants("coach-1", "coachee-1", RelationshipKind.Coaching),
     },
     isLoading: false,
     isError: false,
@@ -153,6 +150,8 @@ vi.mock("@/lib/toast", () => ({
 
 import { useCoachingSessionTopicList } from "@/lib/api/coaching-session-topics"
 import { toast as sonnerToast } from "@/lib/toast"
+import { RelationshipKind } from "@/types/coaching-relationship";
+import { mockParticipants } from "../../../test-utils";
 
 const topic = (over: Partial<CoachingSessionTopic>): CoachingSessionTopic => ({
   ...defaultCoachingSessionTopic(),

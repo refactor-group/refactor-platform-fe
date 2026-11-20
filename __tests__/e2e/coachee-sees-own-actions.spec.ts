@@ -7,6 +7,7 @@ import {
   SINGLE_RELATIONSHIP,
   mockCommonApiRoutes,
   mockRelationship,
+  sessionParticipants,
   COACHEE_VIEWER,
 } from './helpers'
 
@@ -52,6 +53,7 @@ const ENRICHED_SESSION = {
   created_at: RECENT,
   updated_at: RECENT,
   relationship: SINGLE_RELATIONSHIP[0],
+  participants: sessionParticipants(SINGLE_RELATIONSHIP[0]),
 }
 
 const SELF_ASSIGNED_ACTION = mockAction(
@@ -148,7 +150,7 @@ test.describe('Coachee viewing /actions', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             data: {
-              coachee_actions: {
+              actions_by_relationship: {
                 [MOCK_USER_ID]: [SELF_ASSIGNED_ACTION, UNASSIGNED_ACTION],
               },
             },

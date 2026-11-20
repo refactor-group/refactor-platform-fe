@@ -8,6 +8,7 @@ import {
 } from "@/types/coaching-relationship";
 import { RelationshipRole, isRelationshipRole, relationshipRoleLabel } from "@/types/relationship-role";
 import { Id } from "@/types/general";
+import { otherParticipantOf, participantName } from "@/lib/participants";
 import { type Option, Some, None } from "@/types/option";
 
 export type DisplayRole = Role | RelationshipRole
@@ -89,7 +90,7 @@ export function getUserCoaches(
   relationships: CoachingRelationshipWithUserNames[]
 ): readonly string[] {
   return getRelationshipsAsCoachee(userId, relationships)
-    .map(r => `${r.coach_first_name} ${r.coach_last_name}`);
+    .map(r => participantName(otherParticipantOf(r, userId)));
 }
 
 /** The names of the user's colleagues, in "FirstName LastName" format */
@@ -98,8 +99,6 @@ export function getUserColleagues(
   relationships: CoachingRelationshipWithUserNames[]
 ): readonly string[] {
   return getColleagueRelationships(userId, relationships).map(r =>
-    r.coach_id === userId
-      ? `${r.coachee_first_name} ${r.coachee_last_name}`
-      : `${r.coach_first_name} ${r.coach_last_name}`
+    participantName(otherParticipantOf(r, userId))
   );
 }

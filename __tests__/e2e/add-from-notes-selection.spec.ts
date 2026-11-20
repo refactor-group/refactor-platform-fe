@@ -4,6 +4,7 @@ import {
   mockCommonApiRoutes,
   MOCK_USER_ID,
   SINGLE_RELATIONSHIP,
+  mockRelationship,
 } from './helpers'
 
 // ---------------------------------------------------------------------------
@@ -23,7 +24,7 @@ const RELATIONSHIP_ID = SINGLE_RELATIONSHIP[0].id
 // Make the signed-in user the coach so the panel is editable (the add-flows
 // are hidden when readOnly), and date the session in the future so it isn't
 // treated as a past, read-only session.
-const MOCK_RELATIONSHIP = { ...SINGLE_RELATIONSHIP[0], coach_id: MOCK_USER_ID }
+const MOCK_RELATIONSHIP = mockRelationship(RELATIONSHIP_ID, { coach_id: MOCK_USER_ID })
 
 const MOCK_SESSION = {
   id: SESSION_ID,

@@ -69,12 +69,12 @@ Each of these has produced a false result before:
 
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
-| DASH-01 | Header **Add New** | COACH | Shown, with **Coaching session** only | SES-09 |
-| DASH-02 | Header **Add New** | ADMIN | Shown, with **Organization member** only | ORG-01 |
-| DASH-03 | Header **Add New** | COACHEE, MEMBER | Hidden | SES-10 |
-| DASH-04 | Upcoming card, no session today | COACH | "Your day is clear. Schedule a session to get started." plus **Schedule a coaching session** | SES-27 |
-| DASH-05 | Upcoming card, no session today | COACHEE | "…Your coach will schedule your next session.", no button | SES-28 |
-| DASH-06 | Upcoming card for S1: **Reschedule** | COACH, COACHEE | COACH: shown. COACHEE: hidden | SES-15, SES-16 |
+| DASH-01 | Week panel **Schedule session** | COACH | Shown | SES-09 |
+| DASH-02 | Members page **Add Member** (User menu **Members**) | ADMIN | Shown | ORG-01 |
+| DASH-03 | Week panel **Schedule session** | COACHEE, MEMBER | Hidden | SES-10 |
+| DASH-04 | Next session card, no session left this week | COACH | "No more sessions this week." and "Check back on Monday." plus **Schedule a session** | SES-27 |
+| DASH-05 | Next session card, no session left this week | COACHEE | Same copy, no button | SES-28 |
+| DASH-06 | Reschedule for S1 on the week grid card menu (the Next session card has no Reschedule) | COACH, COACHEE | COACH: shown. COACHEE: hidden | SES-15, SES-16 |
 | DASH-07 | Goals card for S1 | COACH: "{Coachee}'s active goals"; COACHEE: "Your active goals" | Both list G1 | GOAL-19 |
 | DASH-08 | Week grid: **Schedule session**, person filter, empty-day **Schedule on {day}** | COACH, COACHEE | COACH: shown; the filter lists only people COACH coaches. COACHEE: hidden | SES-09, REL-01 |
 | DASH-09 | Week grid card S1: drag to move, phone **Move** | COACH, COACHEE | COACH: movable; a move sends `PUT /coaching_sessions/S1`. COACHEE: not movable | SES-15, SES-16 |
@@ -89,7 +89,7 @@ Each of these has produced a false result before:
 | ID | Control | Viewer | Expected | BE |
 |---|---|---|---|---|
 | NEW-01 | Who list | COACH | COACHEE only. REMOVED (R3) is not offered: scheduling with someone who left the org is refused (MEM-10) | REL-01, SES-09 |
-| NEW-02 | Dialog entry points | COACHEE | None: Add New, Schedule session and Schedule on {day} are all hidden (DASH-03, DASH-08) | SES-10 |
+| NEW-02 | Dialog entry points | COACHEE | None: Schedule session and Schedule on {day} are both hidden (DASH-03, DASH-08) | SES-10 |
 | NEW-03 | Clash step: one overlapping session the viewer coaches | COACH | Prompt "Pick a new time for {name}, or keep both.", day circles and time chips to move the other session, and the button "Or keep both at {time}" | SES-15 |
 | NEW-04 | Submit | COACH | `POST /coaching_sessions` (or `/coaching_session_series` when repeating) returns 200, and the session appears on the grid | SES-09, SER-01 |
 

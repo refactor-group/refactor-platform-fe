@@ -19,7 +19,7 @@ Results go in the PR for the layer under test, not in this plan.
 6. Narrow widths: DevTools device toolbar at 375×812, plus a desktop window 899px wide.
 7. Forcing an error without changing data: in Chrome DevTools open **Network**, then **Block request URL**, and block the request the case names. Remove the block afterwards.
 
-Open the dialog from the dashboard: **Add New › Coaching session**, or **Schedule a coaching session** on the empty Upcoming card.
+Open the dialog from the dashboard: **Schedule session** in the week panel.
 
 ## 2. Part A: shell and geometry (#524, checked through the dialog)
 
@@ -107,7 +107,7 @@ Pick A.
 
 Log in as a coach with no people in this organization.
 
-**Pass:** Add New has no Coaching session item, so the dialog can't open onto an empty grid.
+**Pass:** the week panel has no Schedule session button, so the dialog can't open onto an empty grid.
 
 ### Case B6: order and sub-lines
 
@@ -371,9 +371,15 @@ Try offline (block all requests), with Google disconnected (revoke it in Setting
 
 ### Case F5: meeting line
 
-Look at the rail footer with Google connected, Zoom connected, and neither.
+Look at the rail footer with Google connected, Zoom connected, and neither. A test coach with no provider works for neither (e.g. dmanley).
 
-**Pass:** "Google Meet link included", "Zoom link included", and no line.
+**Pass:** "Google Meet link included", then "Zoom link included". With neither, an amber warning icon and "No meeting link. Connect Google Meet or Zoom in Settings." "Settings" shows an external-link icon. A screen reader announces it as "Settings (opens in a new tab)". Nothing about the meeting link flashes while the dialog opens. Rescheduling never shows the line.
+
+### Case F5b: connect from the warning
+
+With no provider connected, choose a person, a time and a repeat. Then click Settings in the warning.
+
+**Pass:** Integrations opens in a new tab, and the dialog stays open in the first tab with every choice kept. Connect Google Meet or Zoom in the new tab, then switch back. Within a moment the warning becomes "{Provider} link included" without a reload. Scheduling now creates a session with a meeting link.
 
 ### Case F6: more create errors
 

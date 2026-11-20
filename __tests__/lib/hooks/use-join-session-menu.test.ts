@@ -35,14 +35,10 @@ vi.mock("@/lib/api/coaching-sessions", async (importOriginal) => ({
 const NOW = DateTime.fromISO("2026-08-25T19:00:00Z", { zone: "utc" });
 
 const rel = (id: string, coacheeId: string, first: string, last: string) =>
-  createMockRelationship({
-    id,
-    coach_id: "me",
-    coachee_id: coacheeId,
-    coachee_first_name: first,
-    coachee_last_name: last,
-    coachee_email: `${coacheeId}@example.com`,
-  });
+  createMockRelationship(
+    { id, coach_id: "me", coachee_id: coacheeId },
+    { coachee: { first_name: first, last_name: last, email: `${coacheeId}@example.com` } }
+  );
 
 const RELATIONSHIPS = [
   rel("rel-z", "zed", "Zed", "Adams"),
@@ -51,12 +47,13 @@ const RELATIONSHIPS = [
   rel("rel-e2", "ehab", "Ehab", "Badawi"),
 ];
 
+const { participants: PRIYA_PARTICIPANTS, ...PRIYA_RELATIONSHIP } = RELATIONSHIPS[1];
 const PRIYA_TODAY = createMockEnrichedSession({
   id: "priya-today",
   coaching_relationship_id: "rel-p",
   date: "2026-08-25T21:30:00",
-  relationship: { ...RELATIONSHIPS[1], coach_id: "me" },
-  coachee: { ...createMockEnrichedSession().coachee!, id: "priya", first_name: "Priya", last_name: "Raman" },
+  relationship: PRIYA_RELATIONSHIP,
+  participants: Some(PRIYA_PARTICIPANTS),
 });
 
 const EHAB_CURRENT = createMockSession({

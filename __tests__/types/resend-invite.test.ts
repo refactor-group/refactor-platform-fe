@@ -9,11 +9,11 @@ const conflict = (details: Record<string, unknown>) =>
   });
 
 describe("toResendInviteFailure", () => {
-  it("keeps a refusal because the coachee left, with the error for the toast", () => {
-    const error = conflict({ reason: "coachee_not_a_member", organization_id: "org-1" });
+  it("keeps a refusal because the other participant left, with the error for the toast", () => {
+    const error = conflict({ reason: "participant_not_a_member", organization_id: "org-1" });
     expect(toResendInviteFailure(error)).toEqual({
       kind: "not_a_member",
-      refusal: { reason: "coachee_not_a_member", userId: None, organizationId: Some("org-1") },
+      refusal: { reason: "participant_not_a_member", userId: None, organizationId: Some("org-1") },
     });
   });
 

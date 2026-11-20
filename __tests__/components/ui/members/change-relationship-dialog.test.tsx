@@ -6,6 +6,7 @@ import { toast } from "@/lib/toast";
 import { EntityApiError } from "@/types/entity-api-error";
 import { type CoachingRelationshipWithUserNames, RelationshipKind } from "@/types/coaching-relationship";
 import type { User } from "@/types/user";
+import { createMockRelationship } from "../../../test-utils";
 
 const changeKind = vi.fn();
 vi.mock("@/lib/api/coaching-relationships", () => ({
@@ -21,18 +22,12 @@ const showNotAMember = vi.fn();
 vi.mock("@/lib/hooks/use-not-a-member-toast", () => ({ useNotAMemberToast: () => showNotAMember }));
 
 const CARA = { id: "cara", first_name: "Cara", last_name: "Test", email: "cara@example.com" } as User;
-const PAT_COACHES_CARA = {
-  id: "rel-1",
-  coach_id: "pat",
-  coach_first_name: "Pat",
-  coach_last_name: "Coach",
-  coachee_id: "cara",
-  coachee_first_name: "Cara",
-  coachee_last_name: "Test",
-  kind: RelationshipKind.Coaching,
-  coach_is_member: true,
-  coachee_is_member: true,
-} as CoachingRelationshipWithUserNames;
+const patAndCara = (kind: RelationshipKind) =>
+  createMockRelationship(
+    { id: "rel-1", coach_id: "pat", coachee_id: "cara", kind },
+    { coach: { first_name: "Pat", last_name: "Coach" }, coachee: CARA }
+  );
+const PAT_COACHES_CARA = patAndCara(RelationshipKind.Coaching);
 
 const conflict = (details: Record<string, unknown>) =>
   new EntityApiError(
@@ -206,7 +201,7 @@ describe("ChangeRelationshipDialog", () => {
     await screen.findByText("Cara Test will see 3 actions assigned to Pat Coach");
 
     // Another admin made them colleagues meanwhile.
-    rerender([{ ...PAT_COACHES_CARA, kind: RelationshipKind.Colleague }]);
+    rerender([patAndCara(RelationshipKind.Colleague)]);
     expect(screen.getByRole("radio", { name: "Colleague (current)" })).toBeChecked();
     expect(screen.getByText("Choose a different role")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Change relationship" })).not.toBeInTheDocument();

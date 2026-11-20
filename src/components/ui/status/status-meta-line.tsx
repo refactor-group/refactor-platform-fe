@@ -6,6 +6,7 @@ import {
   statusMetaClass,
   type StatusMetaInput,
 } from "@/components/ui/status/status-meta";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 
 interface StatusMetaLineProps extends StatusMetaInput {
   locale: string;
@@ -14,7 +15,7 @@ interface StatusMetaLineProps extends StatusMetaInput {
 
 /** "Due Aug 20", "Done Aug 15", "Paused · was due Aug 18" or "Closed Aug 13"; nothing for an open, undated item. */
 export function StatusMetaLine({ locale, className, ...input }: StatusMetaLineProps) {
-  const meta = statusMeta(input, DateTime.now());
+  const meta = statusMeta(input, DateTime.now().setZone(useUserTimezone()));
   const text = formatStatusMeta(meta, locale);
   if (text.none) return null;
   return (

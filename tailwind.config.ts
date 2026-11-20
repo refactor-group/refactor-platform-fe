@@ -69,6 +69,11 @@ const config = {
   				DEFAULT: 'hsl(var(--warning))',
   				text: 'hsl(var(--warning-text))'
   			},
+  			error: {
+  				DEFAULT: 'hsl(var(--error))',
+  				tint: 'hsl(var(--error-tint))',
+  				border: 'hsl(var(--error-border))'
+  			},
   			'on-hold': {
   				ring: 'hsl(var(--on-hold-ring))',
   				fill: 'hsl(var(--on-hold-fill))',

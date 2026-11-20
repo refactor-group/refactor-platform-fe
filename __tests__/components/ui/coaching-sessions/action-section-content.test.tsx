@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DateTime } from "ts-luxon";
+import { useSearchParams } from "next/navigation";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ActionSectionContent } from "@/components/ui/coaching-sessions/action-section-content";
 import { Some } from "@/types/option";
@@ -42,6 +43,11 @@ vi.mock("@/components/ui/coaching-sessions/action-card-parts", async () => {
     ),
   };
 });
+
+const replaceSearchParams = vi.fn();
+vi.mock("@/lib/hooks/use-replace-search-params", () => ({
+  useReplaceSearchParams: () => replaceSearchParams,
+}));
 
 function Wrapper({ children }: { children: ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
@@ -152,6 +158,60 @@ describe("ActionSectionContent", () => {
       expect(reviewContent.textContent).toContain("Review action one");
     });
 
+    it("opens on the 'Due' tab with ?actions=due", () => {
+      vi.mocked(useSearchParams).mockReturnValueOnce(
+        new URLSearchParams({ actions: "due" }) as never
+      );
+
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps()} />
+        </Wrapper>
+      );
+
+      expect(screen.getByTestId("action-tab-due")).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByTestId("action-tab-new")).toHaveAttribute("aria-selected", "false");
+    });
+
+    it("drops ?actions from the URL once applied, keeping other params", () => {
+      vi.mocked(useSearchParams).mockReturnValueOnce(
+        new URLSearchParams({ actions: "due" }) as never
+      );
+
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps()} />
+        </Wrapper>
+      );
+
+      expect(replaceSearchParams).toHaveBeenCalledTimes(1);
+      const params = new URLSearchParams("panel=actions&actions=due");
+      replaceSearchParams.mock.calls[0][0](params);
+      expect(params.get("panel")).toBe("actions");
+      expect(params.has("actions")).toBe(false);
+    });
+
+    it("leaves the URL alone without ?actions", () => {
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps()} />
+        </Wrapper>
+      );
+
+      expect(replaceSearchParams).not.toHaveBeenCalled();
+    });
+
+    it("selects the 'New' tab without ?actions=due", () => {
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps()} />
+        </Wrapper>
+      );
+
+      expect(screen.getByTestId("action-tab-new")).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByTestId("action-tab-due")).toHaveAttribute("aria-selected", "false");
+    });
+
     it("calls onActiveTabChange when tab switches", async () => {
       const user = userEvent.setup();
       const onActiveTabChange = vi.fn();
@@ -166,6 +226,54 @@ describe("ActionSectionContent", () => {
 
       await user.click(screen.getByTestId("action-tab-due"));
       expect(onActiveTabChange).toHaveBeenCalledWith("due");
+    });
+
+    it("reports the initial 'Due' tab from ?actions=due", () => {
+      vi.mocked(useSearchParams).mockReturnValueOnce(
+        new URLSearchParams({ actions: "due" }) as never
+      );
+      const onActiveTabChange = vi.fn();
+
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps({ onActiveTabChange })} />
+        </Wrapper>
+      );
+
+      expect(onActiveTabChange).toHaveBeenCalledWith("due");
+    });
+
+    it("reports the initial 'New' tab without ?actions=due", () => {
+      const onActiveTabChange = vi.fn();
+
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps({ onActiveTabChange })} />
+        </Wrapper>
+      );
+
+      expect(onActiveTabChange).toHaveBeenCalledWith("new");
+    });
+
+    it("reports each tab click exactly once", async () => {
+      vi.mocked(useSearchParams).mockReturnValueOnce(
+        new URLSearchParams({ actions: "due" }) as never
+      );
+      const user = userEvent.setup();
+      const onActiveTabChange = vi.fn();
+
+      render(
+        <Wrapper>
+          <ActionSectionContent {...baseProps({ onActiveTabChange })} />
+        </Wrapper>
+      );
+      expect(onActiveTabChange.mock.calls).toEqual([["due"]]);
+
+      await user.click(screen.getByTestId("action-tab-new"));
+      expect(onActiveTabChange.mock.calls).toEqual([["due"], ["new"]]);
+
+      await user.click(screen.getByTestId("action-tab-due"));
+      expect(onActiveTabChange.mock.calls).toEqual([["due"], ["new"], ["due"]]);
     });
   });
 

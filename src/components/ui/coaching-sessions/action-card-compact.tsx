@@ -44,6 +44,7 @@ import type { NoteField } from "@/types/note-selection";
 import { useFieldPrefill } from "@/lib/hooks/use-field-prefill";
 import { cn } from "@/components/lib/utils";
 import { DateTime } from "ts-luxon";
+import { useUserTimezone } from "@/lib/hooks/use-user-timezone";
 
 // Open all markdown links in a new tab
 const markdownComponents = {
@@ -378,8 +379,10 @@ function ActionBackView({
   onEdit: () => void;
   onDelete?: () => void;
 }) {
+  const timezone = useUserTimezone();
   const formattedSessionDate = sourceSessionDate
-    ?.setLocale(locale)
+    ?.setZone(timezone)
+    .setLocale(locale)
     .toLocaleString(DateTime.DATE_MED);
 
   return (

@@ -1,9 +1,15 @@
 import { DateTime } from "ts-luxon";
 import { toSessionDate } from "@/lib/session-window";
-import type { CoachingRelationshipWithUserNames } from "@/types/coaching-relationship";
+import { type CoachingRelationshipWithUserNames, RelationshipKind } from "@/types/coaching-relationship";
 import type { EnrichedCoachingSession } from "@/types/coaching-session";
 import { None, Some } from "@/types/option";
-import { COACHEE_VIEWER, COACH_VIEWER, createMockEnrichedSession, createMockRelationship } from "../../test-utils";
+import {
+  COACHEE_VIEWER,
+  COACH_VIEWER,
+  createMockEnrichedSession,
+  createMockRelationship,
+  mockParticipants,
+} from "../../test-utils";
 
 /**
  * A coach ("me") in America/Chicago on Monday, August 17, 2026 at 10:00 AM.
@@ -29,51 +35,27 @@ const SARA: Person = { id: "sara", first: "Sara", last: "Lin" };
 const BOSS: Person = { id: "boss", first: "Boss", last: "Person" };
 
 const emailOf = (person: Person) => `${person.first.toLowerCase()}@example.com`;
+const JIM_SEAT = { first_name: "Jim", last_name: "Hodapp", email: "jim@example.com" };
+const seatOf = (person: Person) => ({ first_name: person.first, last_name: person.last, email: emailOf(person) });
 
 const coaching = (id: string, person: Person): CoachingRelationshipWithUserNames =>
-  createMockRelationship({
-    id,
-    coach_id: ME,
-    coachee_id: person.id,
-    coach_first_name: "Jim",
-    coach_last_name: "Hodapp",
-    coachee_first_name: person.first,
-    coachee_last_name: person.last,
-    coach_email: "jim@example.com",
-    coachee_email: emailOf(person),
-  });
+  createMockRelationship(
+    { id, coach_id: ME, coachee_id: person.id },
+    { coach: JIM_SEAT, coachee: seatOf(person) }
+  );
 
 export const RELATIONSHIPS: CoachingRelationshipWithUserNames[] = [
   coaching("rel-d", DANA),
   coaching("rel-e", EHAB),
   coaching("rel-p", PRIYA),
   coaching("rel-s", SARA),
-  createMockRelationship({
-    id: "rel-b",
-    coach_id: BOSS.id,
-    coachee_id: ME,
-    coach_first_name: BOSS.first,
-    coach_last_name: BOSS.last,
-    coachee_first_name: "Jim",
-    coachee_last_name: "Hodapp",
-    coach_email: emailOf(BOSS),
-    coachee_email: "jim@example.com",
-    viewer: COACHEE_VIEWER,
-  }),
+  createMockRelationship(
+    { id: "rel-b", coach_id: BOSS.id, coachee_id: ME, viewer: COACHEE_VIEWER },
+    { coach: seatOf(BOSS), coachee: JIM_SEAT }
+  ),
 ];
 
 const base = createMockEnrichedSession();
-
-function user(person: Person) {
-  return {
-    ...base.coachee!,
-    id: person.id,
-    first_name: person.first,
-    last_name: person.last,
-    email: emailOf(person),
-    display_name: `${person.first} ${person.last}`,
-  };
-}
 
 interface SessionSpec {
   id: string;
@@ -87,8 +69,9 @@ interface SessionSpec {
 }
 
 export function session(spec: SessionSpec): EnrichedCoachingSession {
-  const me = { ...base.coach!, id: ME, first_name: "Jim", last_name: "Hodapp" };
-  const other = user(spec.person);
+  const coachId = spec.asCoachee ? spec.person.id : ME;
+  const coacheeId = spec.asCoachee ? ME : spec.person.id;
+  const [coach, coachee] = spec.asCoachee ? [seatOf(spec.person), JIM_SEAT] : [JIM_SEAT, seatOf(spec.person)];
   return createMockEnrichedSession({
     id: spec.id,
     coaching_relationship_id: spec.relationshipId,
@@ -98,13 +81,23 @@ export function session(spec: SessionSpec): EnrichedCoachingSession {
     relationship: {
       ...base.relationship!,
       id: spec.relationshipId,
-      coach_id: spec.asCoachee ? spec.person.id : ME,
-      coachee_id: spec.asCoachee ? ME : spec.person.id,
+      coach_id: coachId,
+      coachee_id: coacheeId,
       viewer: spec.asCoachee ? COACHEE_VIEWER : COACH_VIEWER,
     },
-    coach: spec.asCoachee ? other : me,
-    coachee: spec.asCoachee ? me : other,
+    participants: Some(mockParticipants(coachId, coacheeId, RelationshipKind.Coaching, { coach, coachee })),
   });
+}
+
+/** `s` with someone else in its coach seat, so it isn't mine to move. */
+export function coachedBySomeoneElse(s: EnrichedCoachingSession): EnrichedCoachingSession {
+  if (!s.relationship || s.participants.none) throw new Error("Needs a session read with its relationship");
+  const [coach, coachee] = s.participants.val;
+  return {
+    ...s,
+    relationship: { ...s.relationship, coach_id: "someone-else", viewer: COACHEE_VIEWER },
+    participants: Some([{ ...coach, id: "someone-else" }, coachee]),
+  };
 }
 
 export const E_04 = session({ id: "e-04", relationshipId: "rel-e", person: EHAB, start: "2026-08-04T14:30", series: "series-e" });

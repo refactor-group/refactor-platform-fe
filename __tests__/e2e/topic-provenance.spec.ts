@@ -4,6 +4,7 @@ import {
   mockCommonApiRoutes,
   MOCK_USER_ID,
   COACHEE_VIEWER,
+  mockRelationship,
 } from './helpers'
 
 // The carried-over provenance line only renders inside the Radix HoverCard on
@@ -20,24 +21,11 @@ const MOCK_SESSION = {
   updated_at: '2026-03-01T00:00:00Z',
 }
 
-const COACHEE_RELATIONSHIP = {
-  id: REL_ID,
+const COACHEE_RELATIONSHIP = mockRelationship(REL_ID, {
   coach_id: 'coach-1',
   coachee_id: MOCK_USER_ID,
-  organization_id: 'org-1',
-  coach_first_name: 'John',
-  coach_last_name: 'Doe',
-  coachee_first_name: 'Jane',
-  coachee_last_name: 'Smith',
-  created_at: '2024-01-01T00:00:00Z',
-  updated_at: '2024-01-01T00:00:00Z',
-  kind: 'coaching',
-  coach_is_member: true,
-  coachee_is_member: true,
   viewer: COACHEE_VIEWER,
-  suggests_actions: true,
-  scheduling_blocked_by: null,
-}
+})
 
 const makeTopic = (over: Record<string, unknown> = {}) => ({
   id: 'topic-1',

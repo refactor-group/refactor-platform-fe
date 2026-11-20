@@ -11,7 +11,7 @@ import { Id } from "@/types/general";
 import {
   type Action,
   type ActionWithAssigneesWire,
-  type BatchCoacheeActionsResponse,
+  type BatchRelationshipActionsResponse,
   transformActionWithAssignees,
 } from "@/types/action";
 import {
@@ -92,8 +92,8 @@ async function fetchSingleRelationshipActions(url: string): Promise<Action[]> {
 /** Fetches actions for all relationships. Flattens grouped response into flat Action[]. */
 async function fetchBatchRelationshipActions(url: string): Promise<Action[]> {
   const response =
-    await sessionGuard.get<ApiResponse<BatchCoacheeActionsResponse>>(url);
-  const grouped = response.data.data.coachee_actions;
+    await sessionGuard.get<ApiResponse<BatchRelationshipActionsResponse>>(url);
+  const grouped = response.data.data.actions_by_relationship;
   return Object.values(grouped).flat().map(transformActionWithAssignees);
 }
 

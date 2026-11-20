@@ -8,7 +8,7 @@ import {
 // As of the dashboard sessions-card refactor, the dashboard no longer renders
 // the visible CoachingRelationshipSelector. The remaining behavior worth
 // asserting is that single-relationship auto-selection STILL happens on
-// dashboard mount — UpcomingSessionCard and GoalsOverviewCard depend on a
+// dashboard mount; NextSessionCard and GoalsOverviewCard depend on a
 // selected `currentCoachingRelationshipId` to render their populated state.
 test.describe('Dashboard relationship state', () => {
   test('the visible relationship selector is no longer present on the dashboard', async ({
