@@ -145,13 +145,11 @@ function panelHref(sessionId: Id, panel: PanelSection): string {
   return `/coaching-sessions/${sessionId}?panel=${panel}`;
 }
 
-// Holds an inert slot while loading so the list doesn't shift when `previous` lands.
-function agreementsRow(loading: boolean, previous: Option<CoachingSession>): GlanceRow[] {
+// Holds an inert slot unless there is a previous session, so the list stays four rows.
+function agreementsRow(loading: boolean, previous: Option<CoachingSession>): GlanceRow {
   const row = { label: "Agreements from last session", value: { kind: GlanceValueKind.None } } as const;
-  if (loading) return [{ ...row, href: "#", hidden: true }];
-  return previous.some
-    ? [{ ...row, href: panelHref(previous.val.id, PanelSection.Agreements), hidden: false }]
-    : [];
+  if (loading || previous.none) return { ...row, href: "#", hidden: true };
+  return { ...row, href: panelHref(previous.val.id, PanelSection.Agreements), hidden: false };
 }
 
 function glanceRows(
@@ -182,7 +180,7 @@ function glanceRows(
     href: panelHref(session.id, PanelSection.Goals),
     hidden: false,
   };
-  return [topics, actions, ...agreements, goals];
+  return [topics, actions, agreements, goals];
 }
 
 function NextSessionBody({

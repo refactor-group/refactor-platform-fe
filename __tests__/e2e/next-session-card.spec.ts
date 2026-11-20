@@ -114,6 +114,9 @@ interface Scenario {
   delayMs?: number
   /** While true, the user's sessions answer 500. */
   failing?: { value: boolean }
+  /** Jane's relationship session list; defaults to her previous and today's sessions. */
+  janeSessions?: Session[]
+  janeDelayMs?: number
 }
 
 async function open(page: Page, context: BrowserContext, scenario: Scenario) {
@@ -145,9 +148,11 @@ async function open(page: Page, context: BrowserContext, scenario: Scenario) {
   )
   await page.route(
     (url) => url.pathname === '/coaching_sessions' && url.searchParams.has('coaching_relationship_id'),
-    (route) => {
+    async (route) => {
       const rel = new URL(route.request().url()).searchParams.get('coaching_relationship_id')
-      return route.fulfill(json(rel === COACHING_JANE.id ? [JANE_PREV, JANE_TODAY] : []))
+      if (scenario.janeDelayMs) await new Promise((r) => setTimeout(r, scenario.janeDelayMs))
+      const jane = scenario.janeSessions ?? [JANE_PREV, JANE_TODAY]
+      return route.fulfill(json(rel === COACHING_JANE.id ? jane : []))
     }
   )
   await page.route(
@@ -287,7 +292,7 @@ test.describe('Next session card on a desktop', () => {
 
     const includes = (url: URL) => (url.searchParams.get('include') ?? '').split(',')
     const thisWeek = requests.filter((url) => url.searchParams.get('from_date') === '2026-11-16')
-    expect(thisWeek.length).toBeGreaterThan(0)
+    expect(thisWeek).toHaveLength(1)
     for (const url of thisWeek) expect(includes(url)).toContain('goal')
     for (const url of requests) expect(includes(url)).not.toContain('organization')
   })
@@ -352,6 +357,19 @@ test.describe('Next session card on a desktop', () => {
     await expect(nextCard(page).locator('.animate-pulse')).toHaveCount(0)
     await opened
     await expect(headline(page)).toHaveText('Today with Jane at 2:30 PM')
+    const after = (await nextCard(page).boundingBox())!.height
+    expect(Math.abs(after - before)).toBeLessThanOrEqual(1)
+  })
+
+  test('(7.3b) a first session keeps the card height', async ({ page, context }) => {
+    const listed = page.waitForResponse(
+      (res) => new URL(res.url()).pathname === '/coaching_sessions' && res.url().includes('coaching_relationship_id')
+    )
+    await open(page, context, { sessions: ALL, janeSessions: [JANE_TODAY], janeDelayMs: 1500 })
+    await expect(headline(page)).toHaveText('Today with Jane at 2:30 PM')
+    const before = (await nextCard(page).boundingBox())!.height
+    await listed
+    await expect(rowValue(page, 'Actions due')).toHaveText(/\S/)
     const after = (await nextCard(page).boundingBox())!.height
     expect(Math.abs(after - before)).toBeLessThanOrEqual(1)
   })

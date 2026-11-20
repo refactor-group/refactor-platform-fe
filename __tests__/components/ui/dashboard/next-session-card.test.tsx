@@ -243,7 +243,7 @@ describe("NextSessionCard populated", () => {
 
     expect(screen.getAllByText("None yet")).toHaveLength(2);
     expect(screen.getAllByText("None")).toHaveLength(1);
-    expect(screen.queryByText("Agreements from last session")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Agreements from last session/ })).toBeNull();
   });
 
   it("says Couldn't load, not None, when actions fail", () => {
@@ -281,12 +281,16 @@ describe("NextSessionCard populated", () => {
     expect(screen.queryByRole("link", { name: /Agreements from last session/ })).toBeNull();
   });
 
-  it("drops the Agreements row once loaded with no previous session", () => {
+  it("keeps an inert Agreements slot once loaded with no previous session", () => {
     setNext({ session: Some(sessionAt("15:05")) });
     setActionsDue({ kind: ActionsDueKind.None }, None);
     const { container } = renderCard();
 
-    expect(container.querySelectorAll("ul > li")).toHaveLength(3);
+    expect(container.querySelectorAll("ul > li")).toHaveLength(4);
+    const box = screen.getByText("Agreements from last session");
+    expect(box).toHaveClass("invisible");
+    expect(box).toHaveAttribute("inert");
+    expect(screen.queryByRole("link", { name: /Agreements from last session/ })).toBeNull();
   });
 
   it("counts actions due when none are overdue", () => {
