@@ -1,4 +1,6 @@
 import { organizationArchivedMessage } from "@/lib/api/organization-errors";
+import { providerName } from "@/lib/scheduling-copy";
+import { Provider } from "@/types/provider";
 import {
   EntityApiError,
   PERMISSION_DENIED_MESSAGE,
@@ -37,12 +39,10 @@ function invalidTarget(write: SessionWrite): string {
   return write === SessionWrite.CreateSeries ? "the recurring sessions" : "the session";
 }
 
-function toastMessage(error: EntityApiError, write: SessionWrite, withMeetLink: boolean): string {
+function toastMessage(error: EntityApiError, write: SessionWrite): string {
   if (error.isNetworkError()) {
     return `Couldn't ${verb(write)} the session · Check your connection and try again`;
   }
-  // A 502 is any service the backend calls, so only blame Meet when a link was asked for.
-  if (error.status === 502 && withMeetLink) return "Couldn't create the Google Meet link · Try again";
   if (error.status !== undefined && error.status >= 500) {
     return `Couldn't ${verb(write)} the session · Something went wrong on our end. Try again in a few minutes`;
   }
@@ -63,16 +63,21 @@ function hasContentConflict(error: EntityApiError, write: SessionWrite): boolean
   return write === SessionWrite.RescheduleSeries && hasSessionContent(error);
 }
 
-/** `withMeetLink`: the write asked for a Google Meet link. */
-export function sessionWriteFailure(error: unknown, write: SessionWrite, withMeetLink: boolean): SessionWriteFailure {
+function revokedProviderName(data: unknown): string {
+  const provider = (data as { provider?: unknown } | undefined)?.provider;
+  const known = Object.values(Provider).find((p) => p === provider);
+  return known ? providerName(known) : "Your meeting provider";
+}
+
+export function sessionWriteFailure(error: unknown, write: SessionWrite): SessionWriteFailure {
   if (!(error instanceof EntityApiError)) return { kind: "unexpected" };
   if (hasContentConflict(error, write)) {
     return { kind: "toast", message: "Some later sessions have notes or actions · Keep enough sessions to cover them" };
   }
   if (error.status === 409 && error.data?.error === "oauth_token_revoked") {
-    return { kind: "reconnect", message: "Google Meet is disconnected · Reconnect it in Settings" };
+    return { kind: "reconnect", message: `${revokedProviderName(error.data)} is disconnected · Reconnect it in Settings` };
   }
   const archivedMessage = organizationArchivedMessage(error);
   if (archivedMessage !== null) return { kind: "toast", message: archivedMessage };
-  return { kind: "toast", message: toastMessage(error, write, withMeetLink) };
+  return { kind: "toast", message: toastMessage(error, write) };
 }

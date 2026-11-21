@@ -180,7 +180,7 @@ export function useScheduleSubmit(onClose: () => void): ScheduleSubmit {
       onClose();
       return;
     }
-    const failure = sessionWriteFailure(error, writeKind(plan), plan.kind === "schedule" && plan.provider.some);
+    const failure = sessionWriteFailure(error, writeKind(plan));
     const logMessage = `Failed to ${plan.kind === "schedule" ? "schedule" : "reschedule"} coaching session:`;
     switch (failure.kind) {
       case "reconnect":

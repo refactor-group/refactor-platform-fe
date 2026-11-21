@@ -119,7 +119,7 @@ describe("NewSessionDialog: move draft", () => {
 
 describe("NewSessionDialog: move errors", () => {
   it("sends a revoked Google connection to Settings", async () => {
-    move.mockRejectedValue(apiError(409, { error: "oauth_token_revoked" }));
+    move.mockRejectedValue(apiError(409, { error: "oauth_token_revoked", provider: "google" }));
     const onClose = renderMove(ONE_OFF);
     rescheduleToThursday();
     await waitFor(() => expect(push).toHaveBeenCalledWith("/settings/integrations"));
