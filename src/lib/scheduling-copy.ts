@@ -208,7 +208,7 @@ export function createsLine(count: number, firstName: string): string {
   return `${sessionCount(count)} with ${firstName}`;
 }
 
-function providerName(provider: Provider): string {
+export function providerName(provider: Provider): string {
   switch (provider) {
     case Provider.Google:
       return "Google Meet";

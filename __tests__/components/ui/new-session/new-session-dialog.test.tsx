@@ -546,7 +546,7 @@ describe("NewSessionDialog: submit", () => {
   });
 
   it("sends a revoked Google connection to Settings", async () => {
-    create.mockRejectedValue(apiError(409, { error: "oauth_token_revoked" }));
+    create.mockRejectedValue(apiError(409, { error: "oauth_token_revoked", provider: "google" }));
     const onClose = readyToSchedule();
     fireEvent.click(screen.getByRole("button", { name: "Schedule session" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/settings/integrations"));

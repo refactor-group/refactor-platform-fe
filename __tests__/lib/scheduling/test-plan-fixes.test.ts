@@ -94,11 +94,11 @@ describe("sessionWriteFailure: fallback", () => {
     );
 
   it("says session, like every other session write message", () => {
-    expect(sessionWriteFailure(serverError(), SessionWrite.Create, false)).toEqual({
+    expect(sessionWriteFailure(serverError(), SessionWrite.Create)).toEqual({
       kind: "toast",
       message: "Couldn't create the session · Something went wrong on our end. Try again in a few minutes",
     });
-    expect(sessionWriteFailure(serverError(), SessionWrite.RescheduleSeries, false)).toEqual({
+    expect(sessionWriteFailure(serverError(), SessionWrite.RescheduleSeries)).toEqual({
       kind: "toast",
       message: "Couldn't update the session · Something went wrong on our end. Try again in a few minutes",
     });
