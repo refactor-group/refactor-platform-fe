@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useContext, useId, useMemo } from "react";
-import type { CSSProperties, KeyboardEvent, ReactNode, RefObject, SyntheticEvent } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef } from "react";
+import type { AnimationEvent, CSSProperties, KeyboardEvent, ReactNode, RefObject, SyntheticEvent } from "react";
 import Link from "next/link";
 import { useDraggable } from "@dnd-kit/core";
 import { ArrowRight, Check } from "lucide-react";
@@ -25,6 +25,7 @@ export interface SessionCardHandlers {
   onAction: OnSessionAction;
   onOpen: (view: CardView) => void;
   onMove?: (view: CardView) => void;
+  onHighlightEnd?: () => void;
 }
 
 export enum SessionCardLayout {
@@ -35,10 +36,14 @@ export enum SessionCardLayout {
 export interface SessionCardProps extends SessionCardHandlers {
   view: CardView;
   dimmed?: boolean;
+  /** Just jumped to: flashes once and takes focus. */
+  highlighted?: boolean;
   layout?: SessionCardLayout;
   /** Present where cards drag; true just after a drag, so its trailing click is ignored. */
   justDragged?: Option<RefObject<boolean>>;
 }
+
+const HIGHLIGHT_CLASS = "animate-week-highlight motion-reduce:animate-week-highlight-still";
 
 const CARD_HINT = "Enter opens the session. Shift+F10 shows actions.";
 
@@ -83,11 +88,13 @@ function CardHintText({ ids }: { ids: CardHintIds }) {
 export function SessionCard({
   view,
   dimmed = false,
+  highlighted = false,
   layout = SessionCardLayout.Grid,
   justDragged = None,
   onAction,
   onOpen,
   onMove,
+  onHighlightEnd,
 }: SessionCardProps) {
   const isPast = view.tense === CardTense.Past;
   const isAgenda = layout === SessionCardLayout.Agenda;
@@ -103,6 +110,13 @@ export function SessionCard({
     if (justDragged.some && justDragged.val.current) return;
     onOpen(view);
   };
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (highlighted) cardRef.current?.focus({ preventScroll: true });
+  }, [highlighted]);
+  const onAnimationEnd = (e: AnimationEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget && e.animationName === "highlight-tint") onHighlightEnd?.();
+  };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" && e.target === e.currentTarget) onOpen(view);
     listeners?.onKeyDown?.(e);
@@ -112,10 +126,14 @@ export function SessionCard({
     <>
       <SessionCardMenu view={view} onAction={onAction}>
         <div
-          ref={setNodeRef}
+          ref={(node) => {
+            setNodeRef(node);
+            cardRef.current = node;
+          }}
           data-testid={`session-card-${view.session.id}`}
           data-tense={view.tense}
           data-dimmed={String(dimmed)}
+          data-highlighted={String(highlighted)}
           data-draggable={String(draggable)}
           tabIndex={0}
           aria-label={`${time}, ${length}, ${view.name}`}
@@ -128,6 +146,7 @@ export function SessionCard({
           {...listeners}
           onClick={onClick}
           onKeyDown={onKeyDown}
+          onAnimationEnd={onAnimationEnd}
           style={elapsedFill(view)}
           className={cn(
             // A long press opens the card's menu, so it mustn't also select text or show iOS's callout.
@@ -137,6 +156,8 @@ export function SessionCard({
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             isPast ? "bg-well" : "bg-card shadow-card",
             dimmed && "opacity-[.28]",
+            highlighted && HIGHLIGHT_CLASS,
+            highlighted && (isPast ? "[--highlight-rest:hsl(var(--well))]" : "[--highlight-rest:hsl(var(--card))]"),
             isDragging && "cursor-grabbing opacity-[.35] outline-dashed outline-1 outline-faint"
           )}
         >

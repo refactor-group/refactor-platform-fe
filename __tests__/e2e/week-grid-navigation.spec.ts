@@ -34,6 +34,7 @@ const FAR_AHEAD = session('far-ahead', '2027-01-04T15:00:00')
 
 const json = (data: unknown) => ({ status: 200, contentType: 'application/json', body: JSON.stringify({ data }) })
 const panel = (page: Page, title: string) => page.getByRole('region', { name: title })
+const weekDays = (page: Page) => page.getByTestId('week-days')
 
 test.describe('Week grid navigation and clicks', () => {
   test.beforeEach(async ({ page, context }) => {
@@ -59,6 +60,37 @@ test.describe('Week grid navigation and clicks', () => {
     await expect(panel(page, 'This week')).toContainText('Oct 19 – 25')
     await page.getByRole('button', { name: 'Previous week' }).click()
     await expect(panel(page, 'Last week')).toBeVisible()
+  })
+
+  test('a new week slides in from the side it lies on', async ({ page }) => {
+    await expect(weekDays(page)).toHaveCSS('animation-name', 'none')
+    await page.getByRole('button', { name: 'Next week' }).click()
+    await expect(weekDays(page)).toHaveCSS('animation-name', 'week-enter-from-right')
+    await page.getByRole('button', { name: 'This week' }).click()
+    await expect(weekDays(page)).toHaveCSS('animation-name', 'week-enter-from-left')
+  })
+
+  test('the week does not slide when motion is reduced', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.getByRole('button', { name: 'Next week' }).click()
+    await expect(panel(page, 'Next week')).toBeVisible()
+    await expect(weekDays(page)).toHaveCSS('animation-name', 'none')
+  })
+
+  test('an empty week goes to the last session and flashes it', async ({ page }) => {
+    await page.route(
+      (url) => url.pathname === `/users/${MOCK_USER_ID}/coaching_sessions`,
+      (route) => route.fulfill(json([THURSDAY, MONDAY_PAST, FAR_BACK]))
+    )
+    await page.getByRole('button', { name: 'Next week' }).click()
+    await expect(panel(page, 'Next week')).toContainText('No sessions this week.')
+    await page.getByRole('button', { name: 'Go to last session on Jan 5' }).click()
+    await expect(panel(page, 'Week of Jan 5')).toBeVisible()
+    await expect(weekDays(page)).toHaveCSS('animation-name', 'week-enter-from-left')
+    const card = page.getByTestId('session-card-far-back')
+    await expect(card).toBeFocused()
+    await expect(card).toHaveAttribute('data-highlighted', 'true')
+    await expect(card).toHaveAttribute('data-highlighted', 'false', { timeout: 5000 })
   })
 
   test('on a phone the week arrows hold still across weeks, even while one loads', async ({ page }) => {

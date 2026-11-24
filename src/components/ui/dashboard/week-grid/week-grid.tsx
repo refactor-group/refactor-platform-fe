@@ -48,7 +48,8 @@ export interface WeekGridProps {
   isUnloaded: boolean;
 }
 
-const WEEK_GRID_CLASS = "mt-6 grid grid-cols-7 items-start gap-4";
+// At least three cards tall (label, 3 × 128px cards, gaps), so paging between busy and quiet weeks keeps the height.
+const WEEK_GRID_CLASS = "mt-6 grid min-h-[428px] grid-cols-7 items-start gap-4";
 
 // Enter stays the card's open key, so only Space picks up and drops.
 const KEYBOARD_CODES = { start: [KeyboardCode.Space], cancel: [KeyboardCode.Esc], end: [KeyboardCode.Space] };

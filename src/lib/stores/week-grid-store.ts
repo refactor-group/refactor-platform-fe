@@ -8,12 +8,22 @@ interface WeekGridState {
   personFilter: Option<Id>;
   selectedDay: Option<string>;
   recentlyMoved: Id[];
+  /** A session just jumped to, flashed once to show where it is. */
+  highlighted: Option<Id>;
+}
+
+export interface SessionJump {
+  weekOffset: number;
+  day: string;
+  sessionId: Id;
 }
 
 interface WeekGridActions {
   previousWeek: () => void;
   nextWeek: () => void;
   thisWeek: () => void;
+  jumpToSession: (jump: SessionJump) => void;
+  clearHighlight: () => void;
   setPersonFilter: (id: Id) => void;
   clearPersonFilter: () => void;
   selectDay: (iso: string) => void;
@@ -30,6 +40,7 @@ const initialState: WeekGridState = {
   personFilter: None,
   selectedDay: None,
   recentlyMoved: [],
+  highlighted: None,
 };
 
 export const createWeekGridStore = () =>
@@ -38,9 +49,12 @@ export const createWeekGridStore = () =>
       persist(
         (set) => ({
           ...initialState,
-          previousWeek: () => set((s) => ({ weekOffset: s.weekOffset - 1, selectedDay: None })),
-          nextWeek: () => set((s) => ({ weekOffset: s.weekOffset + 1, selectedDay: None })),
-          thisWeek: () => set({ weekOffset: 0, selectedDay: None }),
+          previousWeek: () => set((s) => ({ weekOffset: s.weekOffset - 1, selectedDay: None, highlighted: None })),
+          nextWeek: () => set((s) => ({ weekOffset: s.weekOffset + 1, selectedDay: None, highlighted: None })),
+          thisWeek: () => set({ weekOffset: 0, selectedDay: None, highlighted: None }),
+          jumpToSession: ({ weekOffset, day, sessionId }) =>
+            set({ weekOffset, selectedDay: Some(day), highlighted: Some(sessionId) }),
+          clearHighlight: () => set({ highlighted: None }),
           setPersonFilter: (id) => set({ personFilter: Some(id) }),
           clearPersonFilter: () => set({ personFilter: None }),
           selectDay: (iso) => set({ selectedDay: Some(iso) }),

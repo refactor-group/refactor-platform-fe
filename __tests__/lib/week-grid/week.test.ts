@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "ts-luxon";
 import { None, Some } from "@/types/option";
-import { groupByDay, weekOf, weekRange, weekSubline, weekTitle } from "@/lib/week-grid/week";
+import {
+  groupByDay,
+  lastSessionBefore,
+  lastSessionLinkText,
+  weekOf,
+  weekOffsetOf,
+  weekRange,
+  weekSubline,
+  weekTitle,
+} from "@/lib/week-grid/week";
+import { createMockEnrichedSession } from "../../test-utils";
 
 const TZ = "America/Chicago";
 // Tuesday, August 18 2026, 1:45 PM in Chicago.
@@ -131,5 +141,41 @@ describe("groupByDay", () => {
   it("marks today and the days before it", () => {
     expect(groups.map((g) => g.isToday)).toEqual([false, true, false, false, false, false, false]);
     expect(groups.map((g) => g.isPast)).toEqual([true, false, false, false, false, false, false]);
+  });
+});
+
+describe("weekOffsetOf", () => {
+  it("counts weeks from this one, across a DST change and a year end", () => {
+    expect(weekOffsetOf(NOW, NOW, TZ)).toBe(0);
+    expect(weekOffsetOf(DateTime.fromISO("2026-08-23T23:59", { zone: TZ }), NOW, TZ)).toBe(0);
+    expect(weekOffsetOf(DateTime.fromISO("2026-04-14T10:00", { zone: TZ }), NOW, TZ)).toBe(-18);
+    expect(weekOffsetOf(DateTime.fromISO("2026-11-09T10:00", { zone: TZ }), NOW, TZ)).toBe(12);
+    expect(weekOffsetOf(DateTime.fromISO("2025-12-31T10:00", { zone: TZ }), NOW, TZ)).toBe(-33);
+  });
+
+  it("places a UTC instant in the viewer's week", () => {
+    // Monday 2 AM UTC is still Sunday in Chicago.
+    expect(weekOffsetOf(DateTime.fromISO("2026-08-17T02:00:00Z"), NOW, TZ)).toBe(-1);
+  });
+});
+
+describe("lastSessionBefore", () => {
+  const at = (id: string, date: string) => createMockEnrichedSession({ id, date });
+  const instant = DateTime.fromISO("2026-08-18T18:00:00Z");
+
+  it("picks the latest session that starts before the instant", () => {
+    const sessions = [at("old", "2026-03-02T15:00:00"), at("later", "2026-08-18T19:00:00"), at("last", "2026-04-14T15:00:00")];
+    expect(lastSessionBefore(sessions, instant)).toEqual(Some(sessions[2]));
+  });
+
+  it("is None when every session is ahead", () => {
+    expect(lastSessionBefore([at("ahead", "2026-09-01T15:00:00")], instant)).toEqual(None);
+  });
+});
+
+describe("lastSessionLinkText", () => {
+  it("names the day, with the year only when it isn't this one", () => {
+    expect(lastSessionLinkText(DateTime.fromISO("2026-04-14T10:00", { zone: TZ }), NOW)).toBe("Go to last session on Apr 14");
+    expect(lastSessionLinkText(DateTime.fromISO("2025-04-14T10:00", { zone: TZ }), NOW)).toBe("Go to last session on Apr 14, 2025");
   });
 });

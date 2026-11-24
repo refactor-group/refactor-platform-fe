@@ -246,6 +246,7 @@ iOS Safari:
 - Expanders: `transition-transform duration-200`. Carousel slide: `duration-[250ms] ease-out`.
 - Single-dot grow: `transition-transform duration-[180ms] ease-spring`.
 - Live dot: `animate-live-pulse` (opacity 1 → .35 → 1, 2s).
+- Week change: the days enter from the side the new week lies on (`animate-week-enter-from-left` / `-from-right`); the header holds still. Enter only, no exit.
 - Existing named keyframes (`accordion-*`, `kanban-card-*`, `highlight-*`) stay for their uses.
 
 ---

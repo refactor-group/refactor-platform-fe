@@ -12,7 +12,7 @@ const at = (utc: string) => DateTime.fromISO(`2026-08-18T${utc}:00Z`, { zone: "u
 const SESSION = createMockEnrichedSession({ id: "s-1", date: "2026-08-18T18:40:00", duration_minutes: 10 });
 
 function Today({ now }: { now: DateTime }) {
-  const card = { ...cardView(SESSION, { viewerId: "coach-1", now, timezone: TZ }), dimmed: false };
+  const card = { ...cardView(SESSION, { viewerId: "coach-1", now, timezone: TZ }), dimmed: false, highlighted: false };
   const nodes = [<SessionCard key={card.session.id} view={card} onAction={vi.fn()} onOpen={vi.fn()} />];
   return <div>{withNowLine(nodes, [card], Some(now))}</div>;
 }

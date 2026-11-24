@@ -51,6 +51,7 @@ export interface CardView {
 
 export interface GridCard extends CardView {
   dimmed: boolean;
+  highlighted: boolean;
 }
 
 const MINUTES_PER_HOUR = 60;
