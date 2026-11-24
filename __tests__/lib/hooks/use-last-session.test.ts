@@ -49,25 +49,25 @@ beforeEach(() => {
 
 describe("useLastSession", () => {
   it("asks across every relationship the viewer is in, from the top of the hour", () => {
-    renderHook(() => useLastSession(None, NOW));
+    renderHook(() => useLastSession(None, NOW, true));
     expect([...lastQuery().relationshipIds].sort()).toEqual(["rel-1", "rel-2"]);
     expect(lastQuery().around).toBe("2026-08-18T18:00:00Z");
   });
 
   it("asks only about the filtered person", () => {
-    renderHook(() => useLastSession(Some(SAM), NOW));
+    renderHook(() => useLastSession(Some(SAM), NOW, true));
     expect(lastQuery().relationshipIds).toEqual(["rel-sam"]);
   });
 
   it("returns the latest session before the hour, not the next one", () => {
     nearest = { ...nearest, sessions: [at("next", "2026-08-20T15:00:00"), at("last", "2026-04-14T15:00:00")] };
-    const { result } = renderHook(() => useLastSession(None, NOW));
+    const { result } = renderHook(() => useLastSession(None, NOW, true));
     expect(result.current.some && result.current.val.id).toBe("last");
   });
 
   it("keeps the previous answer while the next loads, so the link doesn't blink", () => {
     nearest = { sessions: [at("last", "2026-04-14T15:00:00")], isLoading: true, isError: false };
-    const { result } = renderHook(() => useLastSession(None, NOW));
+    const { result } = renderHook(() => useLastSession(None, NOW, true));
     expect(result.current.some && result.current.val.id).toBe("last");
   });
 
@@ -80,12 +80,12 @@ describe("useLastSession", () => {
       isLoading: true,
       isError: false,
     };
-    const { result } = renderHook(() => useLastSession(Some(SAM), NOW));
+    const { result } = renderHook(() => useLastSession(Some(SAM), NOW, true));
     expect(result.current.some && result.current.val.id).toBe("sam");
   });
 
   it("is None when nothing has loaded", () => {
     nearest = { sessions: [], isLoading: true, isError: false };
-    expect(renderHook(() => useLastSession(None, NOW)).result.current).toEqual(None);
+    expect(renderHook(() => useLastSession(None, NOW, true)).result.current).toEqual(None);
   });
 });

@@ -112,7 +112,6 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const clearHighlight = useWeekGridStore((s) => s.clearHighlight);
   // Leaving mid-flash mustn't flash and refocus the card on return.
   useEffect(() => clearHighlight, [clearHighlight]);
-  const lastSession = useLastSession(selected, now);
   const clearMoved = useWeekGridStore((s) => s.clearMoved);
   useEffect(() => clearMoved, [clearMoved]);
 
@@ -213,7 +212,9 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   // A failed read with nothing cached must not call the week or its days empty.
   const isUnloaded = readOnly && !hasSessions;
   // Nothing loaded is not the same as nothing matching.
-  const isEmpty = !isUnloaded && visibleCount(days) === 0;
+  const isEmpty = !isLoading && !isUnloaded && visibleCount(days) === 0;
+  // Asked only for an empty week, the one place the link shows.
+  const lastSession = useLastSession(selected, now, isEmpty);
   const callout = isEmpty ? emptyWeekCallout(selected.some, lastSession, { now, timezone, jump: jumpToSession }) : None;
   const busy = isLoading || width.none;
   const slide = useWeekSlide(weekOffset);
