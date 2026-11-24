@@ -549,7 +549,6 @@ describe("WeekPanel go to last session", () => {
     selectedPerson = Some(SAM);
     renderPanel();
     const callout = screen.getByText("No sessions match this week.").parentElement!;
-    expect(callout).toHaveAttribute("role", "status");
     expect(within(callout).getByRole("button", { name: "Go to last session on Apr 14" })).toBeInTheDocument();
   });
 
@@ -587,6 +586,16 @@ describe("WeekPanel go to last session", () => {
     // jsdom's AnimationEvent has no animationName.
     fireEvent(card, Object.assign(new Event("animationend", { bubbles: true }), { animationName: "highlight-tint" }));
     expect(card).toHaveAttribute("data-highlighted", "false");
+  });
+
+  it("forgets the highlight when the panel unmounts mid-flash", () => {
+    selectedPerson = Some(SAM);
+    const panel = <WeekPanel onReschedule={onReschedule} onSeriesMutated={onSeriesMutated} onSchedule={onSchedule} />;
+    const { rerender } = render(<WeekGridStoreProvider>{panel}</WeekGridStoreProvider>);
+    fireEvent.click(button("Go to last session on Apr 14"));
+    rerender(<WeekGridStoreProvider>{null}</WeekGridStoreProvider>);
+    rerender(<WeekGridStoreProvider>{panel}</WeekGridStoreProvider>);
+    expect(screen.getByTestId("session-card-sam-april")).toHaveAttribute("data-highlighted", "false");
   });
 
   it("sits in the phone agenda and opens the session's day", () => {

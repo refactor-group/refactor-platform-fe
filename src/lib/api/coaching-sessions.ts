@@ -15,7 +15,7 @@ import { ApiSortOrder, CoachingSessionSortField } from "@/types/sorting";
 import { EntityApi, ApiResponse } from "./entity-api";
 import { USERS_BASEURL } from "./users";
 import { sessionGuard } from "@/lib/auth/session-guard";
-import { Option } from "@/types/option";
+import { None, Some, type Option } from "@/types/option";
 import { DateTime } from "ts-luxon";
 import { ResultAsync, type Result } from "neverthrow";
 import { attemptResend, type ResendInviteFailure } from "@/types/resend-invite";
@@ -542,6 +542,11 @@ export interface NearestEachQuery {
   fetchedFor: string;
 }
 
+/** A `/nearest` query around `around`, or `None` when there are no relationships to ask about. */
+export function nearestEachQuery(userId: Id, relationshipIds: Id[], around: string): Option<NearestEachQuery> {
+  return relationshipIds.length > 0 ? Some({ userId, relationshipIds, around, fetchedFor: around }) : None;
+}
+
 function chunks<T>(items: T[], size: number): T[][] {
   return Array.from({ length: Math.ceil(items.length / size) }, (_, i) =>
     items.slice(i * size, (i + 1) * size)
@@ -553,7 +558,10 @@ function chunks<T>(items: T[], size: number): T[][] {
  * one SWR entry: one request per 50 relationships. `None` or no relationships
  * skips the fetch. Sessions are returned in one flat list.
  */
-export const useNearestEachCoachingSessions = (query: Option<NearestEachQuery>) => {
+export const useNearestEachCoachingSessions = (
+  query: Option<NearestEachQuery>,
+  options?: SWRConfiguration
+) => {
   const active = query.some && query.val.relationshipIds.length > 0;
   const url = query.some
     ? `${USERS_BASEURL}/${query.val.userId}/coaching_sessions/nearest`
@@ -584,7 +592,7 @@ export const useNearestEachCoachingSessions = (query: Option<NearestEachQuery>) 
   };
 
   const { entities, isLoading, isError } =
-    EntityApi.useEntityList<EnrichedCoachingSession>(url, fetcher, params);
+    EntityApi.useEntityList<EnrichedCoachingSession>(url, fetcher, params, options);
 
   return { sessions: entities, isLoading: active ? isLoading : false, isError };
 };

@@ -65,10 +65,27 @@ describe("useLastSession", () => {
     expect(result.current.some && result.current.val.id).toBe("last");
   });
 
-  it("is None while loading or after a failed read", () => {
+  it("keeps the previous answer while the next loads, so the link doesn't blink", () => {
     nearest = { sessions: [at("last", "2026-04-14T15:00:00")], isLoading: true, isError: false };
-    expect(renderHook(() => useLastSession(None, NOW)).result.current).toEqual(None);
-    nearest = { ...nearest, isLoading: false, isError: true };
+    const { result } = renderHook(() => useLastSession(None, NOW));
+    expect(result.current.some && result.current.val.id).toBe("last");
+  });
+
+  it("ignores kept sessions from outside the filtered person's relationships", () => {
+    nearest = {
+      sessions: [
+        createMockEnrichedSession({ id: "other", date: "2026-08-01T15:00:00", coaching_relationship_id: "rel-1" }),
+        createMockEnrichedSession({ id: "sam", date: "2026-04-14T15:00:00", coaching_relationship_id: "rel-sam" }),
+      ],
+      isLoading: true,
+      isError: false,
+    };
+    const { result } = renderHook(() => useLastSession(Some(SAM), NOW));
+    expect(result.current.some && result.current.val.id).toBe("sam");
+  });
+
+  it("is None when nothing has loaded", () => {
+    nearest = { sessions: [], isLoading: true, isError: false };
     expect(renderHook(() => useLastSession(None, NOW)).result.current).toEqual(None);
   });
 });

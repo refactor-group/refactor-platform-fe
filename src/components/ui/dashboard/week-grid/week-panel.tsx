@@ -110,6 +110,8 @@ export function WeekPanel({ onReschedule, onSeriesMutated, onSchedule }: WeekPan
   const highlighted = useWeekGridStore((s) => s.highlighted);
   const jumpToSession = useWeekGridStore((s) => s.jumpToSession);
   const clearHighlight = useWeekGridStore((s) => s.clearHighlight);
+  // Leaving mid-flash mustn't flash and refocus the card on return.
+  useEffect(() => clearHighlight, [clearHighlight]);
   const lastSession = useLastSession(selected, now);
   const clearMoved = useWeekGridStore((s) => s.clearMoved);
   useEffect(() => clearMoved, [clearMoved]);
@@ -264,11 +266,10 @@ function WeekBody({ width, isLoading, drag, ...agenda }: WeekBodyProps) {
     <div className="relative">
       <WeekGrid days={days} handlers={handlers} onSchedule={onSchedule} drag={drag} now={now} isLoading={false} isUnloaded={isUnloaded} />
       {callout.some && (
-        // On the first row of days, so it holds still while weeks of different heights swap under it.
-        <div className="pointer-events-none absolute inset-x-0 top-[92px] flex -translate-y-1/2 justify-center">
-          <div className="pointer-events-auto">
-            <EmptyWeekCallout model={callout.val} placement={CalloutPlacement.Floating} />
-          </div>
+        // Centred on the grid's minimum height (week-grid.tsx), below the first row's Schedule
+        // buttons, so it holds still as weeks change. Only the link takes clicks.
+        <div className="pointer-events-none absolute inset-x-0 top-[214px] flex -translate-y-1/2 justify-center">
+          <EmptyWeekCallout model={callout.val} placement={CalloutPlacement.Floating} />
         </div>
       )}
     </div>

@@ -157,7 +157,6 @@ export function SessionCard({
             isPast ? "bg-well" : "bg-card shadow-card",
             dimmed && "opacity-[.28]",
             highlighted && HIGHLIGHT_CLASS,
-            highlighted && (isPast ? "[--highlight-rest:hsl(var(--well))]" : "[--highlight-rest:hsl(var(--card))]"),
             isDragging && "cursor-grabbing opacity-[.35] outline-dashed outline-1 outline-faint"
           )}
         >

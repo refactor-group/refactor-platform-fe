@@ -27,13 +27,10 @@ const PLACEMENT_CLASS: Record<CalloutPlacement, string> = {
 
 export function EmptyWeekCallout({ model, placement }: { model: EmptyWeekCalloutModel; placement: CalloutPlacement }) {
   return (
-    <div
-      role="status"
-      className={cn("flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3", PLACEMENT_CLASS[placement])}
-    >
+    <div className={cn("flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3", PLACEMENT_CLASS[placement])}>
       <p className="text-sm text-foreground">{model.message}</p>
       {model.jump.some && (
-        <Button variant="link" className="h-auto p-0 tabular-nums" onClick={model.jump.val.onJump}>
+        <Button variant="link" className="pointer-events-auto h-auto p-0 tabular-nums" onClick={model.jump.val.onJump}>
           {model.jump.val.label}
           <ArrowRight aria-hidden />
         </Button>

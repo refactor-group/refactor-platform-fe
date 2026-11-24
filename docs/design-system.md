@@ -101,7 +101,7 @@ Three names, three jobs:
 | `brand-border` | `233.1 59.1% 91.4%` | `237.8 34.2% 31%` | `#dcdff6` / `#34366a` | Hero card border, "Current" chip, empty-day hover border |
 | `brand-dot` | `237.4 69.7% 87.1%` | `238 33.3% 35.9%` | `#c7c9f5` / `#3d3f7a` | Past session dots (Join session strip, month grid) |
 | `brand-month` | `238.1 73.6% 74.7%` | `238.1 71.3% 65.9%` | `#8f92ee` / `#6a6ee6` | Defined, not used by any component today |
-| `--highlight-tint` | `brand` at 10% | `brand` at 20% | n/a | Start of the highlight flash. A full color, not a triplet; a card sets `--highlight-rest` to its own fill so the flash ends there |
+| `--highlight-tint` | `brand` at 10% | `brand` at 20% | n/a | Start of the highlight flash. A full color, not a triplet |
 | `brand-elapsed` | `230 75% 98.4%` | `237.6 35.2% 27.8%` | `#f8f9fe` / `#2e3060` | Elapsed fill on a session card under way |
 | `hero-wash` | gradient, below | gradient, below | n/a | `bg-hero-wash`: hero card background |
 
@@ -280,7 +280,7 @@ Defined in `tailwind.config.ts`. When to use which: style guide §4.
 | `ease-spring` | `cubic-bezier(.2, .8, .2, 1)` | Session dot grow, search expand; the toast spring-back uses the same curve inline |
 | `animate-live-pulse` | opacity 1 to .35 to 1, 2s, infinite | Live dot |
 | `animate-highlight-pulse` | scale to 1.02 at 35%, 600ms | Compact action card highlight |
-| `animate-highlight-tint` | `var(--highlight-tint)` to `var(--highlight-rest)` (default `background`), 2s | Compact action card highlight tint |
+| `animate-highlight-tint` | `var(--highlight-tint)` back to the element's own background, 2s | Compact action card highlight tint |
 | `animate-week-highlight` | `highlight-tint` and `highlight-pulse`, after a 220ms delay | Session card jumped to from the empty-week callout; `animate-week-highlight-still` (tint only) under reduced motion |
 | `animate-kanban-card-enter` / `-exit` | scale and fade, 350ms | Action cards entering and leaving (kanban, session panel) |
 | `animate-toast-ring` | stroke offset 0 to -43.98 (2π × 7), 6s default | Toast countdown ring |
@@ -461,8 +461,9 @@ limits it to one per screen.
 - **Tooltip**: still shadcn: `rounded-md border bg-popover px-3 py-1.5 text-sm shadow-md`.
 - **Empty-week callout** (`dashboard/week-grid/empty-week-callout.tsx`): the popover surface
   without a trigger, `rounded-popover border bg-popover shadow-popover px-4 py-3`, centred over
-  an empty week; `text-sm text-foreground` message and a `link` button. On phones it sits in
-  the agenda's flow as a `rounded-xl bg-well` box, flat.
+  the grid's minimum height, below the first row of days; `text-sm text-foreground` message and a
+  `link` button, the only part that takes clicks. On phones it sits in the agenda's flow as a
+  `rounded-xl bg-well` box, flat.
 - **Inverse tooltips** (hand-built): the session-dot tooltip
   (`join-session/session-dot-strip.tsx`, `rounded-full bg-inverse px-2.5 py-1 text-pill`) and
   the month-grid tooltip (`new-session/month-grid.tsx`, `rounded-[10px] bg-inverse

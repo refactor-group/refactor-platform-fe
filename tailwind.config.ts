@@ -222,12 +222,10 @@ const config = {
   					transform: 'scale(1.02)',
   				}
   			},
+  			// No end frame: the tint fades back to the element's own background.
   			'highlight-tint': {
   				from: {
   					backgroundColor: 'var(--highlight-tint)',
-  				},
-  				to: {
-  					backgroundColor: 'var(--highlight-rest, hsl(var(--background)))',
   				}
   			},
   			'kanban-card-enter': {
