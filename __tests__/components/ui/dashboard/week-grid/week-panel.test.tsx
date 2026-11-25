@@ -60,6 +60,9 @@ vi.mock("@/lib/providers/auth-store-provider", () => ({
 let edges: WeekEdges = { hasEarlier: true };
 vi.mock("@/lib/hooks/use-week-edges", () => ({ useWeekEdges: () => edges }));
 
+let lastSession: Option<EnrichedCoachingSession> = None;
+vi.mock("@/lib/hooks/use-last-session", () => ({ useLastSession: () => lastSession }));
+
 const ALEX: FilterPerson = { userId: "u-alex", fullName: "Alex Chen", relationshipIds: ["rel-1"], group: PersonGroup.Active };
 const SAM: FilterPerson = { userId: "u-sam", fullName: "Sam Ruiz", relationshipIds: ["rel-sam"], group: PersonGroup.Active };
 let selectedPerson: Option<FilterPerson> = None;
@@ -120,6 +123,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   isACoach = true;
   edges = { hasEarlier: true };
+  lastSession = None;
   selectedPerson = None;
   wide = true;
   widthKnown = true;
@@ -520,10 +524,86 @@ describe("WeekPanel person filter", () => {
     expect(screen.queryByText("No sessions match this week.")).not.toBeInTheDocument();
   });
 
-  it("stays quiet when nothing is filtered", () => {
+  it("stays quiet when nothing is filtered and there is no earlier session", () => {
     result = { ...result, sessions: [] };
     renderPanel();
+    expect(screen.queryByText("No sessions this week.")).not.toBeInTheDocument();
+  });
+});
+
+const SAM_APRIL = createMockEnrichedSession({
+  id: "sam-april",
+  date: "2026-04-14T15:00:00",
+  duration_minutes: 50,
+  topics: Some([]),
+  coaching_relationship_id: "rel-sam",
+});
+
+describe("WeekPanel go to last session", () => {
+  beforeEach(() => {
+    result = { ...result, sessions: [THURSDAY, SAM_APRIL] };
+    lastSession = Some(SAM_APRIL);
+  });
+
+  it("offers the last session when nothing in the week matches", () => {
+    selectedPerson = Some(SAM);
+    renderPanel();
+    const callout = screen.getByText("No sessions match this week.").parentElement!;
+    expect(within(callout).getByRole("button", { name: "Go to last session on Apr 14" })).toBeInTheDocument();
+  });
+
+  it("says nothing matches without a link when there is no earlier session", () => {
+    selectedPerson = Some(SAM);
+    lastSession = None;
+    renderPanel();
+    expect(screen.getByText("No sessions match this week.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Go to last session/ })).not.toBeInTheDocument();
+  });
+
+  it("offers it on an empty week without a filter too", () => {
+    result = { ...result, sessions: [SAM_APRIL] };
+    renderPanel();
+    expect(screen.getByText("No sessions this week.")).toBeInTheDocument();
+    expect(button("Go to last session on Apr 14")).toBeInTheDocument();
+  });
+
+  it("adds the year to a session from an earlier year", () => {
+    lastSession = Some({ ...SAM_APRIL, date: "2025-04-14T15:00:00" });
+    result = { ...result, sessions: [] };
+    renderPanel();
+    expect(button("Go to last session on Apr 14, 2025")).toBeInTheDocument();
+  });
+
+  it("goes to that week, highlights the session and focuses it until the flash ends", () => {
+    selectedPerson = Some(SAM);
+    renderPanel();
+    fireEvent.click(button("Go to last session on Apr 14"));
+    expect(screen.getByRole("region", { name: "Week of Apr 13" })).toBeInTheDocument();
+    const card = screen.getByTestId("session-card-sam-april");
+    expect(card).toHaveAttribute("data-highlighted", "true");
+    expect(card).toHaveFocus();
     expect(screen.queryByText("No sessions match this week.")).not.toBeInTheDocument();
+    // jsdom's AnimationEvent has no animationName.
+    fireEvent(card, Object.assign(new Event("animationend", { bubbles: true }), { animationName: "highlight-tint" }));
+    expect(card).toHaveAttribute("data-highlighted", "false");
+  });
+
+  it("forgets the highlight when the panel unmounts mid-flash", () => {
+    selectedPerson = Some(SAM);
+    const panel = <WeekPanel onReschedule={onReschedule} onSeriesMutated={onSeriesMutated} onSchedule={onSchedule} />;
+    const { rerender } = render(<WeekGridStoreProvider>{panel}</WeekGridStoreProvider>);
+    fireEvent.click(button("Go to last session on Apr 14"));
+    rerender(<WeekGridStoreProvider>{null}</WeekGridStoreProvider>);
+    rerender(<WeekGridStoreProvider>{panel}</WeekGridStoreProvider>);
+    expect(screen.getByTestId("session-card-sam-april")).toHaveAttribute("data-highlighted", "false");
+  });
+
+  it("sits in the phone agenda and opens the session's day", () => {
+    wide = false;
+    selectedPerson = Some(SAM);
+    renderPanel();
+    fireEvent.click(button("Go to last session on Apr 14"));
+    expect(screen.getByTestId("session-card-sam-april")).toHaveAttribute("data-highlighted", "true");
   });
 });
 

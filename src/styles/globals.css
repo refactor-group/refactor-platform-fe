@@ -61,6 +61,7 @@
     --brand-dot: 237.4 69.7% 87.1%;
     --brand-month: 238.1 73.6% 74.7%;
     --brand-elapsed: 230 75% 98.4%;
+    --highlight-tint: hsl(var(--brand) / 0.1);
     --hero-wash: radial-gradient(120% 90% at 100% 0%, #e3e6fb, rgba(238, 240, 252, 0.7) 45%, #fff);
 
     /* Status */
@@ -153,6 +154,7 @@
     --brand-dot: 238 33.3% 35.9%;
     --brand-month: 238.1 71.3% 65.9%;
     --brand-elapsed: 237.6 35.2% 27.8%;
+    --highlight-tint: hsl(var(--brand) / 0.2);
     --hero-wash: radial-gradient(120% 90% at 100% 0%, #262747, rgba(34, 35, 58, 0.7) 45%, #1b1b1f);
 
     --positive: 142.5 39.1% 63.9%;

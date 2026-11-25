@@ -222,12 +222,10 @@ const config = {
   					transform: 'scale(1.02)',
   				}
   			},
+  			// No end frame: the tint fades back to the element's own background.
   			'highlight-tint': {
   				from: {
   					backgroundColor: 'var(--highlight-tint)',
-  				},
-  				to: {
-  					backgroundColor: 'hsl(var(--background))',
   				}
   			},
   			'kanban-card-enter': {
@@ -242,6 +240,18 @@ const config = {
   				'100%': {
   					opacity: '1',
   					transform: 'scale(1)',
+  				}
+  			},
+  			'week-enter-from-left': {
+  				from: {
+  					opacity: '0',
+  					transform: 'translateX(-16px)',
+  				}
+  			},
+  			'week-enter-from-right': {
+  				from: {
+  					opacity: '0',
+  					transform: 'translateX(16px)',
   				}
   			},
   			'toast-ring': {
@@ -263,7 +273,12 @@ const config = {
   			'live-pulse': 'live-pulse 2s ease-in-out infinite',
   			'highlight-pulse': 'highlight-pulse 600ms ease-out',
   			'highlight-tint': 'highlight-tint 2s ease-out both',
-  			'toast-ring': 'toast-ring 6s linear forwards'
+  			// Waits out the week's slide.
+  			'week-highlight': 'highlight-tint 2s ease-out 220ms both, highlight-pulse 600ms ease-out 220ms',
+  			'week-highlight-still': 'highlight-tint 2s ease-out 220ms both',
+  			'toast-ring': 'toast-ring 6s linear forwards',
+  			'week-enter-from-left': 'week-enter-from-left 220ms cubic-bezier(.2, .8, .2, 1)',
+  			'week-enter-from-right': 'week-enter-from-right 220ms cubic-bezier(.2, .8, .2, 1)'
   		},
   		fontFamily: {
   			sans: [

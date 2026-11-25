@@ -25,6 +25,21 @@ describe("week grid store", () => {
     expect(store.getState().weekOffset).toBe(0);
   });
 
+  it("jumps to a session's week and day and highlights it until paging", () => {
+    const store = createWeekGridStore();
+    store.getState().jumpToSession({ weekOffset: -31, day: "2026-04-14", sessionId: "s-1" });
+    expect(store.getState()).toMatchObject({ weekOffset: -31, selectedDay: Some("2026-04-14"), highlighted: Some("s-1") });
+    store.getState().nextWeek();
+    expect(store.getState().highlighted).toEqual(None);
+  });
+
+  it("clears the highlight", () => {
+    const store = createWeekGridStore();
+    store.getState().jumpToSession({ weekOffset: -2, day: "2026-11-09", sessionId: "s-1" });
+    store.getState().clearHighlight();
+    expect(store.getState().highlighted).toEqual(None);
+  });
+
   it("sets and clears the person filter", () => {
     const store = createWeekGridStore();
     store.getState().setPersonFilter("u-alex");

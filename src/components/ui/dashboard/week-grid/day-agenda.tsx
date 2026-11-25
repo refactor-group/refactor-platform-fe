@@ -39,7 +39,7 @@ function agendaNodes(
     return [<NoSessions key="none" />];
   }
   return group.items.map((card) => (
-    <SessionCard key={card.session.id} view={card} dimmed={card.dimmed} layout={SessionCardLayout.Agenda} {...handlers} />
+    <SessionCard key={card.session.id} view={card} dimmed={card.dimmed} highlighted={card.highlighted} layout={SessionCardLayout.Agenda} {...handlers} />
   ));
 }
 

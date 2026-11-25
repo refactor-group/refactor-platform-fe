@@ -117,3 +117,26 @@ export function scheduleOn<T>(
 ): Option<() => void> {
   return onSchedule.some && !group.isPast ? Some(() => onSchedule.val(group.day)) : None;
 }
+
+/** Weeks from the current week to the one holding `day`; negative in the past. */
+export function weekOffsetOf(day: DateTime, now: DateTime, timezone: string): number {
+  const current = now.setZone(timezone).startOf("week");
+  return Math.round(day.setZone(timezone).startOf("week").diff(current, "weeks").weeks);
+}
+
+/** The latest session starting before `instant`. */
+export function lastSessionBefore(
+  sessions: EnrichedCoachingSession[],
+  instant: DateTime
+): Option<EnrichedCoachingSession> {
+  const start = (s: EnrichedCoachingSession) => sessionStartIn(s.date, "utc").toMillis();
+  const past = sessions.filter((s) => start(s) < instant.toMillis());
+  if (past.length === 0) return None;
+  return Some(past.reduce((latest, s) => (start(s) > start(latest) ? s : latest)));
+}
+
+/** "Go to last session on Apr 14", with the year when it isn't this year's. */
+export function lastSessionLinkText(start: DateTime, now: DateTime): string {
+  const format = start.hasSame(now.setZone(start.zone), "year") ? "LLL d" : "LLL d, yyyy";
+  return `Go to last session on ${start.toFormat(format)}`;
+}

@@ -85,6 +85,7 @@ function DayBody({ group, handlers, onSchedule, drag, justDragged, now, isLoadin
             key={card.session.id}
             view={card}
             dimmed={card.dimmed}
+            highlighted={card.highlighted}
             justDragged={Some(justDragged)}
             {...handlers}
           />
