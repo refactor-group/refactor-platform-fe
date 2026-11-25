@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  PARSEABLE_TYPES,
   SearchHitType,
   TranscriptSuggestionTarget,
   isSearchableQuery,
@@ -95,6 +96,26 @@ describe("parseSearchHit", () => {
     expect(hit.val.target).toBe(TranscriptSuggestionTarget.Action);
     expect(hit.val.coaching_session_id).toEqual({ some: true, none: false, val: "sess-1" });
     expect(hit.val.session_title).toBe("Weekly sync");
+  });
+
+  it("parses a hit for every type it asks for", () => {
+    // The fields each type needs beyond the base; a new hit type must add its own here.
+    const required: Record<SearchHitType, Record<string, string>> = {
+      [SearchHitType.CoachingSession]: { date: "2026-09-01T09:00:00" },
+      [SearchHitType.Goal]: {},
+      [SearchHitType.Action]: {},
+      [SearchHitType.Agreement]: {},
+      [SearchHitType.Topic]: {},
+      [SearchHitType.TranscriptSuggestion]: {
+        session_date: "2026-09-01T09:00:00",
+        session_title: "Weekly sync",
+      },
+    };
+    const types = Object.values(SearchHitType);
+    for (const type of types) {
+      expect(parseSearchHit({ ...base, ...required[type], type }).some, type).toBe(true);
+    }
+    expect(PARSEABLE_TYPES).toHaveLength(types.length);
   });
 
   it("returns None for hit types this client does not know", () => {

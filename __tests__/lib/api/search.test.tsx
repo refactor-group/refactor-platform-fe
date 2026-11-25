@@ -74,6 +74,21 @@ describe("buildSearchQuery", () => {
     expect(qs.has("organization_id")).toBe(false);
   });
 
+  it("asks for every type it can parse when none are given", () => {
+    const typesOf = (types?: SearchableType[]) =>
+      buildSearchQuery({ q: "plan", types }).get("types")?.split(",").sort();
+    const expected = [
+      "actions",
+      "agreements",
+      "coaching_sessions",
+      "goals",
+      "topics",
+      "transcript_suggestions",
+    ];
+    expect(typesOf()).toEqual(expected);
+    expect(typesOf([])).toEqual(expected);
+  });
+
   it("truncates the query at the backend's limit", () => {
     const qs = buildSearchQuery({ q: "x".repeat(300) });
     expect(qs.get("q")).toHaveLength(256);
@@ -118,7 +133,9 @@ describe("SearchApi.search", () => {
 
     expect(result.isOk()).toBe(true);
     const [url, config] = vi.mocked(EntityApi.getFn).mock.calls[0] as [string, AxiosRequestConfig];
-    expect(url).toBe("http://localhost:3000/search?q=weekly+plan");
+    expect(url).toBe(
+      "http://localhost:3000/search?q=weekly+plan&types=coaching_sessions%2Cgoals%2Cactions%2Cagreements%2Ctopics%2Ctranscript_suggestions"
+    );
     expect(config.signal).toBe(controller.signal);
   });
 });

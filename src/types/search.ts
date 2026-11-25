@@ -27,6 +27,19 @@ export enum SearchableType {
   TranscriptSuggestions = "transcript_suggestions",
 }
 
+/** The `types` value that asks for each hit type. */
+const SEARCHABLE_TYPE_OF: Record<SearchHitType, SearchableType> = {
+  [SearchHitType.CoachingSession]: SearchableType.CoachingSessions,
+  [SearchHitType.Goal]: SearchableType.Goals,
+  [SearchHitType.Action]: SearchableType.Actions,
+  [SearchHitType.Agreement]: SearchableType.Agreements,
+  [SearchHitType.Topic]: SearchableType.Topics,
+  [SearchHitType.TranscriptSuggestion]: SearchableType.TranscriptSuggestions,
+};
+
+/** Every type this client can parse a hit for. */
+export const PARSEABLE_TYPES: readonly SearchableType[] = Object.values(SEARCHABLE_TYPE_OF);
+
 /** What accepting a transcript suggestion creates. */
 export enum TranscriptSuggestionTarget {
   Action = "action",
