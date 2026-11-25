@@ -75,9 +75,18 @@ describe("buildSearchQuery", () => {
   });
 
   it("asks for every type it can parse when none are given", () => {
-    const expected = "coaching_sessions,goals,actions,agreements,topics,transcript_suggestions";
-    expect(buildSearchQuery({ q: "plan" }).get("types")).toBe(expected);
-    expect(buildSearchQuery({ q: "plan", types: [] }).get("types")).toBe(expected);
+    const typesOf = (types?: SearchableType[]) =>
+      buildSearchQuery({ q: "plan", types }).get("types")?.split(",").sort();
+    const expected = [
+      "actions",
+      "agreements",
+      "coaching_sessions",
+      "goals",
+      "topics",
+      "transcript_suggestions",
+    ];
+    expect(typesOf()).toEqual(expected);
+    expect(typesOf([])).toEqual(expected);
   });
 
   it("truncates the query at the backend's limit", () => {
