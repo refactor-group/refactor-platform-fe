@@ -58,8 +58,8 @@ import {
 import { actionStatusToString, type Id } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
 import {
+  SEARCHABLE_TYPE_OF,
   SearchHitType,
-  SearchableType,
   isSearchableQuery,
   type SearchError,
   type SearchHit,
@@ -173,7 +173,9 @@ const GROUP_ORDER: ReadonlyArray<{ type: SearchHitType; heading: string }> = [
 ];
 
 // Sent explicitly: left out, the backend searches every type it has, including ones not rendered here.
-const RENDERED_TYPES: SearchFilters = { types: Object.values(SearchableType) };
+const RENDERED_TYPES: SearchFilters = {
+  types: GROUP_ORDER.map(({ type }) => SEARCHABLE_TYPE_OF[type]),
+};
 
 /** Groups hits by kind, Sessions first; empty kinds are omitted. */
 export function groupSearchHits(hits: SearchHit[]): SearchHitGroup[] {

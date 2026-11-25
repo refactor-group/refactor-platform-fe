@@ -27,6 +27,16 @@ export enum SearchableType {
   TranscriptSuggestions = "transcript_suggestions",
 }
 
+/** The `types` value that asks for each hit type. */
+export const SEARCHABLE_TYPE_OF: Record<SearchHitType, SearchableType> = {
+  [SearchHitType.CoachingSession]: SearchableType.CoachingSessions,
+  [SearchHitType.Goal]: SearchableType.Goals,
+  [SearchHitType.Action]: SearchableType.Actions,
+  [SearchHitType.Agreement]: SearchableType.Agreements,
+  [SearchHitType.Topic]: SearchableType.Topics,
+  [SearchHitType.TranscriptSuggestion]: SearchableType.TranscriptSuggestions,
+};
+
 /** What accepting a transcript suggestion creates. */
 export enum TranscriptSuggestionTarget {
   Action = "action",
