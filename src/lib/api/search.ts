@@ -15,6 +15,7 @@ import {
   SearchErrorCode,
   isSearchableQuery,
   parseSearchResponse,
+  PARSEABLE_TYPES,
   SEARCH_MAX_QUERY_LENGTH,
   type SearchError,
   type SearchHit,
@@ -28,13 +29,13 @@ const SEARCH_BASEURL: string = `${siteConfig.env.backendServiceURL}/search`;
 /** Matches the backend's sizing guidance for its per-IP rate limit. */
 export const SEARCH_DEBOUNCE_MS = 250;
 
-/** Serializes params to the wire format; drops undefined fields. */
+/** Serializes params to the wire format; drops undefined fields, and asks for every parseable type when none are given. */
 export function buildSearchQuery(params: SearchParams): URLSearchParams {
   const qs = new URLSearchParams();
   qs.set("q", params.q.slice(0, SEARCH_MAX_QUERY_LENGTH));
-  if (params.types !== undefined && params.types.length > 0) {
-    qs.set("types", params.types.join(","));
-  }
+  // Left out, the backend searches every type it has; hits this client can't parse would be dropped.
+  const types = params.types?.length ? params.types : PARSEABLE_TYPES;
+  qs.set("types", types.join(","));
   const scalar: Array<[string, string | number | undefined]> = [
     ["organization_id", params.organization_id],
     ["coaching_relationship_id", params.coaching_relationship_id],

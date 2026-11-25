@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/search/search-people-strip";
 import { SearchSnippet } from "@/components/ui/search/search-snippet";
 import { useCoachingRelationshipList } from "@/lib/api/coaching-relationships";
-import { useSearch, type SearchFilters, type SearchState } from "@/lib/api/search";
+import { useSearch, type SearchState } from "@/lib/api/search";
 import { otherParticipant } from "@/lib/people";
 import { useAuthStore } from "@/lib/providers/auth-store-provider";
 import { useCoachingRelationshipStateStore } from "@/lib/providers/coaching-relationship-state-store-provider";
@@ -58,7 +58,6 @@ import {
 import { actionStatusToString, type Id } from "@/types/general";
 import { type Option, Some, None } from "@/types/option";
 import {
-  SEARCHABLE_TYPE_OF,
   SearchHitType,
   isSearchableQuery,
   type SearchError,
@@ -172,11 +171,6 @@ const GROUP_ORDER: ReadonlyArray<{ type: SearchHitType; heading: string }> = [
   { type: SearchHitType.TranscriptSuggestion, heading: "Suggestions" },
 ];
 
-// Sent explicitly: left out, the backend searches every type it has, including ones not rendered here.
-const RENDERED_TYPES: SearchFilters = {
-  types: GROUP_ORDER.map(({ type }) => SEARCHABLE_TYPE_OF[type]),
-};
-
 /** Groups hits by kind, Sessions first; empty kinds are omitted. */
 export function groupSearchHits(hits: SearchHit[]): SearchHitGroup[] {
   return GROUP_ORDER.map(({ type, heading }) => ({
@@ -282,7 +276,7 @@ export function GlobalSearch({ className }: GlobalSearchProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-  const { state, loadMore } = useSearch(query, RENDERED_TYPES);
+  const { state, loadMore } = useSearch(query);
   const userId = useAuthStore((store) => store.userId);
   const currentOrganizationId = useOrganizationStateStore(
     (store) => store.currentOrganizationId

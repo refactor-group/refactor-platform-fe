@@ -191,21 +191,6 @@ describe("GlobalSearch", () => {
     expect(screen.queryByRole("status", { name: "Searching" })).not.toBeInTheDocument();
   });
 
-  it("asks only for the types it renders", () => {
-    mockSearch({ kind: "idle" });
-    render(<GlobalSearch />, { wrapper: TestProviders });
-    expect(useSearch).toHaveBeenLastCalledWith("", {
-      types: [
-        "coaching_sessions",
-        "goals",
-        "actions",
-        "agreements",
-        "topics",
-        "transcript_suggestions",
-      ],
-    });
-  });
-
   it("shows skeleton rows while a search is in flight", async () => {
     mockSearch({ kind: "loading", query: "weekly" });
     render(<GlobalSearch />, { wrapper: TestProviders });
